@@ -1,0 +1,182 @@
+[
+  {
+    "id": 1,
+    "tier": "basic",
+    "category": "leadership",
+    "title": "Led a cross-team data initiative",
+    "body": "Tell me about a time you led a cross-functional data project. What was the goal, who was involved, and what was the outcome?",
+    "framework": "**Situation:** A pipeline serving finance and product had conflicting SLAs and no single owner.\n\n**Task:** Align stakeholders and deliver a unified bronze-to-gold model without breaking existing reports.\n\n**Action:** Ran a kickoff with schema contracts, set weekly demos, split work into ingestion (your team) vs consumption (BI), documented decisions in Confluence.\n\n**Result:** Cut duplicate pipelines by 40%, finance sign-off in 6 weeks, adopted as template for other domains.\n\n**Tip:** Quantify scope (tables, users, latency) and name tools (ADF, Databricks, dbt).",
+    "anchor": "q-1"
+  },
+  {
+    "id": 2,
+    "tier": "basic",
+    "category": "teamwork",
+    "title": "Worked with a difficult stakeholder",
+    "body": "Describe a situation where you had to work closely with a stakeholder who was skeptical of your approach. How did you handle it?",
+    "framework": "**Situation:** Product manager wanted real-time dashboards; your batch lakehouse couldn't meet sub-minute latency.\n\n**Task:** Find a workable compromise without over-engineering.\n\n**Action:** Mapped their actual decision windows (hourly, not second-level), proposed incremental loads + materialized views, showed prototype with sample data.\n\n**Result:** PM accepted hourly refresh; you avoided costly streaming build. Relationship improved through transparent trade-off doc.\n\n**Tip:** Show empathy first, then data-driven alternatives — never blame the stakeholder.",
+    "anchor": "q-2"
+  },
+  {
+    "id": 3,
+    "tier": "medium",
+    "category": "conflict",
+    "title": "Disagreement on architecture",
+    "body": "Tell me about a time you disagreed with a colleague or architect on a technical decision. How did you resolve it?",
+    "framework": "**Situation:** Team debated Spark vs SQL stored procedures for a 50M-row daily transform.\n\n**Task:** Pick an approach that balances maintainability, cost, and team skills.\n\n**Action:** Built a one-day POC for both paths, compared cost (DBU vs SQL DWU), runtime, and testability. Presented findings neutrally in architecture review.\n\n**Result:** Chose Databricks for complex joins; kept SQL for simple aggregations. Documented decision ADR; both sides felt heard.\n\n**Tip:** Focus on criteria, not personalities. \"We\" language throughout.",
+    "anchor": "q-3"
+  },
+  {
+    "id": 4,
+    "tier": "medium",
+    "category": "failure",
+    "title": "Pipeline failure in production",
+    "body": "Tell me about a time a data pipeline failed in production. What happened and what did you learn?",
+    "framework": "**Situation:** Nightly ADF pipeline failed silently — downstream dashboard showed stale data for 2 days.\n\n**Task:** Restore freshness and prevent recurrence.\n\n**Action:** Traced to schema drift (new nullable column broke strict mapping), added schema evolution + alerting on row-count deltas, wrote runbook for on-call.\n\n**Result:** MTTR dropped from 48h to 2h; zero repeat incidents in 6 months.\n\n**Tip:** Own the failure without drama. Emphasize monitoring, blameless postmortem, and systemic fix.",
+    "anchor": "q-4"
+  },
+  {
+    "id": 5,
+    "tier": "basic",
+    "category": "project-delivery",
+    "title": "Tight deadline migration",
+    "body": "Describe a project with a very tight deadline. How did you prioritize and deliver?",
+    "framework": "**Situation:** 3-week mandate to migrate on-prem SQL Server ETL to Azure before license renewal.\n\n**Task:** Move critical 12 pipelines without data loss.\n\n**Action:** MoSCoW prioritization, parallelized lift-and-shift for simple jobs, deferred nice-to-have transforms, daily standups with business sponsor.\n\n**Result:** 10/12 pipelines live on day 20; remaining 2 in hypercare week 4. Zero missed SLAs.\n\n**Tip:** Show ruthless scope control and communication cadence.",
+    "anchor": "q-5"
+  },
+  {
+    "id": 6,
+    "tier": "hard",
+    "category": "data-specific",
+    "title": "Data quality crisis",
+    "body": "Tell me about a time you discovered a serious data quality issue. How did you investigate and fix it?",
+    "framework": "**Situation:** Revenue metrics dropped 15% overnight — executives assumed product issue.\n\n**Task:** Determine if data or business caused the drop.\n\n**Action:** Compared source vs warehouse row counts, found duplicate dedup logic removed valid multi-currency rows; quarantined bad partition, replayed from bronze, added reconciliation checks.\n\n**Result:** Metrics restored in 4 hours; exec briefing prevented wrong product decisions. DQ framework expanded to all fact tables.\n\n**Tip:** DE stories shine when you saved business from bad decisions.",
+    "anchor": "q-6"
+  },
+  {
+    "id": 7,
+    "tier": "medium",
+    "category": "initiative",
+    "title": "Proposed a process improvement",
+    "body": "Give an example of when you identified and implemented a process improvement without being asked.",
+    "framework": "**Situation:** Engineers manually deployed notebooks; drift between dev and prod caused weekly incidents.\n\n**Task:** Introduce CI/CD for data assets with minimal disruption.\n\n**Action:** Piloted Git-backed Databricks Repos + Azure DevOps pipeline for 2 notebooks, documented template, trained team in lunch-and-learn.\n\n**Result:** Deployment time 2h → 15min; prod incidents down 60% in Q2.\n\n**Tip:** Show you drive change bottom-up with proof, not mandates.",
+    "anchor": "q-7"
+  },
+  {
+    "id": 8,
+    "tier": "basic",
+    "category": "communication",
+    "title": "Explained technical concept to non-technical audience",
+    "body": "Tell me about a time you had to explain a complex data concept to non-technical stakeholders.",
+    "framework": "**Situation:** Legal team needed to understand PII masking in the lakehouse for GDPR audit.\n\n**Task:** Explain encryption, tokenization, and access controls without jargon.\n\n**Action:** Used analogy (locked filing cabinet + key per role), diagrammed bronze/silver/gold with redacted samples, walked through audit log demo.\n\n**Result:** Legal signed off; you became go-to for compliance questions.\n\n**Tip:** Analogies + visuals beat acronyms. Confirm understanding with questions.",
+    "anchor": "q-8"
+  },
+  {
+    "id": 9,
+    "tier": "hard",
+    "category": "leadership",
+    "title": "Mentored a junior engineer",
+    "body": "Describe a time you mentored someone less experienced. What was your approach and the outcome?",
+    "framework": "**Situation:** New grad struggled with PySpark window functions on a customer churn model.\n\n**Task:** Upskill them while meeting sprint deadline.\n\n**Action:** Pair-programmed 2 sessions, left commented notebook templates, assigned smaller partition of problem, reviewed PRs with constructive feedback.\n\n**Result:** They owned next window-function story solo; promoted to mid-level within a year.\n\n**Tip:** Balance support with autonomy — show growth metrics.",
+    "anchor": "q-9"
+  },
+  {
+    "id": 10,
+    "tier": "medium",
+    "category": "teamwork",
+    "title": "Collaborated under pressure",
+    "body": "Tell me about a time your team had to collaborate intensely to meet a critical business need.",
+    "framework": "**Situation:** Black Friday — marketing needed hourly campaign performance; existing pipeline was daily.\n\n**Task:** Enable near-real-time feeds in 5 days with analytics and infra teams.\n\n**Action:** Split streams (ingestion vs dashboard), shared Slack war room, hourly checkpoints, feature-flagged new path parallel to old.\n\n**Result:** Hourly dashboard live day before launch; 0 downtime during peak; reused pattern for Cyber Monday.\n\n**Tip:** Highlight coordination mechanics and risk mitigation (parallel run).",
+    "anchor": "q-10"
+  },
+  {
+    "id": 11,
+    "tier": "hard",
+    "category": "conflict",
+    "title": "Pushed back on unrealistic requirements",
+    "body": "Describe a time you had to push back on requirements that were unrealistic or poorly defined.",
+    "framework": "**Situation:** Business asked for \"real-time 360° customer view\" in 2 weeks with 200 source systems.\n\n**Task:** Reset expectations without killing the initiative.\n\n**Action:** Documented effort estimate, proposed MVP (top 5 sources, 15-min latency), showed phased roadmap with cost per phase.\n\n**Result:** Sponsors approved 8-week MVP; full vision became FY roadmap item.\n\n**Tip:** Replace \"no\" with \"yes, if we phase it\" — always offer a path.",
+    "anchor": "q-11"
+  },
+  {
+    "id": 12,
+    "tier": "medium",
+    "category": "failure",
+    "title": "Missed a personal deadline",
+    "body": "Tell me about a time you missed a deadline or deliverable. What did you do?",
+    "framework": "**Situation:** Underestimated complexity of CDC from Oracle; sprint commitment slipped by 4 days.\n\n**Task:** Minimize impact and rebuild trust.\n\n**Action:** Flagged risk at day 2 (not day 4), negotiated scope cut (deferred history backfill), worked with DBA for faster log access, daily updates to PM.\n\n**Result:** Incremental load delivered on revised date; retrospective improved estimation templates.\n\n**Tip:** Early escalation beats surprise. Show learning, not excuses.",
+    "anchor": "q-12"
+  },
+  {
+    "id": 13,
+    "tier": "basic",
+    "category": "data-specific",
+    "title": "Designed a new data model",
+    "body": "Walk me through a time you designed or redesigned a data model. What trade-offs did you consider?",
+    "framework": "**Situation:** Star schema couldn't support evolving product attributes (SCD Type 2 explosion).\n\n**Task:** Redesign customer dimension for flexibility and query performance.\n\n**Action:** Evaluated wide table vs normalized bridge; chose hybrid with current-state view + history table; documented grain and PK strategy.\n\n**Result:** Query time -30%, analyst self-serve improved; pattern reused across 3 domains.\n\n**Tip:** Name dimensional modeling concepts — interviewers listen for grain, SCD, denormalization rationale.",
+    "anchor": "q-13"
+  },
+  {
+    "id": 14,
+    "tier": "hard",
+    "category": "project-delivery",
+    "title": "Managed scope creep",
+    "body": "Tell me about a project where scope kept expanding. How did you manage it?",
+    "framework": "**Situation:** \"Simple\" Salesforce ingest became 15 custom objects mid-sprint.\n\n**Task:** Protect timeline and team morale.\n\n**Action:** Introduced change-request log, weekly scope review with sponsor, traded low-priority objects for phase 2, froze scope 5 days before release.\n\n**Result:** Phase 1 on time with 10 objects; phase 2 planned and funded.\n\n**Tip:** Formalize change control — shows maturity beyond coding.",
+    "anchor": "q-14"
+  },
+  {
+    "id": 15,
+    "tier": "medium",
+    "category": "communication",
+    "title": "Presented to leadership",
+    "body": "Describe a time you presented technical work or recommendations to senior leadership.",
+    "framework": "**Situation:** CTO asked why cloud data costs spiked 40% QoQ.\n\n**Task:** Explain root cause and remediation in 10 minutes.\n\n**Action:** One-slide executive summary (cost drivers pie chart), 3 recommendations with ROI, avoided cluster config deep-dive unless asked.\n\n**Result:** Approved auto-termination policy and reserved capacity; costs flat next quarter.\n\n**Tip:** Lead with business impact, bury technical detail in appendix.",
+    "anchor": "q-15"
+  },
+  {
+    "id": 16,
+    "tier": "basic",
+    "category": "teamwork",
+    "title": "Onboarded to a new team",
+    "body": "Tell me about joining a new team or project. How did you ramp up and contribute quickly?",
+    "framework": "**Situation:** Joined Azure data platform team mid-migration; unfamiliar with their ADF naming conventions.\n\n**Task:** Become productive within 2 weeks.\n\n**Action:** Shadowed on-call, mapped pipeline dependency diagram, fixed 3 small bugs in week 1, proposed doc for naming standards.\n\n**Result:** Owned first feature in week 3; doc adopted team-wide.\n\n**Tip:** Show proactive learning and quick wins — not passive onboarding.",
+    "anchor": "q-16"
+  },
+  {
+    "id": 17,
+    "tier": "hard",
+    "category": "data-specific",
+    "title": "Optimized a slow pipeline",
+    "body": "Tell me about a time you significantly improved pipeline performance or cost.",
+    "framework": "**Situation:** Daily Spark job on 2TB logs took 4 hours and blocked downstream SLA.\n\n**Task:** Cut runtime below 90 minutes without correctness loss.\n\n**Action:** Profiled stages, fixed skew with salting, switched to Delta OPTIMIZE + Z-order, right-sized cluster, partitioned by date.\n\n**Result:** Runtime 75 min, cost -35%, SLA met consistently.\n\n**Tip:** Before/after numbers are mandatory. Mention specific Spark/Delta knobs.",
+    "anchor": "q-17"
+  },
+  {
+    "id": 18,
+    "tier": "medium",
+    "category": "leadership",
+    "title": "Drove adoption of a new tool",
+    "body": "Describe a time you introduced a new technology or tool to your team. How did you drive adoption?",
+    "framework": "**Situation:** Team used ad-hoc SQL scripts; no version control or testing.\n\n**Task:** Introduce dbt for transform layer with buy-in from skeptics.\n\n**Action:** Migrated one low-risk mart as showcase, ran internal demo showing tests + lineage, paired with strongest skeptic on second model.\n\n**Result:** 80% of transforms on dbt within 3 months; incident rate from bad deploys dropped.\n\n**Tip:** Champions + proof project beat top-down mandates.",
+    "anchor": "q-18"
+  },
+  {
+    "id": 19,
+    "tier": "hard",
+    "category": "failure",
+    "title": "Received critical feedback",
+    "body": "Tell me about a time you received difficult feedback. How did you respond?",
+    "framework": "**Situation:** Manager said your documentation was blocking handoffs during PTO.\n\n**Task:** Improve without defensiveness.\n\n**Action:** Asked for specific examples, created runbook template, scheduled doc review in Definition of Done, peer-reviewed next 3 pipelines.\n\n**Result:** Handoff survey scores improved; became team doc standard bearer.\n\n**Tip:** Growth mindset stories — thank the feedback, show behavior change.",
+    "anchor": "q-19"
+  },
+  {
+    "id": 20,
+    "tier": "medium",
+    "category": "initiative",
+    "title": "Built something beyond your job description",
+    "body": "Give an example of going above and beyond your formal responsibilities.",
+    "framework": "**Situation:** Analysts filed weekly tickets for the same metric definitions.\n\n**Task:** Not in your role, but you saw repeated pain.\n\n**Action:** Built internal metrics catalog in Confluence with SQL snippets, linked to dbt docs, ran 30-min office hours.\n\n**Result:** Duplicate tickets -70%; promoted to \"data champion\" for analytics org.\n\n**Tip:** Connect extra effort to org-wide impact — shows senior potential.",
+    "anchor": "q-20"
+  }
+]

@@ -1,0 +1,57 @@
+{
+  "employees": {
+    "label": "employees",
+    "description": "Core employee dimension",
+    "columns": [
+      { "name": "id", "type": "INT", "key": "PK" },
+      { "name": "name", "type": "VARCHAR(100)" },
+      { "name": "department", "type": "VARCHAR(50)" },
+      { "name": "department_id", "type": "INT", "key": "FK → departments.id" },
+      { "name": "salary", "type": "DECIMAL(10,2)" },
+      { "name": "manager_id", "type": "INT", "key": "FK → employees.id" },
+      { "name": "hire_date", "type": "DATE" },
+      { "name": "phone", "type": "VARCHAR(20)" }
+    ]
+  },
+  "departments": {
+    "label": "departments",
+    "description": "Department lookup",
+    "columns": [
+      { "name": "id", "type": "INT", "key": "PK" },
+      { "name": "name", "type": "VARCHAR(50)" },
+      { "name": "location", "type": "VARCHAR(100)" }
+    ]
+  },
+  "orders": {
+    "label": "orders",
+    "description": "Sales orders fact table",
+    "columns": [
+      { "name": "order_id", "type": "INT", "key": "PK" },
+      { "name": "customer_id", "type": "INT", "key": "FK → customers.id" },
+      { "name": "product_id", "type": "INT", "key": "FK → products.id" },
+      { "name": "amount", "type": "DECIMAL(12,2)" },
+      { "name": "order_date", "type": "DATE" },
+      { "name": "status", "type": "VARCHAR(20)" }
+    ]
+  },
+  "customers": {
+    "label": "customers",
+    "description": "Customer dimension",
+    "columns": [
+      { "name": "id", "type": "INT", "key": "PK" },
+      { "name": "name", "type": "VARCHAR(100)" },
+      { "name": "city", "type": "VARCHAR(50)" },
+      { "name": "country", "type": "VARCHAR(50)" }
+    ]
+  },
+  "products": {
+    "label": "products",
+    "description": "Product catalog",
+    "columns": [
+      { "name": "id", "type": "INT", "key": "PK" },
+      { "name": "name", "type": "VARCHAR(100)" },
+      { "name": "category", "type": "VARCHAR(50)" },
+      { "name": "price", "type": "DECIMAL(10,2)" }
+    ]
+  }
+}

@@ -1,0 +1,227 @@
+[
+  {
+    "id": 1,
+    "tier": "basic",
+    "category": "adf",
+    "title": "Bronze landing from Blob",
+    "body": "Design an ADF pipeline that copies daily CSV files from an on-prem SFTP folder to ADLS Gen2 bronze layer. Files arrive as `orders_YYYYMMDD.csv`. Include linked services, dataset parameterization, and folder structure.",
+    "solution": "1. Linked services: SFTP (on-prem IR), ADLS Gen2 (account key or MSI in prod).\n2. Parameterized datasets: source SFTP file path `@concat('orders_', formatDateTime(utcnow(),'yyyyMMdd'),'.csv')`; sink ADLS path `bronze/orders/dt=@{formatDateTime(utcnow(),'yyyy-MM-dd')}/orders.csv`.\n3. Copy activity with binary/CSV format; enable staging if large.\n4. Schedule trigger at 02:00 UTC daily.\n5. Use Key Vault references for SFTP password and storage key — never inline secrets.",
+    "anchor": "q-1"
+  },
+  {
+    "id": 2,
+    "tier": "basic",
+    "category": "adf",
+    "title": "Lookup for watermark table",
+    "body": "You need to incrementally load SQL Server `sales` table using a `last_modified` watermark stored in a control table. Which ADF activities do you use and in what order?",
+    "solution": "1. Lookup activity → read `max(last_modified)` from control table (or default '1900-01-01').\n2. Set variable / pass Lookup output to Copy activity source query: `WHERE last_modified > @{activity('LookupWatermark').output.firstRow.max_ts}`.\n3. Copy to ADLS bronze or staging.\n4. Stored procedure or Script activity to UPDATE control table with new max timestamp from pipeline run.\n5. Lookup limit: max 5000 rows / 4 MB — fine for single watermark row.",
+    "anchor": "q-2"
+  },
+  {
+    "id": 3,
+    "tier": "basic",
+    "category": "adls",
+    "title": "Medallion folder layout",
+    "body": "Define ADLS Gen2 folder structure for a retail medallion architecture with orders, customers, and products. Include bronze, silver, gold layers and partitioning strategy.",
+    "solution": "Container: `datalake`\nbronze/orders/dt=YYYY-MM-DD/*.csv\nbronze/customers/snapshot_dt=YYYY-MM-DD/*.parquet\nbronze/products/*.json\nsilver/orders/ (Delta or Parquet, partitioned by order_date)\nsilver/customers/ (SCD Type 2 Delta table)\ngold/daily_revenue/ (aggregated Parquet or Synapse table)\nUse hierarchical namespace; ACLs or RBAC per layer. Bronze = raw, silver = cleansed/conformed, gold = business metrics.",
+    "anchor": "q-3"
+  },
+  {
+    "id": 4,
+    "tier": "basic",
+    "category": "security",
+    "title": "Key Vault linked service",
+    "body": "ADF must connect to SQL DB and ADLS without storing secrets in Git. Walk through Key Vault integration.",
+    "solution": "1. Store secrets in Azure Key Vault (sql-connection-string, adls-account-key or use MSI).\n2. ADF → Manage → Azure Key Vault linked service (MSI auth to KV).\n3. In SQL/ADLS linked services, click Azure Key Vault and select secret name — ADF stores reference only.\n4. Grant ADF MSI 'Get' on secrets in KV access policy / RBAC.\n5. ARM/Bicep templates use same secret references for CI/CD. Rotate secrets in KV without redeploying pipelines.",
+    "anchor": "q-4"
+  },
+  {
+    "id": 5,
+    "tier": "basic",
+    "category": "adf",
+    "title": "Get Metadata vs Lookup",
+    "body": "A teammate uses Lookup to check if a file exists in ADLS before copy. Explain why Get Metadata is better and design the check.",
+    "solution": "Get Metadata returns file/folder metadata (exists, size, lastModified, childItems) without reading row data. Lookup reads tabular data (max 5000 rows).\nPipeline:\n1. Get Metadata on ADLS path → childItems or exists flag.\n2. If Condition activity: `@activity('GetMeta').output.exists` is true → Copy; else → Fail or Skip with log.\n3. Optionally filter childItems for today's partition folder.",
+    "anchor": "q-5"
+  },
+  {
+    "id": 6,
+    "tier": "basic",
+    "category": "synapse",
+    "title": "Dedicated SQL pool load",
+    "body": "Load 50M rows from ADLS Parquet into Synapse dedicated SQL pool table `fact_sales`. Choose the fastest pattern.",
+    "solution": "Use COPY INTO (serverless/dedicated) or PolyBase external table + CTAS:\n`COPY INTO dbo.fact_sales FROM 'https://account.dfs.core.windows.net/gold/fact_sales/*.parquet' WITH (FILE_TYPE='PARQUET', CREDENTIAL=(IDENTITY='Managed Identity'));`\nOr: CREATE EXTERNAL TABLE → INSERT INTO dbo.fact_sales SELECT * FROM ext_fact_sales.\nAvoid row-by-row INSERT. Use DISTRIBUTION = HASH(sale_id), appropriate indexes after load. Pause/resume pool for cost if batch nightly.",
+    "anchor": "q-6"
+  },
+  {
+    "id": 7,
+    "tier": "medium",
+    "category": "adf",
+    "title": "Event-driven blob arrival",
+    "body": "Trigger ADF pipeline when new files land in `raw/incoming/` without polling. Design trigger and handle duplicate events.",
+    "solution": "1. Enable Event Grid subscription on Storage Account → BlobCreated under `raw/incoming/`.\n2. ADF Storage events trigger (or Event Grid → ADF REST) fires pipeline.\n3. Pass `@triggerBody().fileName` as parameter.\n4. Idempotency: check processed log table or move file to `processing/` then `processed/` after success.\n5. Deduplicate with file ETag or lastModified in control table. Use tumbling window only if batching is acceptable.",
+    "anchor": "q-7"
+  },
+  {
+    "id": 8,
+    "tier": "medium",
+    "category": "adf",
+    "title": "Failure path with Fail activity",
+    "body": "Pipeline must fail loudly if silver row count is zero after transform. Implement validation and alerting path.",
+    "solution": "1. After data flow / copy to silver, Lookup or Get Metadata for row count (or Script: SELECT COUNT(*)).\n2. If Condition: count == 0 → Fail activity with custom message and errorCode `EMPTY_SILVER`.\n3. On Failure dependency: Send email / Teams via Logic App or Azure Monitor alert on ADF failure metric.\n4. Success path: continue to gold aggregation.\nFail activity makes failure visible in Monitor → not swallowed by empty success.",
+    "anchor": "q-8"
+  },
+  {
+    "id": 9,
+    "tier": "medium",
+    "category": "adls",
+    "title": "RBAC for data engineers",
+    "body": "Three roles: ingest engineer (bronze write only), analytics engineer (silver/gold read/write), BI reader (gold read only). Map Azure RBAC on ADLS.",
+    "solution": "Use ACLs or Azure RBAC at container/folder scope:\n- Ingest: Storage Blob Data Contributor on `bronze/` only (or custom role).\n- Analytics: Contributor on silver/ + gold/; Reader on bronze.\n- BI: Storage Blob Data Reader on gold/ only.\nPrefer RBAC with ABAC conditions on prefix where possible. ADF MSI gets scoped write to bronze/silver per pipeline. Document in data catalog.",
+    "anchor": "q-9"
+  },
+  {
+    "id": 10,
+    "tier": "medium",
+    "category": "patterns",
+    "title": "Bronze to silver with Data Flow",
+    "body": "Raw CSV in bronze has dirty headers and nulls. Design Mapping Data Flow bronze→silver with dedupe and schema enforcement.",
+    "solution": "1. Source: ADLS bronze CSV dataset (wildcard path).\n2. Select: rename columns to snake_case, cast types.\n3. Filter: drop rows where key columns null.\n4. Aggregate or Window: dedupe by business key keeping latest last_modified.\n5. Sink: ADLS silver as Parquet partitioned by dt.\n6. Enable debug cluster for dev; production triggers on IR with appropriate core count. Log rejected rows to quarantine folder via conditional split.",
+    "anchor": "q-10"
+  },
+  {
+    "id": 11,
+    "tier": "medium",
+    "category": "synapse",
+    "title": "Serverless vs dedicated choice",
+    "body": "Team debates Synapse serverless SQL vs dedicated pool for ad-hoc analytics on 2 TB Parquet lake. Recommend architecture.",
+    "solution": "Serverless: pay per TB scanned, no infra management, great for ad-hoc/external tables over gold Parquet, unpredictable light queries. Use CETAS to materialize hot aggregates.\nDedicated: predictable performance, heavy concurrent BI, large CTAS workloads — but cost when idle (pause when not used).\nPattern: gold Parquet in ADLS → serverless external tables for exploration; nightly COPY INTO dedicated star schema for Power BI dashboards. Spark pool for heavy transforms.",
+    "anchor": "q-11"
+  },
+  {
+    "id": 12,
+    "tier": "medium",
+    "category": "adf",
+    "title": "Parent-child pipeline parameters",
+    "body": "Master pipeline orchestrates 5 table pipelines with different schemas but same date parameter. Design reusable child pipeline.",
+    "solution": "Child pipeline parameters: `p_table_name`, `p_source_query`, `p_sink_path`, `p_run_date`.\nMaster: ForEach over config array (Lookup from SQL config table or inline).\nExecute Pipeline activity passes parameters per iteration.\nChild: Copy or Data Flow using `@pipeline().parameters.p_*`.\nBenefits: single child template, config-driven scale. Set batch count on ForEach to limit parallelism.",
+    "anchor": "q-12"
+  },
+  {
+    "id": 13,
+    "tier": "medium",
+    "category": "security",
+    "title": "Managed Identity end-to-end",
+    "body": "Eliminate storage account keys across ADF, Synapse, and Databricks accessing same ADLS. List IAM assignments.",
+    "solution": "1. Enable system-assigned MSI on ADF, Synapse workspace, Databricks (access connector).\n2. ADLS: assign 'Storage Blob Data Contributor' to each MSI at container or folder scope.\n3. Linked services use Authentication = System-assigned managed identity.\n4. Synapse COPY INTO: CREDENTIAL with IDENTITY='Managed Identity'.\n5. No keys in KV except legacy systems. Audit with Azure Policy denying key-based auth.",
+    "anchor": "q-13"
+  },
+  {
+    "id": 14,
+    "tier": "medium",
+    "category": "patterns",
+    "title": "SCD Type 2 on Azure",
+    "body": "Implement customer dimension SCD Type 2 from daily CDC feed landing in bronze. Tools: ADF + Synapse Spark or SQL.",
+    "solution": "Bronze: store raw CDC JSON/CSV with operation column (I/U/D).\nSilver Spark/SQL:\n1. Stage incoming records.\n2. Close current rows: UPDATE SET effective_end = run_date, is_current = 0 WHERE business_key match AND attr changed.\n3. INSERT new versions with effective_start = run_date, is_current = 1.\nDelta Lake MERGE is ideal on Spark pool. ADF orchestrates notebook/SQL script. Maintain surrogate key and hash of tracked columns for change detection.",
+    "anchor": "q-14"
+  },
+  {
+    "id": 15,
+    "tier": "medium",
+    "category": "adls",
+    "title": "Lifecycle management tiering",
+    "body": "Bronze data must be hot for 30 days, cool for 180, then archive. Configure on ADLS Gen2.",
+    "solution": "Storage Management Policy rules on container `datalake`:\n- Rule 1: prefix bronze/ → move to Cool after 30 days.\n- Rule 2: prefix bronze/ → move to Archive after 210 days.\n- Optional: delete after 7 years for compliance.\nNote: rehydration latency/cost for Archive. Gold may stay Hot. Monitor with Storage Analytics. ADF unaffected — same paths, different tier.",
+    "anchor": "q-15"
+  },
+  {
+    "id": 16,
+    "tier": "hard",
+    "category": "adf",
+    "title": "Self-hosted IR HA",
+    "body": "On-prem Oracle extraction requires HA and minimal downtime. Design self-hosted integration runtime deployment.",
+    "solution": "Install 2+ SHIR nodes registering to same IR with active-active capability (ADF routes jobs to available node).\nPlace nodes on separate VMs/subnets. Shared high-availability via multiple nodes — not active-passive cluster officially but jobs failover to healthy node.\nUse ExpressRoute/VPN for stable connectivity. Monitor IR heartbeat in ADF. Scale out nodes for parallel copy from partitioned Oracle queries. Key Vault for Oracle credentials.",
+    "anchor": "q-16"
+  },
+  {
+    "id": 17,
+    "tier": "hard",
+    "category": "adf",
+    "title": "Tumbling window backfill",
+    "body": "Reprocess last 90 days of hourly partitions after bug fix in silver logic. Use tumbling window trigger.",
+    "solution": "1. Tumbling window trigger: frequency 1 hour, interval 90 days lookback (or manual backfill with start/end).\n2. Parameter `@trigger().outputs.windowStartTime` / windowEndTime passed to pipeline.\n3. ForEach hour partition path `silver/orders/dt=.../hour=...`.\n4. Concurrency limit to avoid throttling. Depends on: fixed window order.\n5. Monitor backfill status in Trigger runs. Alternative: one-time pipeline with Generate Date Range + ForEach.",
+    "anchor": "q-17"
+  },
+  {
+    "id": 18,
+    "tier": "hard",
+    "category": "synapse",
+    "title": "Spark pool medallion job",
+    "body": "10 TB daily clickstream JSON in bronze. Design Synapse Spark notebook pipeline to silver (parsed, deduped) and gold (session aggregates).",
+    "solution": "Spark pool (auto-scale executors):\n1. Read bronze JSON with recursiveFileLookup, schema inference or explicit schema.\n2. explode/nested flatten, filter invalid events.\n3. dedupe by event_id window by event_time.\n4. Write silver Delta partitioned by date/hour.\n5. Gold: groupBy session_id, metrics (page_views, duration).\n6. ADF Synapse notebook activity orchestrates; pause Spark pool after job. Optimize with adaptive query execution, Z-order on session_id.",
+    "anchor": "q-18"
+  },
+  {
+    "id": 19,
+    "tier": "hard",
+    "category": "patterns",
+    "title": "Data quality gate",
+    "body": "Before promoting silver to gold, enforce: not null on keys, referential integrity to dim tables, row count within 10% of yesterday. Implement on Azure.",
+    "solution": "Option A — ADF: Notebook/Script runs Great Expectations or custom SQL checks; output to pipeline variable; Condition fails if any check fails.\nOption B — Databricks/Synapse: Delta Live Tables expectations.\nOption C — Azure Purview + quality scans (batch).\nStore results in `ops.dq_results` table. Fail pipeline with Fail activity. Alert on failure. Gold promotion only on success dependency chain.",
+    "anchor": "q-19"
+  },
+  {
+    "id": 20,
+    "tier": "hard",
+    "category": "security",
+    "title": "Private endpoints architecture",
+    "body": "Enterprise requires no public internet for ADF, ADLS, Synapse, Key Vault. Draw network integration approach.",
+    "solution": "1. VNet with private endpoints for ADLS, Synapse, Key Vault, SQL.\n2. ADF: managed VNet integration + managed private endpoints to each service (approve in target).\n3. Disable public network access on storage and Synapse.\n4. SHIR on-prem via ExpressRoute to VNet; ADF self-hosted IR in same VNet.\n5. DNS: private DNS zones link FQDNs to private IPs.\n6. Azure Firewall optional for egress control. ADF Azure IR in managed VNet for cloud sources.",
+    "anchor": "q-20"
+  },
+  {
+    "id": 21,
+    "tier": "basic",
+    "category": "adf",
+    "title": "Copy activity performance",
+    "body": "Copy from SQL to ADLS takes 4 hours for 200 GB. List 5 tuning knobs in ADF.",
+    "solution": "1. DIU / parallel copy (scale units) — increase in Copy activity settings.\n2. Partition source query (by date/id ranges) with parallel copies.\n3. Use Parquet + compression on sink (snappy).\n4. Staging account in same region for certain connectors.\n5. Self-hosted IR near source if on-prem SQL.\n6. Avoid unnecessary type conversions; use tabular translator.\n7. Enable polybase path for Synapse dedicated as sink.",
+    "anchor": "q-21"
+  },
+  {
+    "id": 22,
+    "tier": "medium",
+    "category": "adls",
+    "title": "ACL inheritance break",
+    "body": "A user cannot read a file in gold despite Reader on container. Troubleshoot ADLS Gen2 POSIX ACLs.",
+    "solution": "Check: 1) default ACL on parent folders — access ACL must include --x on traverse path. 2) mask permissions. 3) RBAC vs ACL conflict — both apply, most restrictive. 4) Synapse/Databricks service principal separate from user. 5) Use Storage Explorer → Manage ACL → verify user/group SID entries on each parent folder to file. Fix: set default ACL on gold/ for BI group r-x, or use RBAC only mode if enabled.",
+    "anchor": "q-22"
+  },
+  {
+    "id": 23,
+    "tier": "medium",
+    "category": "synapse",
+    "title": "CETAS materialization",
+    "body": "Analysts repeatedly scan 500 GB external table. Reduce cost with serverless SQL.",
+    "solution": "CREATE EXTERNAL TABLE remains for discovery.\nRun CETAS:\n`CREATE EXTERNAL TABLE gold.daily_summary WITH (LOCATION='gold/daily_summary/', DATA_SOURCE=..., FILE_FORMAT=ParquetFormat) AS SELECT ... GROUP BY ...`\nPay once for scan + write; subsequent queries hit smaller materialized dataset.\nSchedule CETAS via ADF/Synapse pipeline nightly. Partition output by date. Drop/recreate or INSERT overwrite strategy.",
+    "anchor": "q-23"
+  },
+  {
+    "id": 24,
+    "tier": "hard",
+    "category": "adf",
+    "title": "Git integration CI/CD",
+    "body": "ADF pipelines in Git main branch must deploy to prod via Azure DevOps with approval. Outline release pipeline.",
+    "solution": "1. ADF Git integration (Azure DevOps/GitHub) — collaborate branch.\n2. PR merge to main triggers build.\n3. Export ARM template or use ADF publish → generate artifacts in adf_publish branch.\n4. Release pipeline: deploy ARM to prod RG with parameter overrides (linked service connections, KV names).\n5. Manual approval gate before prod.\n6. Post-deploy smoke: trigger test pipeline via REST.\nNever store secrets in Git — parameterize linked services.",
+    "anchor": "q-24"
+  },
+  {
+    "id": 25,
+    "tier": "hard",
+    "category": "patterns",
+    "title": "Multi-tenant lake isolation",
+    "body": "SaaS product stores each tenant's data in shared ADLS. Ensure tenant A never reads tenant B data in Synapse and ADF.",
+    "solution": "1. Folder prefix per tenant: `silver/tenant_id={id}/`.\n2. ABAC/RBAC: Azure Storage attributes or ACLs scoped per tenant group/service principal.\n3. Synapse: views with WHERE tenant_id = current_user metadata (pass tenant in session context).\n4. ADF: parameterize tenant_id; pipeline triggered per tenant with MSI limited to that prefix (custom role).\n5. Optional: separate containers per tier. Audit logs via Storage diagnostic settings.",
+    "anchor": "q-25"
+  }
+]

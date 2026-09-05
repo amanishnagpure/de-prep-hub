@@ -1,0 +1,182 @@
+[
+  {
+    "id": 1,
+    "tier": "basic",
+    "category": "batch-streaming",
+    "title": "Nightly sales ETL",
+    "body": "A retail company has 50 GB of daily sales CSV files landing in S3 at 2 AM. Analysts need a dashboard by 8 AM. Design the pipeline.",
+    "solution": "**Approach:** S3 event \u2192 orchestrator (Airflow/Databricks Job) \u2192 Spark read CSV bronze Delta \u2192 silver dedupe/validate \u2192 gold daily aggregates \u2192 Power BI/Tableau.\n\n**Key decisions:** Batch window fits SLA; partition bronze by `ingest_date`; MERGE silver on `order_id`; DQ checks (null PK, amount > 0); alert if job misses 8 AM freshness.",
+    "anchor": "q-1"
+  },
+  {
+    "id": 2,
+    "tier": "basic",
+    "category": "batch-streaming",
+    "title": "Hourly inventory sync",
+    "body": "Warehouse inventory updates every hour via API (paginated JSON). Need inventory table in lake within 90 minutes.",
+    "solution": "**Approach:** Scheduled job pulls API \u2192 bronze JSON \u2192 silver flatten + type cast \u2192 MERGE on `sku_id`.\n\n**Idempotency:** Use `api_batch_id` + `sku_id`; store raw response in bronze for replay.",
+    "anchor": "q-2"
+  },
+  {
+    "id": 3,
+    "tier": "basic",
+    "category": "lakehouse",
+    "title": "Migrate data warehouse to lakehouse",
+    "body": "Team wants to move raw Parquet on S3 to governed tables with ACID. 200 TB historical data.",
+    "solution": "**Approach:** Convert to Delta/Iceberg via `CONVERT` or rewrite jobs; Unity Catalog/Glue for governance; phased migration by domain.\n\n**Tradeoffs:** Rewrite cost vs in-place conversion; enable OPTIMIZE/VACUUM schedule.",
+    "anchor": "q-3"
+  },
+  {
+    "id": 4,
+    "tier": "basic",
+    "category": "medallion",
+    "title": "Bronze layer for SaaS exports",
+    "body": "Daily Salesforce exports (CSV) with varying columns. Design bronze ingestion.",
+    "solution": "**Approach:** Land as-is with `_file_name`, `_ingest_ts`, `_row_hash`; schema evolution allowed; no business logic.\n\n**Why:** Preserves audit trail; silver handles schema mapping.",
+    "anchor": "q-4"
+  },
+  {
+    "id": 5,
+    "tier": "medium",
+    "category": "kafka",
+    "title": "Order events to analytics",
+    "body": "E-commerce emits 10K orders/sec as JSON to Kafka. Need real-time revenue dashboard and daily reconciliation.",
+    "solution": "**Approach:** Kafka topic `orders` (key=customer_id) \u2192 Flink 1-min tumbling revenue \u2192 Redis/ClickHouse for dashboard; parallel Spark batch daily from bronze Delta fed by Kafka Connect.\n\n**Lambda note:** Reconcile stream totals vs batch gold nightly.",
+    "anchor": "q-5"
+  },
+  {
+    "id": 6,
+    "tier": "medium",
+    "category": "cdc",
+    "title": "PostgreSQL CDC to lake",
+    "body": "OLTP Postgres 2 TB, need near-real-time customer dimension in lake. Deletes must propagate.",
+    "solution": "**Approach:** Debezium \u2192 Kafka `db.public.customers` \u2192 Spark Structured Streaming MERGE Delta silver SCD2.\n\n**Deletes:** `op=d` tombstone \u2192 mark `is_active=false` or hard delete per policy.",
+    "anchor": "q-6"
+  },
+  {
+    "id": 7,
+    "tier": "medium",
+    "category": "batch-streaming",
+    "title": "Batch vs stream for clickstream",
+    "body": "100M events/day, product wants both real-time funnel and daily reports. Recommend architecture.",
+    "solution": "**Recommend:** Kappa-ish \u2014 Kafka bronze \u2192 Flink for 5-min funnel (gold RT table) + Spark daily aggregation from same bronze.\n\n**Avoid:** Separate ingestion paths duplicating logic; share silver conformed events.",
+    "anchor": "q-7"
+  },
+  {
+    "id": 8,
+    "tier": "medium",
+    "category": "sla",
+    "title": "Pipeline missed SLA",
+    "body": "Gold `daily_revenue` was 3 hours late. How do you respond and prevent recurrence?",
+    "solution": "**Response:** Communicate stakeholders, check upstream delays, rerun from last good checkpoint, validate counts.\n\n**Prevent:** SLA monitors on freshness, critical path alerting, buffer in schedule, dependency sensors in Airflow, runbook.",
+    "anchor": "q-8"
+  },
+  {
+    "id": 9,
+    "tier": "medium",
+    "category": "data-quality",
+    "title": "Quarantine bad records",
+    "body": "5% of incoming IoT sensor readings are out of range. Design handling without blocking good data.",
+    "solution": "**Approach:** Validate in silver; split valid \u2192 merge gold, invalid \u2192 quarantine Delta table + DLQ metrics; alert if invalid rate > threshold.\n\n**Replay:** Fix rules and reprocess quarantine batch.",
+    "anchor": "q-9"
+  },
+  {
+    "id": 10,
+    "tier": "medium",
+    "category": "medallion",
+    "title": "Silver to gold for star schema",
+    "body": "Silver has normalized orders, customers, products. Design gold for BI star schema.",
+    "solution": "**Approach:** Spark job builds `fact_orders` (grain: order_line) and dims with surrogate keys; slowly changing dim Type 2 on customer.\n\n**Partition:** `order_date`; Z-order on `customer_id` for Delta.",
+    "anchor": "q-10"
+  },
+  {
+    "id": 11,
+    "tier": "medium",
+    "category": "lakehouse",
+    "title": "Iceberg vs Delta choice",
+    "body": "Multi-engine team uses Spark, Flink, and Trino. Recommend table format.",
+    "solution": "**Recommend Iceberg** for broad engine support and hidden partitioning.\n\n**If** all-in Databricks \u2192 Delta + Unity Catalog. Document catalog choice and migration path.",
+    "anchor": "q-11"
+  },
+  {
+    "id": 12,
+    "tier": "hard",
+    "category": "kafka",
+    "title": "Kafka consumer lag spike",
+    "body": "Consumer lag grew to 6 hours on payments topic (32 partitions). Diagnose and fix.",
+    "solution": "**Diagnose:** Slow processing, rebalance, deploy restart, downstream throttle, skewed keys.\n\n**Fix:** Scale consumers to 32, optimize processing, fix hot partitions (salt keys), increase retention temporarily, replay with parallel batch catch-up.",
+    "anchor": "q-12"
+  },
+  {
+    "id": 13,
+    "tier": "hard",
+    "category": "cdc",
+    "title": "CDC schema breaking change",
+    "body": "Source adds NOT NULL column without default. CDC stream breaks. Design resilience.",
+    "solution": "**Approach:** Schema Registry compatibility BACKWARD; Debezium schema change event \u2192 pause consumer \u2192 migrate silver schema \u2192 deploy new code \u2192 resume.\n\n**Prevention:** Contract tests, staging CDC mirror, nullable defaults on source.",
+    "anchor": "q-13"
+  },
+  {
+    "id": 14,
+    "tier": "hard",
+    "category": "batch-streaming",
+    "title": "Backfill 2 years orders",
+    "body": "New gold metric needs 2 years history while streaming continues. Design backfill.",
+    "solution": "**Approach:** Snapshot bronze/archive OR batch from source DB \u2192 write to `gold_orders_v2` partition by month; dual-run streaming to new logic on new table; validate row counts vs old gold; atomic swap view.",
+    "anchor": "q-14"
+  },
+  {
+    "id": 15,
+    "tier": "hard",
+    "category": "sla",
+    "title": "Define SLAs for 50 gold tables",
+    "body": "Platform has 50 gold tables with mixed criticality. How to tier and monitor?",
+    "solution": "**Tier 1:** 1h freshness, page on breach. **Tier 2:** 24h, email. **Tier 3:** best effort.\n\n**Monitor:** Unified freshness table (max event time vs now); Monte Carlo/DataDog; ownership per domain.",
+    "anchor": "q-15"
+  },
+  {
+    "id": 16,
+    "tier": "hard",
+    "category": "data-quality",
+    "title": "End-to-end DQ observability",
+    "body": "Executives want trust metrics across bronze/silver/gold. Design framework.",
+    "solution": "**Approach:** Great Expectations suites per layer; metrics \u2192 Prometheus/Grafana; freshness + completeness + accuracy scores per dataset; lineage in OpenLineage; monthly trust report.",
+    "anchor": "q-16"
+  },
+  {
+    "id": 17,
+    "tier": "hard",
+    "category": "medallion",
+    "title": "Medallion for ML features",
+    "body": "Data science needs feature store from same medallion layers. Design integration.",
+    "solution": "**Approach:** Gold feature tables (point-in-time correct joins from silver SCD2); Feast or Databricks Feature Store reads gold; training snapshots via time travel Delta.\n\n**Avoid:** Leakage \u2014 always join features as-of event time.",
+    "anchor": "q-17"
+  },
+  {
+    "id": 18,
+    "tier": "hard",
+    "category": "lakehouse",
+    "title": "Time travel for audit",
+    "body": "Regulator requires point-in-time data snapshots for 7 years. Design on Delta Lake.",
+    "solution": "**Approach:** Retain history via retention policy + periodic VACUUM exceptions for audit tables; `DESCRIBE HISTORY` / `TIMESTAMP AS OF` for investigations; export monthly snapshots to WORM storage.",
+    "anchor": "q-18"
+  },
+  {
+    "id": 19,
+    "tier": "hard",
+    "category": "kafka",
+    "title": "Exactly-once Kafka to warehouse",
+    "body": "Finance requires exactly-once ledger entries from Kafka to Snowflake. Design.",
+    "solution": "**Approach:** Idempotent MERGE on `transaction_id`; consumer stores offsets in same transaction as load (Kafka Connect EOS) OR Flink two-phase commit; dedupe table on `(topic, partition, offset)` as safety net.",
+    "anchor": "q-19"
+  },
+  {
+    "id": 20,
+    "tier": "hard",
+    "category": "batch-streaming",
+    "title": "Global multi-region ingestion",
+    "body": "Users in US, EU, APAC generate events. GDPR requires EU data in EU. Design.",
+    "solution": "**Approach:** Regional Kafka clusters \u2192 regional bronze buckets (S3 eu-west-1, etc.); separate processing; global gold only for aggregated non-PII metrics; no cross-border PII replication.",
+    "anchor": "q-20"
+  }
+]

@@ -1,0 +1,1715 @@
+{
+  "1": {
+    "answer": "Get Metadata inspects structure and file properties without reading row data — it returns item name, size, last modified, child items, exists, and schema metadata. Lookup executes a query or stored procedure and returns actual row-level data (up to 5,000 rows). Use Get Metadata for folder/file discovery and pre-validation; use Lookup for small config tables, watermarks, or control values that drive dynamic pipelines.",
+    "points": [
+      "Get Metadata = structural/file metadata only; no row reads",
+      "Lookup = query/SP result set for control-plane data",
+      "Get Metadata fields: childItems, lastModified, itemName, structure",
+      "Lookup caps: 5,000 rows and 4 MB output",
+      "Typical pattern: Get Metadata → Filter → ForEach → Copy",
+      "Lookup feeds parameters like watermark or table name"
+    ],
+    "de": "Nightly bronze ingest: Get Metadata on `abfss://bronze@stg.dfs.core.windows.net/incoming/` lists new CSV child items; Lookup reads `etl.watermark` for last `file_ts`; only files newer than watermark are copied to ADLS bronze before Databricks silver MERGE.",
+    "mistake": "Using Lookup to read thousands of file names from a SQL table instead of Get Metadata on the folder — hits row/size limits and adds unnecessary database dependency.",
+    "interviewTip": "Draw two boxes: 'what exists in storage' (Get Metadata) vs 'what value drives the pipeline' (Lookup). Give one bronze landing example for each.",
+    "syntax": "// ForEach items from Get Metadata\n@activity('GetMetadata1').output.childItems\n\n// Lookup watermark\n@activity('LookupWatermark').output.firstRow.last_processed_ts",
+    "table": [
+      [
+        "Aspect",
+        "Get Metadata",
+        "Lookup"
+      ],
+      [
+        "Reads rows",
+        "No — file/folder properties only",
+        "Yes — SQL/query/SP result"
+      ],
+      [
+        "Row limit",
+        "N/A (lists child items)",
+        "5,000 rows / 4 MB max"
+      ],
+      [
+        "Typical use",
+        "Discover new files in ADLS",
+        "Read watermark/config row"
+      ],
+      [
+        "IR required",
+        "Yes — dataset linked service IR",
+        "Yes — database IR"
+      ]
+    ]
+  },
+  "2": {
+    "answer": "Lookup activity is designed for lightweight control data — it returns at most 5,000 rows and the serialized result cannot exceed 4 MB. It is ideal for reading a watermark row, config table, or small reference list to parameterize downstream activities. For bulk data movement or large dimension lists, use Copy activity, Data Flow, or push the join logic into Databricks instead of Lookup.",
+    "points": [
+      "Hard cap: 5,000 rows maximum",
+      "Output size cap: 4 MB total",
+      "Supports query, table, and stored procedure sources",
+      "First row accessible via output.firstRow",
+      "Full array via output.value for ForEach",
+      "Not a substitute for Copy or Spark joins"
+    ],
+    "de": "Before incremental Copy from on-prem SQL to ADLS bronze, Lookup selects `last_modified_ts` from `etl.watermark` where `source_name='orders'` — one row drives the source query predicate `WHERE modified_ts > @{last_ts}`.",
+    "mistake": "Looping Lookup inside ForEach to fetch per-key rows from a large table — explodes runtime and still hits caps; stage keys in a temp table and Copy once.",
+    "interviewTip": "State the caps first, then say 'I only use Lookup for control plane — watermark, config, validation counts under a few thousand rows.'",
+    "syntax": "SELECT last_watermark FROM etl.watermark WHERE pipeline_name = 'pl_orders_bronze'"
+  },
+  "3": {
+    "answer": "The Fail activity deliberately terminates a pipeline with a custom error code and message. Use it after validation activities (e.g., Lookup row count, Get Metadata file exists) when business rules require a hard stop rather than silent success. It integrates with Azure Monitor alerts and dependency conditions so downstream work does not proceed on bad data.",
+    "points": [
+      "Fail activity raises controlled pipeline failure",
+      "Custom message and error code for alerting",
+      "Place on Success path after If Condition validation",
+      "No linked service or IR required",
+      "Distinct from activity Failure dependency path",
+      "Makes data-quality failures visible in Monitor"
+    ],
+    "de": "After Copy lands bronze files, Lookup checks `SELECT COUNT(*) FROM etl.file_audit WHERE run_id=@runId` — If count=0, Fail activity raises 'No files ingested for partition dt=@{partition}' before Databricks silver job starts.",
+    "mistake": "Letting pipeline succeed when row count is zero because Fail was never wired after the validation If Condition — gold dashboards show stale data with green status.",
+    "interviewTip": "Frame it as 'circuit breaker for data quality' — name the validation, the Fail message, and who gets alerted.",
+    "syntax": "{ \"name\": \"FailOnZeroRows\", \"type\": \"Fail\", \"typeProperties\": { \"message\": \"Bronze load empty\", \"errorCode\": \"DQ001\" } }"
+  },
+  "4": {
+    "answer": "ADF does not allow a ForEach activity nested directly inside another ForEach in the same pipeline. The standard pattern is an outer ForEach that calls a child pipeline via Execute Pipeline for each item; the child pipeline contains its own ForEach. Pass the outer item as a pipeline parameter so the inner loop processes sub-items (e.g., dates then files per date).",
+    "points": [
+      "No true nested ForEach in one pipeline canvas",
+      "Workaround: outer ForEach + Execute Pipeline child",
+      "Pass outer item via pipeline parameters",
+      "Child holds inner ForEach and Copy/Data Flow",
+      "Modular design improves reuse and testing",
+      "Watch parallel ForEach concurrency on both levels"
+    ],
+    "de": "Outer ForEach iterates `@pipeline().parameters.date_list`; each iteration Execute Pipeline `pl_ingest_day` with `p_date`. Child ForEach loops Get Metadata childItems under `bronze/incoming/dt=@{p_date}/` and Copy each CSV to ADLS.",
+    "mistake": "Trying to drag ForEach inside ForEach on the same canvas — ADF blocks it; teams waste time before discovering Execute Pipeline pattern.",
+    "interviewTip": "Say 'ADF composes loops via pipeline hierarchy, not nested containers' and sketch parent → child Execute Pipeline.",
+    "syntax": "@pipeline().parameters.date_list  // outer ForEach items\n@pipeline().parameters.p_folder     // passed into child"
+  },
+  "5": {
+    "answer": "Day-over-day slowdown usually means growing data volume without matching scale. Check Copy DIU/parallelism, sink table indexes and partitioning, watermark/filter predicates, Data Flow cluster size, and audit tables that accumulate unbounded history. Review Monitor duration trends per activity, query plans on source/sink, and whether incremental logic still pushes filters to the source.",
+    "points": [
+      "Compare Monitor run duration trend per activity",
+      "Verify incremental watermark still filters source",
+      "Check sink indexes, stats, and partition strategy",
+      "Increase Copy parallelCopies / DIU if appropriate",
+      "Data Flow: right-size compute and partition hints",
+      "Audit/control tables growing without retention"
+    ],
+    "de": "Orders pipeline slowed from 8 min to 45 min as bronze grew — root cause was Lookup scanning full `etl.run_log` without date filter. Fix: partition log table by `run_date`, add predicate, move heavy transforms to Databricks Delta OPTIMIZE on `order_date`.",
+    "mistake": "Only increasing DIU without checking an unindexed SQL sink MERGE target — money spent, bottleneck unchanged.",
+    "interviewTip": "Walk through Monitor → isolate slowest activity → source vs sink vs transform → one concrete fix you applied.",
+    "syntax": "WHERE modified_ts > @{activity('LookupWatermark').output.firstRow.wm}"
+  },
+  "6": {
+    "answer": "Wait activity pauses pipeline execution for a specified number of seconds (up to 86400). It runs entirely on the ADF control plane and consumes zero Integration Runtime capacity — no Azure IR, SHIR, or SSIS IR is involved. Common uses include short delays before polling external systems, spacing out API calls to avoid throttling, or waiting for eventual consistency after a storage write.",
+    "points": [
+      "Pauses pipeline for N seconds (max 86400)",
+      "Runs on ADF service — no IR consumed",
+      "No linked service or dataset needed",
+      "Useful for API rate-limit spacing",
+      "Not a substitute for event-driven triggers",
+      "Pair with Until/Web for polling patterns"
+    ],
+    "de": "After Copy writes parquet to ADLS bronze, Wait 30 seconds before Databricks notebook trigger — storage listing occasionally lags; Wait avoids 'file not found' on immediate downstream read.",
+    "mistake": "Using long Wait chains instead of Event trigger or Get Metadata exists check — fragile timing, extends SLA unnecessarily.",
+    "interviewTip": "Mention 'zero IR' explicitly — interviewers often test whether you confuse control-plane vs data-plane activities.",
+    "syntax": "{ \"name\": \"Wait30s\", \"type\": \"Wait\", \"typeProperties\": { \"waitTimeInSeconds\": 30 } }"
+  },
+  "7": {
+    "answer": "Debug run executes unpublished pipeline changes interactively from the Author pane for developer testing — it does not use production triggers and may behave differently around IR debug settings. Trigger run executes a published pipeline initiated by schedule, tumbling window, event, or manual trigger — fully logged in Monitor with production configuration. Always validate with a trigger run before relying on debug behavior.",
+    "points": [
+      "Debug = unpublished, interactive, developer testing",
+      "Trigger run = published pipeline, production config",
+      "Debug may not appear in trigger history",
+      "Publish required before schedule/event triggers fire",
+      "Monitor shows trigger runs with full audit trail",
+      "Parameter defaults may differ debug vs published"
+    ],
+    "de": "Developer Debug-runs `pl_bronze_copy` against dev ADLS; after PR merge and Publish, Schedule trigger at 02:00 UTC runs the same pipeline against prod ADLS → Databricks silver workflow.",
+    "mistake": "Shipping pipeline tested only in Debug without Publish — trigger never fires or runs stale published version.",
+    "interviewTip": "Contrast 'authoring sandbox' vs 'operational execution' and mention Publish + Monitor run ID for audits.",
+    "table": [
+      [
+        "Aspect",
+        "Debug run",
+        "Trigger run"
+      ],
+      [
+        "Pipeline version",
+        "Unpublished draft",
+        "Published"
+      ],
+      [
+        "Initiation",
+        "Author pane Debug button",
+        "Schedule/Event/Manual trigger"
+      ],
+      [
+        "Monitor history",
+        "Limited debug context",
+        "Full trigger run log"
+      ],
+      [
+        "Production IR",
+        "May use debug IR settings",
+        "Production IR config"
+      ]
+    ]
+  },
+  "8": {
+    "answer": "Configure a failure notification on the pipeline or activity Failure dependency path. Common patterns: Web activity calling Logic App (Office 365 Outlook connector), SendGrid REST API, or Azure Function that formats pipeline name, RunId, activity name, and error message from `@activity('Copy1').error.message`. Alternatively enable ADF native alerts in Azure Monitor for failed pipeline runs.",
+    "points": [
+      "Wire Web/Logic App on Failure dependency path",
+      "Pass @pipeline().RunId and error message in body",
+      "Logic App + Office 365 is common enterprise pattern",
+      "Azure Monitor alert rule on ADF failed runs",
+      "Avoid emailing on Success path only",
+      "Use Key Vault for API keys in Web activity"
+    ],
+    "de": "When `pl_medallion_bronze` Copy fails, Web activity POSTs to Logic App webhook with `factory`, `runId`, `activity=Copy_ADLS`, `error` — email to DE on-call before Databricks silver is skipped.",
+    "mistake": "Attaching notification Web activity on Completion instead of Failure — team gets emails on success and misses real failures.",
+    "interviewTip": "Describe dependency arrow color (red Failure path) and which dynamic expressions you pass to the alert payload.",
+    "syntax": "@concat('Pipeline ', pipeline().Pipeline, ' failed: ', activity('Copy1').error.message)"
+  },
+  "9": {
+    "answer": "For REST API sources, create a REST linked service (base URL, authentication — Anonymous, Basic, AAD, or API key) and a REST dataset pointing to the relative resource path. In Copy activity, select REST as source dataset; ADF handles pagination via additional columns if configured. Sink is typically JSON files in ADLS bronze or a staging table before Databricks processes nested JSON.",
+    "points": [
+      "REST linked service defines base URL + auth",
+      "REST dataset = relative path / resource endpoint",
+      "Copy source type: REST dataset",
+      "Supports additional columns for pagination tokens",
+      "Landing JSON to ADLS bronze is common pattern",
+      "Complex flattening often done in Databricks not Copy"
+    ],
+    "de": "Copy REST linked service `https://api.vendor.com/v1/orders` with AAD service principal → ADLS `bronze/api/orders/dt=@{utcnow('yyyy-MM-dd')}/orders.json` → Databricks Auto Loader to Delta silver.",
+    "mistake": "Selecting HTTP/Generic dataset when REST connector with proper auth and pagination is required — auth failures and partial page downloads.",
+    "interviewTip": "Name auth method (AAD vs API key), landing zone path, and where flattening happens (Databricks).",
+    "syntax": "{ \"linkedServiceName\": { \"referenceName\": \"ls_rest_api\", \"type\": \"LinkedServiceReference\" }, \"type\": \"RestResource\", \"typeProperties\": { \"relativeUrl\": \"orders?since=@{variables('wm')}\" } }"
+  },
+  "10": {
+    "answer": "Use a metadata-driven pattern: store file-to-table mappings in a config table (file_name, target_schema, target_table, delimiter). Lookup reads config rows, ForEach iterates, parameterized Copy moves each on-prem file via Self-hosted IR to the correct SQL table. One generic pipeline replaces ten hard-coded copies — add new files by inserting config rows only.",
+    "points": [
+      "Config table maps source file → target table",
+      "Self-hosted IR for on-prem file/SQL access",
+      "Lookup → ForEach → parameterized Copy",
+      "Pipeline parameters: filePath, tableName",
+      "Single pipeline maintains ten loads",
+      "SHIR on machine with network to file share + SQL"
+    ],
+    "de": "`etl.file_config` lists 10 on-prem CSVs and Synapse table targets; nightly ADF Lookup → ForEach → Copy via SHIR lands to bronze ADLS, then Databricks loads silver — config row drives both paths.",
+    "mistake": "Building 10 separate pipelines instead of one parameterized pattern — CI/CD and bug fixes multiplied by ten.",
+    "interviewTip": "Lead with config table columns and say 'one pipeline, N rows in config' — shows metadata-driven maturity.",
+    "syntax": "INSERT INTO etl.file_config VALUES ('office.csv','dbo','Office',1);\n@item().target_table  // ForEach Copy sink dynamic table"
+  },
+  "11": {
+    "answer": "Use Get Metadata on the folder with Child Items field, then Filter activity on `item().name` with expression `endsWith(item().name, '.csv')` or wildcard. Pass Filter output to ForEach. Alternatively set Copy source wildcard path `*.csv` directly if all CSVs go to one sink pattern. Combine with lastModified filter when only recent files should process.",
+    "points": [
+      "Get Metadata childItems lists folder contents",
+      "Filter on extension: endsWith(name,'.csv')",
+      "ForEach on @activity('Filter').output.Value",
+      "Copy wildcard *.csv when pattern is simple",
+      "Event trigger can filter blob path pattern",
+      "Avoid processing _SUCCESS or manifest files"
+    ],
+    "de": "ADLS `bronze/incoming/` has CSV and JSON; Get Metadata → Filter `endsWith(.csv)` → ForEach Copy to `bronze/csv/`; JSON files routed to separate child pipeline for Databricks semi-structured ingest.",
+    "mistake": "ForEach over all childItems without Filter — loads .tmp and .json into SQL COPY expecting CSV.",
+    "interviewTip": "Mention Filter output path `@activity('Filter1').output.Value` — shows you know expression wiring.",
+    "syntax": "@and(endsWith(item().name,'.csv'), not(startsWith(item().name,'_')))"
+  },
+  "12": {
+    "answer": "A metadata-driven pipeline stores source paths, targets, formats, schedules, and active flags in a control table instead of hard-coding them in pipeline JSON. At runtime, Lookup reads active config rows and ForEach + parameterized Copy/Data Flow processes each object. One generic pipeline scales to hundreds of tables with minimal code changes — ideal for platform teams and medallion bronze ingestion factories.",
+    "points": [
+      "Config table is single source of truth for loads",
+      "Generic pipeline reads config at runtime",
+      "Add datasets by inserting rows, not new pipelines",
+      "Supports enable/disable via is_active flag",
+      "Centralizes logging and error handling",
+      "Foundation for data mesh ingestion hubs"
+    ],
+    "de": "`etl.ingest_config` holds 200 source-to-bronze mappings; one `pl_metadata_driver` Lookup → ForEach Execute Pipeline `pl_copy_bronze` with parameters; Databricks job triggered per domain partition.",
+    "mistake": "Config table without versioning or audit — wrong row silently routes payroll to wrong ADLS folder.",
+    "interviewTip": "Contrast '100 pipelines' vs '1 driver + config rows' and mention enable flag and environment-specific config DB.",
+    "syntax": "SELECT * FROM etl.ingest_config WHERE is_active = 1 AND env = 'prod'"
+  },
+  "13": {
+    "answer": "Medallion (multi-hop) architecture layers data by quality and purpose: Bronze holds raw immutable landing aligned to source; Silver applies cleansing, typing, deduplication, and conformed keys; Gold delivers business aggregates and star schemas for BI. ADF orchestrates movement between layers — Copy to bronze, triggers Databricks for silver/gold Delta tables on ADLS.",
+    "points": [
+      "Bronze: raw, append-only, source-faithful",
+      "Silver: cleansed, validated, conformed entities",
+      "Gold: business metrics, aggregates, reporting models",
+      "ADLS Gen2 is typical storage for all layers",
+      "ADF orchestrates; Databricks transforms Delta",
+      "Enables replay and audit from bronze"
+    ],
+    "de": "ADF Copy on-prem SQL → ADLS `bronze/orders/`; event trigger fires Databricks notebook for silver `delta/orders` MERGE; second workflow builds gold `agg_daily_revenue` for Power BI.",
+    "mistake": "Skipping bronze and transforming in-flight — lose replay ability when silver logic changes.",
+    "interviewTip": "Draw three zones on ADLS; state what ADF vs Databricks owns in each hop.",
+    "table": [
+      [
+        "Layer",
+        "Purpose",
+        "Typical ADF role"
+      ],
+      [
+        "Bronze",
+        "Raw landing",
+        "Copy, Event trigger, Get Metadata"
+      ],
+      [
+        "Silver",
+        "Cleansed conformed",
+        "Trigger Databricks MERGE jobs"
+      ],
+      [
+        "Gold",
+        "BI-ready aggregates",
+        "Orchestrate SP or Databricks gold job"
+      ]
+    ]
+  },
+  "14": {
+    "answer": "An Event trigger starts a pipeline when a storage event occurs — typically Blob Created or Blob Deleted in a specified storage account, container, and optional path prefix or file pattern. It enables near-real-time ingestion instead of polling. Example: when vendor drops `sales_*.csv` into `raw/incoming/`, ADF immediately runs bronze Copy and kicks off Databricks silver processing.",
+    "points": [
+      "Fires on Blob Created or Blob Deleted",
+      "Scoped to storage account + container + path filter",
+      "Near-real-time alternative to schedule polling",
+      "Requires Event Grid subscription on storage",
+      "Pipeline must be published for trigger to work",
+      "Pair with idempotent downstream MERGE keys"
+    ],
+    "de": "Partner uploads to `abfss://landing@stg.dfs.core.windows.net/vendor/` → Event trigger starts `pl_bronze_ingest` → Copy to `bronze/vendor/` → Execute Pipeline Databricks `wf_silver_vendor`.",
+    "mistake": "Event trigger on container without prefix filter — every metadata file triggers a full pipeline run.",
+    "interviewTip": "Give file-arrival story with container path and mention publish requirement.",
+    "syntax": "{ \"blobPathBeginsWith\": \"/landing/vendor/\", \"blobPathEndsWith\": \".csv\", \"events\": [\"Microsoft.Storage.BlobCreated\"] }"
+  },
+  "15": {
+    "answer": "Schedule trigger fires on wall-clock cadence (cron-like) with no memory of prior windows — each run is independent. Tumbling Window trigger divides time into fixed non-overlapping intervals, tracks each window's state, supports dependencies between windows, retries per window, and backfill for historical periods. Use tumbling window when pipeline must process exactly once per time slice with state.",
+    "points": [
+      "Schedule: calendar-based, stateless runs",
+      "Tumbling window: fixed intervals, stateful",
+      "Tumbling supports window chaining dependencies",
+      "Retry and backfill per specific window",
+      "Tumbling needs startTime, frequency, interval",
+      "Schedule simpler for daily batch ETL"
+    ],
+    "de": "Hourly tumbling window processes `bronze/events/hour=@{windowStartTime}` partitions with dependency on previous hour success; daily schedule trigger runs gold aggregation at 06:00 UTC after all windows complete.",
+    "mistake": "Using schedule trigger for hourly partitions without idempotency — reruns double-load the same hour.",
+    "interviewTip": "Say 'stateless cron vs stateful window with backfill' — interviewers love tumbling window dependency chains.",
+    "table": [
+      [
+        "Aspect",
+        "Schedule trigger",
+        "Tumbling window"
+      ],
+      [
+        "State",
+        "Stateless",
+        "Stateful per window"
+      ],
+      [
+        "Overlap",
+        "Independent runs",
+        "Non-overlapping windows"
+      ],
+      [
+        "Backfill",
+        "Manual reruns",
+        "Built-in window backfill"
+      ],
+      [
+        "Use case",
+        "Daily ETL",
+        "Hourly partition processing"
+      ]
+    ]
+  },
+  "16": {
+    "answer": "Retry policy on an activity specifies how many times ADF automatically retries after a transient failure and the interval between attempts. Configure retry count, interval in seconds, and optionally secure input/output. It helps with flaky network, API throttling, or brief source unavailability without failing the entire pipeline immediately.",
+    "points": [
+      "Settings: retry count + interval (seconds)",
+      "Applies per activity, not whole pipeline",
+      "Handles transient failures (network, throttle)",
+      "Does not fix logic errors — still fails after retries",
+      "Default often 0 retries — set explicitly for Copy",
+      "Combine with pipeline-level alerting on final fail"
+    ],
+    "de": "Copy from on-prem SQL via SHIR has retry=3, interval=60s — handles nightly VPN blip; after exhaustion, Failure Web activity alerts team before Databricks silver is skipped.",
+    "mistake": "Setting retry=10 on a bad SQL syntax error — wastes 30 minutes before surfacing a dev bug.",
+    "interviewTip": "Distinguish transient (retry) vs permanent (Fail fast) and name your typical retry count for Copy.",
+    "syntax": "{ \"policy\": { \"retry\": 3, \"retryIntervalInSeconds\": 60, \"secureOutput\": false } }"
+  },
+  "17": {
+    "answer": "In Monitor, open the failed pipeline run and use 'Rerun from failed activity' (or select a specific activity and rerun from there). ADF re-executes the chosen activity and all downstream dependencies without rerunning upstream succeeded steps. Available for triggered runs — saves time and avoids duplicate loads from already-succeeded Copy steps.",
+    "points": [
+      "Monitor → pipeline run → Rerun from failed activity",
+      "Can rerun from any selected activity downstream",
+      "Upstream succeeded activities are skipped",
+      "Preserves same RunId context in monitoring",
+      "Critical for long pipelines after transient fail",
+      "Ensure idempotent sink for partial reruns"
+    ],
+    "de": "Activity 5 Databricks notebook fails on silver MERGE; rerun from activity 4 Set Variable — skips bronze Copy already landed to ADLS, replays silver only.",
+    "mistake": "Full pipeline rerun after activity 5 fails — duplicates bronze Copy rows without idempotent keys.",
+    "interviewTip": "Mention idempotency requirement when discussing rerun — shows production awareness.",
+    "syntax": "// Monitor UI: Rerun from 'Notebook_Silver' activity"
+  },
+  "18": {
+    "answer": "Build dynamic pipelines using parameters at pipeline, dataset, and linked service levels with expressions like `@pipeline().parameters.tableName` and `@dataset().paramFilePath`. Lookup reads a config table to supply parameter values; ForEach iterates rows. Avoid hard-coded paths — one pipeline template serves many sources and environments via parameter files in CI/CD.",
+    "points": [
+      "Parameters on pipeline, dataset, linked service",
+      "Expressions: @pipeline(), @dataset(), @item()",
+      "Lookup + ForEach drives dynamic values",
+      "Dynamic datasets use param in file path/table",
+      "ARM parameter files per environment",
+      "system variables: RunId, TriggerTime, WindowStart"
+    ],
+    "de": "`pl_dynamic_copy` parameters `p_schema`, `p_table`, `p_partition`; Lookup from `etl.config` supplies values; Copy writes `abfss://bronze@.../schema=@{p_schema}/table=@{p_table}/`.",
+    "mistake": "Hard-coding table names in dataset JSON while claiming 'dynamic pipeline' — breaks CI/CD promotion.",
+    "interviewTip": "Walk one expression end-to-end: config row → parameter → dataset path → Copy sink.",
+    "syntax": "@{concat('abfss://bronze@stg.dfs.core.windows.net/', pipeline().parameters.table, '/')}"
+  },
+  "19": {
+    "answer": "Add logging activities on both Success and Failure paths using Stored Procedure or Copy to a SQL audit table. Log `@pipeline().RunId`, pipeline name, trigger time, status, row counts, error message from `@activity('X').error`, and duration. Use 'On Completion' dependency for a final audit step that always runs regardless of outcome.",
+    "points": [
+      "Audit table: run_id, pipeline, status, timestamps",
+      "Use @pipeline().RunId for unique execution ID",
+      "Stored Procedure or Copy insert to SQL sink",
+      "Wire Success, Failure, and Completion paths",
+      "Capture activity-level error.message on fail",
+      "Enables SLA dashboards and rerun analysis"
+    ],
+    "de": "`etl.pipeline_run_log` receives INSERT from Stored Procedure on Completion with RunId, bronze row count from Copy output `rowsCopied`, and Databricks run id — Power BI tracks medallion SLA.",
+    "mistake": "Logging only on Success path — failed runs missing from audit, SLA reports look artificially healthy.",
+    "interviewTip": "List exact columns you log and which expression supplies RunId — concrete beats abstract.",
+    "syntax": "EXEC etl.usp_log_run @run_id=@runId, @status=@status, @rows=@rowsCopied"
+  },
+  "20": {
+    "answer": "Stored Procedure activity requires an Integration Runtime connected to the target database — Azure IR for Azure SQL/Synapse, Self-hosted IR for on-prem SQL. Wait and Fail activities run on the ADF control plane and need zero IR and zero linked services. This distinction matters for capacity planning and troubleshooting 'IR not available' errors.",
+    "points": [
+      "Stored Procedure: 1 IR (via linked service)",
+      "Wait: 0 IR — ADF service only",
+      "Fail: 0 IR, 0 linked services",
+      "Azure IR for cloud SQL; SHIR for on-prem",
+      "Fail does not touch any data store",
+      "Common interview trap — don't say '1 IR for all'"
+    ],
+    "de": "Logging SP on Azure SQL uses Azure IR; Wait 10s before trigger; Fail on zero rows uses no IR — pipeline mixes control-plane and data-plane activities.",
+    "mistake": "Saying all activities need IR — fails Wait/Fail questions and reveals shallow ADF knowledge.",
+    "interviewTip": "Group activities: 'data-plane needs IR, control-plane does not' — then give Stored Procedure example.",
+    "table": [
+      [
+        "Activity",
+        "IR needed",
+        "Linked service"
+      ],
+      [
+        "Stored Procedure",
+        "Yes (DB IR)",
+        "Yes — SQL"
+      ],
+      [
+        "Wait",
+        "No",
+        "No"
+      ],
+      [
+        "Fail",
+        "No",
+        "No"
+      ]
+    ]
+  },
+  "21": {
+    "answer": "Execute Pipeline activity invokes a child pipeline from a parent, optionally passing parameters and waiting for completion (synchronous) or fire-and-forget (asynchronous). It enables modular design — separate bronze, silver orchestration, and logging into reusable child pipelines. Master pipeline chains Execute Pipeline calls for end-to-end medallion workflows.",
+    "points": [
+      "Invokes child pipeline with optional parameters",
+      "Synchronous: wait for child completion",
+      "Enables modular reusable pipeline design",
+      "Master pipeline orchestrates domain children",
+      "Failure in child fails parent Execute Pipeline",
+      "Preferred over duplicating activity groups"
+    ],
+    "de": "Parent `pl_medallion_daily` Execute Pipeline `pl_bronze_ingest` → `pl_databricks_silver` → `pl_gold_agg` — each child owns ADLS paths and Key Vault secrets for its layer.",
+    "mistake": "One monolithic 80-activity pipeline instead of Execute Pipeline modules — untestable, slow to debug.",
+    "interviewTip": "Describe master-child hierarchy and what parameters cross the boundary (date, domain).",
+    "syntax": "{ \"name\": \"ExecBronze\", \"type\": \"ExecutePipeline\", \"typeProperties\": { \"pipeline\": { \"referenceName\": \"pl_bronze\", \"type\": \"PipelineReference\" }, \"parameters\": { \"p_date\": \"@pipeline().parameters.p_date\" } } }"
+  },
+  "22": {
+    "answer": "ARM stands for Azure Resource Manager. ARM templates are JSON documents declaring Azure resources and their properties for idempotent deployment. In ADF, publishing generates ARM templates containing pipelines, datasets, linked services, triggers, and integration runtimes — deployed across Dev/Test/Prod via CI/CD with environment-specific parameter files overriding connection endpoints.",
+    "points": [
+      "ARM = Azure Resource Manager",
+      "JSON template defines infrastructure + ADF artifacts",
+      "Generated on Publish to adf_publish branch",
+      "Parameter files override per environment",
+      "Enables repeatable Dev → Prod promotion",
+      "Integrates with Azure DevOps / GitHub Actions"
+    ],
+    "de": "Publish from main generates ARM in `adf_publish/`; release pipeline deploys to prod factory with `Prod.parameters.json` swapping ADLS account and Key Vault URIs — same pipeline JSON, different linked service params.",
+    "mistake": "Manually recreating pipelines in prod UI instead of ARM deploy — drift between environments within weeks.",
+    "interviewTip": "Say 'ARM JSON + parameter files' and mention adf_publish branch — shows real CI/CD exposure.",
+    "syntax": "{ \"$schema\": \"https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#\", \"resources\": [...] }"
+  },
+  "23": {
+    "answer": "Connect ADF to Git (Azure DevOps or GitHub), develop in feature branches, merge to collaboration branch, Publish to generate ARM template in adf_publish branch. CI/CD release pipeline deploys ARM to target factories using environment parameter files. Use Azure DevOps YAML or GitHub Actions with ADF deploy task; separate global parameters and Key Vault references per environment.",
+    "points": [
+      "Git integration: feature branch → collaboration branch",
+      "Publish creates adf_publish ARM artifacts",
+      "Release pipeline deploys ARM per environment",
+      "Parameter files for connection strings/endpoints",
+      "Key Vault for secrets — never in Git plaintext",
+      "PR review before merge to main/collaboration"
+    ],
+    "de": "DE opens PR for new bronze pipeline; after merge and Publish, Azure DevOps release deploys to SIT factory, runs smoke trigger, then prod with manual approval — Databricks job name parameterized.",
+    "mistake": "Committing connection strings to Git instead of Key Vault references — security audit failure.",
+    "interviewTip": "Recite the flow: branch → PR → Publish → adf_publish → release pipeline → parameter file.",
+    "syntax": "# Azure DevOps: npm install -g @microsoft/azure-data-factory-utilities\n# node build/deploy.js -f factory -i ARMTemplateForFactory.json -p Prod.parameters.json"
+  },
+  "24": {
+    "answer": "ADF Git mode stores pipeline JSON in Azure DevOps or GitHub. Developers create feature branches, commit changes, open pull requests for review, merge to collaboration/main branch, then Publish to sync live factory and generate ARM for deployment. Deployment uses CI/CD release pipelines — not manual copy-paste — ensuring audit trail and consistent promotion across environments.",
+    "points": [
+      "Feature branches for isolated development",
+      "Pull request review before merge",
+      "Collaboration branch is integration point",
+      "Publish syncs factory + generates ARM",
+      "Release pipeline deploys to higher environments",
+      "Git is source of truth, not live UI edits"
+    ],
+    "de": "Team shares `de-adf-repo`; colleague pulls `feature/add-vendor-bronze`, reviews PR, merges — no rebuild from scratch; ARM promotes to prod factory after approval gate.",
+    "mistake": "Editing live factory without Git — changes lost on next ARM deploy overwrite.",
+    "interviewTip": "Emphasize PR culture and that Publish is required before triggers update in production.",
+    "syntax": "git checkout -b feature/bronze-vendor\ngit push -u origin feature/bronze-vendor  // open PR"
+  },
+  "25": {
+    "answer": "RunId is a GUID uniquely identifying one pipeline execution instance. Use it in audit logs, correlation with Databricks run ids, and support tickets. A new manual or scheduled trigger generates a new RunId. Rerun from failed activity in Monitor reuses the same run context; triggering the pipeline again creates a fresh RunId.",
+    "points": [
+      "RunId = unique GUID per pipeline execution",
+      "Access via @pipeline().RunId in expressions",
+      "Essential for audit and cross-system correlation",
+      "New trigger = new RunId",
+      "Rerun from failed keeps run tracking linked",
+      "Log RunId in SQL audit and alert emails"
+    ],
+    "de": "Bronze Copy logs `@pipeline().RunId` to `etl.audit`; Databricks notebook receives same id as parameter — join ADF Monitor to Spark UI for end-to-end trace.",
+    "mistake": "Using pipeline name as correlation id — collisions across concurrent runs.",
+    "interviewTip": "Explain when RunId changes vs when Monitor rerun preserves lineage.",
+    "syntax": "@pipeline().RunId"
+  },
+  "26": {
+    "answer": "Mapping Data Flow is Spark-based visual ETL for large-scale structured transforms — joins, aggregates, pivots, window functions, and Delta sinks. Wrangling Data Flow (Power Query online) targets smaller interactive data prep with M language, limited scale, and tighter row limits — suited for analyst-style cleansing not production medallion loads.",
+    "points": [
+      "Mapping Data Flow: Spark, production ETL scale",
+      "Wrangling Data Flow: Power Query, smaller datasets",
+      "Mapping supports Delta sink and complex joins",
+      "Wrangling uses M language, limited throughput",
+      "Medallion silver/gold typically uses Mapping",
+      "Wrangling for ad-hoc exploration in ADF"
+    ],
+    "de": "Mapping Data Flow joins bronze ADLS parquet to reference CSV, dedupes, writes Delta silver on ADLS; Wrangling would not scale to nightly 50M-row orders — use Databricks instead.",
+    "mistake": "Choosing Wrangling Data Flow for production SCD Type 2 on millions of rows — wrong tool, timeout and cost.",
+    "interviewTip": "Say 'Spark scale vs analyst prep' and steer production talk to Mapping or Databricks.",
+    "table": [
+      [
+        "Aspect",
+        "Mapping Data Flow",
+        "Wrangling Data Flow"
+      ],
+      [
+        "Engine",
+        "Apache Spark (managed)",
+        "Power Query Online"
+      ],
+      [
+        "Scale",
+        "Large production volumes",
+        "Smaller interactive datasets"
+      ],
+      [
+        "Language",
+        "Visual + expressions",
+        "M language"
+      ],
+      [
+        "Delta sink",
+        "Yes",
+        "Limited / not primary use"
+      ]
+    ]
+  },
+  "27": {
+    "answer": "Mapping Data Flow limitations include cluster cold-start latency (minutes), higher cost than Copy-only pipelines, limited debugging vs IDE notebooks, expression complexity ceiling, and less fine-grained Spark tuning than Databricks. For heavy custom logic, UDFs, or ML features, trigger Databricks notebooks from ADF instead.",
+    "points": [
+      "Cold start: cluster spin-up adds minutes",
+      "Cost: dedicated Spark cluster per Data Flow run",
+      "Debugging harder than Databricks notebook",
+      "Complex logic better in PySpark/Spark SQL",
+      "No arbitrary Python UDF ecosystem like Databricks",
+      "Right-size compute type: General vs Memory Optimized"
+    ],
+    "de": "Team moved 200-step Mapping Data Flow to Databricks notebook — startup dropped from 8 min to 2 min job cluster, same ADLS Delta silver target orchestrated by ADF Execute Pipeline.",
+    "mistake": "Using Data Flow for simple column rename CSV→SQL — pay Spark tax when Copy mapping suffices.",
+    "interviewTip": "Acknowledge when Data Flow fits (visual joins) vs when you hand off to Databricks.",
+    "syntax": "// Data Flow compute: general | memoryOptimized | computeOptimized"
+  },
+  "28": {
+    "answer": "A watermark table stores the last successfully processed boundary per source — typically max modified timestamp, CDC LSN, or incrementing ID. Before incremental Copy, Lookup reads watermark; source query filters `WHERE col > @watermark`; after success, Stored Procedure updates watermark. It is the control mechanism preventing full scans and enabling reliable incremental medallion bronze loads.",
+    "points": [
+      "Stores last processed timestamp/ID per source",
+      "Lookup reads watermark before incremental extract",
+      "Update watermark only after successful commit",
+      "One row per source object or pipeline",
+      "Prevents full table scan each run",
+      "Pair with idempotent MERGE in silver"
+    ],
+    "de": "`etl.watermark`: source=`orders`, wm=`2026-09-04T22:00:00`; ADF Copy `WHERE modified_ts > wm` → ADLS bronze; SP sets wm to MAX(modified_ts) after Databricks silver MERGE succeeds.",
+    "mistake": "Updating watermark before downstream silver fails — gap or duplicate data on rerun.",
+    "interviewTip": "Stress 'update watermark only after end-to-end success' — classic incremental load trap.",
+    "syntax": "UPDATE etl.watermark SET wm_value = @new_max WHERE source_name = 'orders'"
+  },
+  "29": {
+    "answer": "A config table holds metadata driving generic pipelines: source system, path, target table, file format, delimiter, active flag, schedule group, and error contacts. Lookup reads config at runtime so one pipeline processes many objects. It is the operational catalog for metadata-driven ingestion — separate from watermark which tracks processing state.",
+    "points": [
+      "Defines what to load, not last processed value",
+      "Columns: source, target, format, is_active",
+      "Drives Lookup → ForEach → dynamic Copy",
+      "Distinct from watermark (state vs definition)",
+      "Environment-specific config DB or schema",
+      "Enables self-service onboarding via INSERT row"
+    ],
+    "de": "`etl.ingest_config` lists 50 tables from on-prem to ADLS bronze paths; watermark table tracks each table's last ts — together they power one `pl_universal_ingest` orchestrating Databricks silver per domain.",
+    "mistake": "Mixing watermark and config in one table without clear semantics — race conditions on updates.",
+    "interviewTip": "Contrast config='what to process' vs watermark='where we left off'.",
+    "syntax": "SELECT source_path, target_path, format FROM etl.config WHERE is_active=1"
+  },
+  "30": {
+    "answer": "Production deployment uses CI/CD: merge to collaboration branch, Publish in ADF to generate ARM in adf_publish, release pipeline deploys ARM template to prod Data Factory with Prod.parameters.json overriding linked service endpoints, Key Vault URIs, and trigger start times. Manual approval gates and smoke tests on SIT precede prod. Never edit prod factory UI directly when Git mode is enabled.",
+    "points": [
+      "Publish → ARM in adf_publish branch",
+      "Release pipeline with environment gates",
+      "Parameter files swap endpoints per env",
+      "Key Vault references for prod secrets",
+      "Smoke test trigger on SIT before prod",
+      "Avoid live prod UI edits — Git is truth"
+    ],
+    "de": "Friday release: ARM deploy to prod `adf-prod` with parameters pointing to prod ADLS `stgprod` and prod Databricks workspace; schedule trigger enabled post-validation Copy test.",
+    "mistake": "Deploying ARM without stopping triggers first — duplicate overlapping runs during deployment.",
+    "interviewTip": "Mention approval gate + parameter file + post-deploy smoke trigger.",
+    "syntax": "Prod.parameters.json → factoryName, ls_adls_properties_typeProperties_url"
+  },
+  "31": {
+    "answer": "SCD types define how dimension changes are handled. Type 0: no updates allowed — immutable attributes. Type 1: overwrite old value, no history. Type 2: insert new row with effective dates and current flag, full history preserved. Type 3: store previous value in separate column — limited history. In medallion gold, Type 2 is most common for customer/product dimensions; implement via Data Flow or Databricks MERGE.",
+    "points": [
+      "Type 0: insert-only, no changes",
+      "Type 1: overwrite — no history",
+      "Type 2: new row + effective dates + is_current",
+      "Type 3: previous value column — one generation back",
+      "Type 2 standard for compliance/audit",
+      "ADF Data Flow or Databricks for Type 2 MERGE"
+    ],
+    "de": "Customer dimension in gold: email typo → Type 1 overwrite; address change → Type 2 closes old row (`end_date`, `is_current=0`), inserts new current row via Databricks MERGE orchestrated by ADF.",
+    "mistake": "Using Type 1 for attributes requiring audit history — regulators see no trail.",
+    "interviewTip": "Give one attribute example per type — interviewers want business context not definitions only.",
+    "table": [
+      [
+        "Type",
+        "Behavior",
+        "History"
+      ],
+      [
+        "0",
+        "No updates",
+        "Original only"
+      ],
+      [
+        "1",
+        "Overwrite",
+        "None"
+      ],
+      [
+        "2",
+        "New row",
+        "Full"
+      ],
+      [
+        "3",
+        "Add prev column",
+        "Limited"
+      ]
+    ]
+  },
+  "32": {
+    "answer": "Get Metadata field list options depend on dataset type. For storage: Item Name, Item Type, Size, Created, Last Modified, Child Items, Content MD5, Exists, Is Folder. For structured sources: Structure, Column Count. Select only needed fields to minimize latency. Child Items powers file discovery; Last Modified supports incremental file picking.",
+    "points": [
+      "Storage: childItems, lastModified, itemName, size",
+      "Structure/columnCount for tabular metadata",
+      "Exists checks single file before Copy",
+      "Content MD5 for integrity validation",
+      "Select minimal field list for performance",
+      "Child Items returns array for Filter/ForEach"
+    ],
+    "de": "Get Metadata on `bronze/incoming/` with Child Items + Last Modified → Filter files newer than watermark → ForEach Copy to partitioned ADLS bronze before Databricks Auto Loader.",
+    "mistake": "Requesting all fields including Structure on huge folders — slow metadata calls every run.",
+    "interviewTip": "Name 3 fields you actually use in production: childItems, lastModified, exists.",
+    "syntax": "{ \"fieldList\": [\"childItems\", \"itemName\", \"lastModified\", \"exists\"], \"dataset\": { \"referenceName\": \"ds_adls_folder\" } }"
+  },
+  "33": {
+    "answer": "Azure Key Vault stores secrets, keys, and certificates referenced by ADF linked services via `@Microsoft.KeyVault(SecretUri=...)`. ADF retrieves secrets at runtime using Managed Identity — credentials never appear in Git-exported ARM or pipeline JSON. Central rotation in Key Vault updates all linked services without redeploying pipeline logic.",
+    "points": [
+      "Secrets stored in Azure Key Vault",
+      "Linked services reference SecretUri expression",
+      "ADF MSI authenticates to Key Vault",
+      "No plaintext passwords in Git/ARM",
+      "Supports secret rotation without code change",
+      "Grant ADF 'Get' permission on secrets"
+    ],
+    "de": "SQL linked service connection string and Databricks token stored in Key Vault; dev/prod ARM parameter files point to different vault URIs — same pipeline, environment-safe secrets.",
+    "mistake": "Hard-coding SQL password in linked service — exposed in ARM export and Git history.",
+    "interviewTip": "Say Managed Identity + Key Vault reference — security reviewers listen for this.",
+    "syntax": "@Microsoft.KeyVault(SecretUri=https://kv-de.vault.azure.net/secrets/sql-connection/)"
+  },
+  "34": {
+    "answer": "In Mapping Data Flow use Derived Column with `iif(isNull(col), defaultValue, col)` or `coalesce()`. Conditional Split routes null records to a separate stream for quarantine ADLS path. In Copy activity, column mapping and type conversion settings handle nulls at load time. For silver quality, enforce not-null rules in Databricks expectations rather than only in ADF.",
+    "points": [
+      "Derived Column: iif(isNull(), default, col)",
+      "Conditional Split quarantines null key rows",
+      "Copy mapping: type conversion defaults",
+      "coalesce() for first non-null value",
+      "Silver layer should enforce DQ rules",
+      "Log quarantine counts to audit table"
+    ],
+    "de": "Data Flow Conditional Split sends null `customer_id` rows to `bronze/quarantine/orders/`; valid rows MERGE to Delta silver; ADF logs quarantine count via Stored Procedure.",
+    "mistake": "Silently coalescing null business keys to 'UNKNOWN' — corrupts gold joins.",
+    "interviewTip": "Prefer quarantine stream over silent default for primary keys.",
+    "syntax": "iif(isNull(customer_id), toString('MISSING'), toString(customer_id))"
+  },
+  "35": {
+    "answer": "On Completion dependency runs the downstream activity after the upstream finishes regardless of success or failure — unlike Success-only (green) or Failure-only (red) paths. Use it for mandatory cleanup, audit logging, or notification that must execute even when Copy fails. Pair with If Condition inside the completion branch to branch on status if needed.",
+    "points": [
+      "Runs after upstream completes — success OR fail",
+      "Different from Success (green) dependency",
+      "Ideal for audit log that always writes",
+      "Cleanup temp files even on failure",
+      "Combine with If on activity().status",
+      "Prevents orphaned resources on failed runs"
+    ],
+    "de": "Copy to bronze may fail; On Completion Stored Procedure always INSERTs run outcome to `etl.audit` with status from `@activity('Copy1').status` before pipeline ends.",
+    "mistake": "Using Success dependency for audit log — failed runs leave no audit row.",
+    "interviewTip": "Contrast three arrows: Success, Failure, Completion — draw them on whiteboard.",
+    "syntax": "{ \"dependencyConditions\": [\"Completed\"], \"activities\": [\"LogAudit\"] }"
+  },
+  "36": {
+    "answer": "Add a Fail activity with custom message and errorCode after a validation If Condition — e.g., Lookup returns row_count=0 or Get Metadata childItems empty. Fail stops pipeline with explicit error visible in Monitor and triggers alerts. Prefer Fail over silent success when business rules require non-empty loads or schema validation pass.",
+    "points": [
+      "Fail activity with message + errorCode",
+      "Place after If validation on Success branch",
+      "Lookup/Get Metadata feed validation expressions",
+      "Visible failure in Monitor and alerts",
+      "No IR or linked service required",
+      "Better than letting empty load succeed"
+    ],
+    "de": "If `@activity('LookupFileCount').output.firstRow.cnt` equals 0, Fail with 'No vendor files for dt=@{partition}' — prevents empty Databricks MERGE marking silver green.",
+    "mistake": "If Condition with empty True branch — pipeline succeeds doing nothing.",
+    "interviewTip": "Give validation rule + Fail message text — sounds like production ops.",
+    "syntax": "{ \"type\": \"Fail\", \"typeProperties\": { \"message\": \"Row count zero\", \"errorCode\": \"DQ_EMPTY\" } }"
+  },
+  "37": {
+    "answer": "Set ForEach Items to the Filter activity output array: `@activity('Filter1').output.Value`. Filter takes Get Metadata childItems and applies expression like endsWith(name,'.csv'). The filtered array becomes iteration input for parameterized Copy activities inside ForEach.",
+    "points": [
+      "ForEach Items = @activity('Filter').output.Value",
+      "Filter input from Get Metadata childItems",
+      "Expression filters by extension, prefix, date",
+      "Each item() has name, type properties",
+      "Sequential vs parallel batch in ForEach settings",
+      "Empty Filter output skips Copy iterations"
+    ],
+    "de": "Get Metadata childItems → Filter `endsWith(.parquet)` → ForEach Copy to `bronze/table=@{item().name}` on ADLS for Databricks bronze-to-silver.",
+    "mistake": "ForEach on full childItems forgetting Filter — processes archive and temp files.",
+    "interviewTip": "Recite the expression chain: Get Metadata → Filter → ForEach Items field.",
+    "syntax": "@activity('FilterCSVs').output.Value"
+  },
+  "38": {
+    "answer": "Web Hook activity calls an HTTP endpoint and suspends the pipeline until the external system POSTs back to ADF's callback URL with continuation token. Used for manual approvals, long-running external jobs, or partner systems that signal completion asynchronously. Unlike Web activity, pipeline does not proceed until callback arrives or timeout.",
+    "points": [
+      "Calls URL then waits for callback to ADF",
+      "ADF provides callbackUrl in request body",
+      "External system POSTs back to resume pipeline",
+      "Used for manual approval workflows",
+      "Timeout configuration prevents infinite wait",
+      "Distinct from synchronous Web activity"
+    ],
+    "de": "Web Hook notifies approval API for prod ADLS overwrite; approver clicks link; API callbacks ADF; pipeline resumes Databricks gold publish — audit trail in Monitor wait duration.",
+    "mistake": "Using Web Hook when synchronous Web + Until loop suffices — unnecessary complexity.",
+    "interviewTip": "Emphasize 'pause until callback' vs Web 'fire and continue'.",
+    "syntax": "{ \"url\": \"https://api.approval.com/request\", \"method\": \"POST\", \"body\": { \"callbackUrl\": \"@{listCallbackUrl()}\" } }"
+  },
+  "39": {
+    "answer": "Typical environments: Dev (developer experimentation), SIT/Test/QA (integration testing), UAT (business validation), Prod (live). Promote via CI/CD ARM deployment with environment-specific parameter files — different ADLS accounts, SQL servers, Databricks workspaces, and Key Vaults. Same pipeline JSON; linked service parameters swap per stage.",
+    "points": [
+      "Dev → SIT/QA → UAT → Prod progression",
+      "Separate ADF factory or branch per env",
+      "ARM parameter files per environment",
+      "Key Vault and ADLS endpoints differ",
+      "Approval gates before prod deploy",
+      "Never point dev pipeline at prod data"
+    ],
+    "de": "Dev factory uses `stgdev` ADLS and dev Databricks; ARM `SIT.parameters.json` swaps to `stgsit`; prod release requires change ticket — medallion paths mirror across envs.",
+    "mistake": "Shared prod linked service in dev factory — developer test run corrupts production bronze.",
+    "interviewTip": "List your env names and what parameter file changes between them.",
+    "syntax": "SIT.parameters.json: ls_adls_properties_typeProperties_url → stgsit.dfs.core.windows.net"
+  },
+  "40": {
+    "answer": "Event-based triggers in ADF respond to Azure Blob Storage events via Event Grid: Blob Created and Blob Deleted. Configure storage account, container, optional path begins/ends with filters, and ignore empty blobs option. Multiple triggers can target different path patterns for domain-separated ingestion.",
+    "points": [
+      "Blob Created and Blob Deleted events",
+      "Event Grid subscription on storage account",
+      "Path prefix/suffix filters narrow scope",
+      "Ignore empty blobs option available",
+      "Near-real-time pipeline start",
+      "Requires published pipeline + active trigger"
+    ],
+    "de": "Trigger A: `Blob Created` on `landing/orders/*.csv`; Trigger B: `landing/products/*.json` — separate bronze pipelines into ADLS before unified Databricks silver conformed model.",
+    "mistake": "One trigger on entire container — 1000 small files spawn 1000 concurrent pipeline runs.",
+    "interviewTip": "Name both event types and path filter example.",
+    "syntax": "{ \"events\": [\"Microsoft.Storage.BlobCreated\"], \"blobPathBeginsWith\": \"/landing/orders/\" }"
+  },
+  "41": {
+    "answer": "Pipeline shows Succeeded because the last executed activity in the dependency chain succeeded — even if Copy failed earlier. This happens when Web activity is on Completion or unconditional path without Failure dependency from Copy, or when failure path was not wired. Fix: attach alert/logging on Copy Failure path and avoid marking pipeline success when critical activities fail.",
+    "points": [
+      "Overall status = last activity outcome in chain",
+      "Copy fail + Web success on wrong path = Succeeded",
+      "Failure dependency (red arrow) required for fail handling",
+      "Completion runs regardless of Copy status",
+      "Critical activities need Failure → Fail/Alert",
+      "Review dependency graph in Author canvas"
+    ],
+    "de": "Copy to ADLS bronze failed but Web notification on Completion path ran OK — Monitor green while bronze empty; fix: Failure path from Copy → Fail activity + alert before any Completion logging.",
+    "mistake": "Assuming pipeline status reflects worst activity — ADF uses dependency graph terminal nodes.",
+    "interviewTip": "Draw the dependency arrows — interview tests whether you understand green/red/grey paths.",
+    "syntax": "// Copy → (Failure) → WebAlert\n// Copy → (Success) → NextStep"
+  },
+  "42": {
+    "answer": "Even modest daily row growth causes slowdown if sink lacks indexes, incremental predicate stops pushing down, DIU/Data Flow cluster is undersized, or audit tables grow unbounded. A once-fast 5K-row load becomes a full scan if watermark filter is removed or lookup query loses predicate. Profile source query plan and Monitor per-activity duration weekly.",
+    "points": [
+      "Sink table growth without indexes/partitioning",
+      "Watermark/predicate drift — full scans creep in",
+      "Fixed low DIU on growing Copy",
+      "Data Flow cluster too small for volume",
+      "Audit/log tables unbounded growth",
+      "Monitor trend: duration vs row count"
+    ],
+    "de": "8K rows/day but SQL MERGE sink grew to 40M rows without index on merge key — Copy fast, Stored Procedure slow; added index + partition on `order_date`, restored 6-minute SLA.",
+    "mistake": "Blaming ADF when SQL sink MERGE is the bottleneck — check database DMVs.",
+    "interviewTip": "Separate Copy duration from sink merge duration using Monitor drill-down.",
+    "syntax": "WHERE modified_ts > @{watermark}  -- verify predicate still in source query"
+  },
+  "43": {
+    "answer": "Yes — write Delta format using Mapping Data Flow sink configured for Delta on ADLS Gen2 path, not plain Copy to parquet. Copy alone writes parquet/CSV; Delta requires transaction log. Alternatively ADF triggers Databricks notebook with Delta write — preferred for complex medallion silver. Data Flow Delta sink needs linked ADLS and proper folder path.",
+    "points": [
+      "Mapping Data Flow sink format = Delta",
+      "Target ADLS Gen2 abfss path",
+      "Plain Copy cannot create Delta log",
+      "Databricks notebook alternative via ADF",
+      "Delta enables ACID MERGE in silver",
+      "Partition columns in Data Flow sink settings"
+    ],
+    "de": "Mapping Data Flow reads bronze CSV from ADLS, transforms, writes `abfss://silver@stg.dfs.core.windows.net/orders/` as Delta — Databricks optimizes and MERGE downstream.",
+    "mistake": "Copy parquet to folder and calling it Delta — missing _delta_log breaks ACID.",
+    "interviewTip": "Say 'Data Flow Delta sink or Databricks' — never 'Copy creates Delta'.",
+    "syntax": "{ \"sink\": { \"formatSettings\": { \"type\": \"DeltaFormat\" }, \"storeSettings\": { \"type\": \"AzureBlobFSWriteSettings\" } } }"
+  },
+  "44": {
+    "answer": "Minimum two activities if dynamic: one ForEach over array of four file names with one parameterized Copy inside. Alternatively four explicit Copy activities — simpler but not scalable. Config-driven: Lookup four config rows → ForEach → Copy. Add Get Metadata or validation if files may be missing.",
+    "points": [
+      "Dynamic: ForEach (1) + Copy (1) = 2 activities",
+      "Static: 4 Copy activities = 4 activities",
+      "ForEach items: office, product, order, employee CSVs",
+      "Parameterized sink table per item",
+      "Optional Fail if expected file missing",
+      "Metadata-driven scales beyond four files"
+    ],
+    "de": "ForEach `@createArray('office.csv','product.csv','order.csv','employee.csv')` → Copy to `dbo.{basename}` via SHIR from on-prem share; bronze archive to ADLS optional second sink.",
+    "mistake": "1000 files in folder but only filtering in Copy without existence check — silent skip of missing required file.",
+    "interviewTip": "State '2 activities minimum dynamic' and explain parameterization.",
+    "syntax": "@createArray('office.csv','product.csv','order.csv','employee.csv')"
+  },
+  "45": {
+    "answer": "Data Flow challenges: cluster startup latency, higher per-run cost than Copy, limited debugging and stepping, expression complexity limits, less Spark tuning than Databricks, and vendor connector edge cases. Teams often hit maintenance pain on very complex visual graphs — refactor to Databricks for silver while ADF orchestrates.",
+    "points": [
+      "Cold start latency every run",
+      "Spark cluster cost vs serverless Copy",
+      "Hard to unit test visual transformations",
+      "Complex graphs become unreadable",
+      "Limited vs Databricks for UDFs/ML",
+      "Monitoring inside Data Flow less granular"
+    ],
+    "de": "45-step Mapping Data Flow replaced by 200-line PySpark in Databricks — ADF Execute Pipeline triggers notebook; same ADLS Delta paths, 60% cost reduction.",
+    "mistake": "Building entire medallion silver in Data Flow because UI is easy — unmaintainable at scale.",
+    "interviewTip": "Balance: 'good for mid-complexity joins; hand off heavy logic to Databricks'.",
+    "syntax": "// Prefer: ADF orchestrates, Databricks transforms Delta on ADLS"
+  },
+  "46": {
+    "answer": "Parameters are typed inputs declared on pipelines, datasets, and linked services, supplied at runtime via trigger, Execute Pipeline parent, or ARM deployment. They make artifacts reusable — e.g., `p_tableName`, `p_partitionDate`, `p_filePath` — instead of hard-coding values. Expressions reference `@pipeline().parameters.p_name` or `@dataset().p_path` for dynamic behavior across environments.",
+    "points": [
+      "Declared on pipeline, dataset, linked service",
+      "Types: string, int, bool, array, object",
+      "Set by trigger, parent pipeline, or ARM",
+      "Expressions access via @pipeline().parameters",
+      "Default values for optional parameters",
+      "Global parameters for factory-wide constants"
+    ],
+    "de": "Trigger passes `p_business_date`; dataset path `bronze/orders/dt=@{dataset().p_date}/`; Execute Pipeline passes domain code — one pipeline ingests all ADLS bronze domains.",
+    "mistake": "Using pipeline variables where parameters are needed — variables can't be set at trigger time from ARM.",
+    "interviewTip": "Differentiate parameters (external input) vs variables (internal state).",
+    "syntax": "\"parameters\": { \"p_table\": { \"type\": \"String\", \"defaultValue\": \"orders\" } }"
+  },
+  "47": {
+    "answer": "Export ARM template from ADF or copy pipeline JSON from Git repo / Author export. Grant colleague access to same Azure DevOps Git repo — they pull collaboration branch. Alternatively use ADF's import resource to paste JSON into their dev factory. Never rebuild manually — share via version control for audit and CI/CD compatibility.",
+    "points": [
+      "Export ARM template from ADF UI",
+      "Share via Git repo — preferred",
+      "Import pipeline JSON to target factory",
+      "Grant RBAC on factory or Git project",
+      "ARM includes linked services + datasets",
+      "Colleague adjusts parameter files for env"
+    ],
+    "de": "Complex medallion orchestrator exported via Git PR; new team member clones repo, deploys ARM to personal dev factory with Dev.parameters.json — connects to dev ADLS and Databricks.",
+    "mistake": "Screenshots of canvas — not reproducible, no CI/CD path.",
+    "interviewTip": "Answer Git/ARM first — shows enterprise practice over ad-hoc export.",
+    "syntax": "Azure Data Factory → Manage → ARM template → Export"
+  },
+  "48": {
+    "answer": "Public endpoint exposes a service over the internet (e.g., storage.blob.core.windows.net) protected by firewall and RBAC. Private endpoint assigns a private IP in your VNet via Azure Private Link — traffic stays on Microsoft backbone, never public internet. Enterprises use private endpoints for ADLS, SQL, and Key Vault when ADF SHIR or Azure IR must access resources without public exposure.",
+    "points": [
+      "Public: internet-routable endpoint + firewall rules",
+      "Private: VNet IP via Private Link",
+      "Traffic never traverses public internet",
+      "Required for many compliance architectures",
+      "ADF SHIR in VNet uses private endpoints",
+      "DNS private zone maps endpoint hostname"
+    ],
+    "de": "Prod ADLS and Key Vault only private endpoints; SHIR VM in hub VNet resolves `stgprod.privatelink.dfs.core.windows.net` — ADF Copy bronze without public storage access.",
+    "mistake": "Enabling public access 'temporarily' for debugging — security review finding.",
+    "interviewTip": "Mention Private Link + DNS zone — shows network-aware DE skills.",
+    "table": [
+      [
+        "Aspect",
+        "Public endpoint",
+        "Private endpoint"
+      ],
+      [
+        "Network path",
+        "Internet (with restrictions)",
+        "Private VNet only"
+      ],
+      [
+        "DNS",
+        "Public Azure DNS",
+        "Private DNS zone"
+      ],
+      [
+        "Compliance",
+        "Often insufficient",
+        "Preferred for regulated data"
+      ]
+    ]
+  },
+  "49": {
+    "answer": "Managed Identity is an Azure AD (Entra ID) identity automatically managed for an Azure resource. ADF uses System-assigned or User-assigned MSI to authenticate to Key Vault, ADLS, Azure SQL without storing credentials. Grant MSI RBAC roles (e.g., Storage Blob Data Contributor) on target resources — eliminates secret rotation in linked services.",
+    "points": [
+      "System-assigned: tied to ADF lifecycle",
+      "User-assigned: shared across resources",
+      "No credentials in code or ARM plaintext",
+      "Authenticate to Key Vault, ADLS, SQL",
+      "RBAC role assignment on target resource",
+      "Preferred over service principal secrets"
+    ],
+    "de": "ADF MSI has Storage Blob Data Contributor on ADLS bronze container — Copy linked service uses MSI auth; Key Vault stores only Databricks token, not storage keys.",
+    "mistake": "Using storage account keys in linked service when MSI suffices — key leakage risk.",
+    "interviewTip": "Say 'MSI + RBAC on ADLS' — zero secrets for cloud-to-cloud.",
+    "syntax": "{ \"type\": \"AzureBlobFSLocation\", \"authenticationType\": \"ManagedIdentity\" }"
+  },
+  "50": {
+    "answer": "Microsoft Entra ID (formerly Azure AD) is Microsoft's cloud identity platform managing users, groups, service principals, and managed identities. It provides authentication and authorization for Azure resources via RBAC. ADF uses Entra ID for portal login, MSI, service principal linked services, and Key Vault access policies — foundation of zero-trust data platform security.",
+    "points": [
+      "Cloud identity and access management (IAM)",
+      "Users, groups, service principals, MSI",
+      "RBAC assigns roles on Azure resources",
+      "Formerly called Azure Active Directory",
+      "Underpins Managed Identity and AAD auth",
+      "Conditional access and MFA for humans"
+    ],
+    "de": "DE team group has Contributor on dev ADF; prod deploy service principal has only Data Factory Contributor + Key Vault Secrets User — Entra RBAC segregates medallion env access.",
+    "mistake": "Shared personal account for prod ADF — no audit trail on who published pipeline.",
+    "interviewTip": "Connect Entra to MSI and RBAC — interviewers link identity to ADF auth patterns.",
+    "syntax": "// Assign: Storage Blob Data Contributor to ADF MSI on ADLS scope"
+  },
+  "51": {
+    "answer": "Azure Monitor collects metrics, logs, and activity data from Azure resources. For ADF: pipeline run failures, activity duration, trigger firing, IR CPU/memory, and integration with Log Analytics workspaces. Set alert rules on failed pipeline runs, build dashboards for SLA tracking, and use diagnostic settings to export ADF logs for long-term retention.",
+    "points": [
+      "Unified metrics, logs, alerts platform",
+      "ADF failed run alert rules",
+      "Log Analytics for query and retention",
+      "Diagnostic settings export ADF logs",
+      "Dashboards for pipeline SLA and duration",
+      "Action groups: email, SMS, Logic App"
+    ],
+    "de": "Alert when `pl_medallion_daily` fails 2 consecutive days; Log Analytics KQL joins ADF RunId to Databricks job id for root-cause dashboard.",
+    "mistake": "Relying only on email from Web activity — no centralized history or KQL analysis.",
+    "interviewTip": "Name one alert rule and one KQL or metric you would monitor.",
+    "syntax": "ADFActivityRun | where Status == 'Failed' | summarize count() by PipelineName"
+  },
+  "52": {
+    "answer": "Develop in feature branch, open PR to collaboration/main branch, complete review, merge, then click Publish in ADF to sync factory and update adf_publish ARM branch. CI/CD release pipeline picks up ARM from adf_publish and deploys to target environments. Main branch in Git is source of truth; Publish bridges Git to deployable ARM artifacts.",
+    "points": [
+      "PR merge to collaboration/main branch",
+      "Publish button generates ARM artifacts",
+      "adf_publish branch holds deployable JSON",
+      "Release pipeline deploys to prod factory",
+      "Do not skip Publish after merge",
+      "Triggers update only after Publish"
+    ],
+    "de": "Merge `feature/bronze-vendor` to main → Publish → release pipeline deploys ARM to prod ADF → enable schedule trigger for nightly ADLS bronze load.",
+    "mistake": "Merged PR but forgot Publish — prod still runs old pipeline version.",
+    "interviewTip": "Emphasize Publish step — common gap between Git merge and production.",
+    "syntax": "git merge feature/x → ADF Publish → CI/CD release from adf_publish"
+  },
+  "53": {
+    "answer": "ARM templates are JSON documents following Azure Resource Manager schema. They declare resources array with type, apiVersion, name, properties, parameters, variables, and outputs. ADF publish generates factory-scoped ARM with Microsoft.DataFactory/factories/linkedservices, datasets, pipelines, triggers as nested resources.",
+    "points": [
+      "Format: JSON per Azure ARM schema",
+      "Sections: parameters, variables, resources",
+      "ADF resources nested under factory",
+      "apiVersion per resource type",
+      "Deployed via az deployment or DevOps task",
+      "Parameter files supply environment values"
+    ],
+    "de": "ARMTemplateForFactory.json + ARMTemplateParametersForFactory.json deployed via Azure DevOps to prod — swaps ADLS URL in linked service properties block.",
+    "mistake": "Hand-editing ARM without schema knowledge — deployment validation errors.",
+    "interviewTip": "Simply say JSON — then mention parameters file if they want depth.",
+    "syntax": "{ \"$schema\": \"...\", \"contentVersion\": \"1.0.0.0\", \"parameters\": {}, \"resources\": [] }"
+  },
+  "54": {
+    "answer": "Set Variable activity assigns a value to a pipeline variable at runtime, overwriting previous value. Used for counters, flags, aggregating state mid-pipeline. Append Variable builds arrays incrementally. Variables are mutable pipeline-scoped state; unlike parameters they are set during execution via activities, not at trigger invocation.",
+    "points": [
+      "Overwrites pipeline variable value",
+      "Append Variable builds array variables",
+      "Variables scoped to pipeline run",
+      "Mutable vs immutable parameters",
+      "Use in subsequent activity expressions",
+      "Track loop counters or status flags"
+    ],
+    "de": "Set Variable `files_copied` from Copy output `rowsCopied`; Append Variable collects error messages from parallel ForEach before final audit Stored Procedure.",
+    "mistake": "Expecting Set Variable to pass data across pipeline runs — variables reset each RunId.",
+    "interviewTip": "Contrast variable (internal mutable) vs parameter (external input).",
+    "syntax": "{ \"name\": \"SetCounter\", \"type\": \"SetVariable\", \"typeProperties\": { \"variableName\": \"fileCount\", \"value\": \"@activity('Copy1').output.rowsCopied\" } }"
+  },
+  "55": {
+    "answer": "Switch activity evaluates an expression and routes to matching case branches — like switch-case in programming. Includes default branch when no case matches. Cleaner than chaining multiple If Condition activities for multi-value routing — e.g., route by file extension or domain code to different child pipelines.",
+    "points": [
+      "Expression evaluated once against cases",
+      "Multiple case branches + default",
+      "Cleaner than nested If conditions",
+      "Route by domain, format, or region code",
+      "Each case contains activity group",
+      "Default catches unmatched values"
+    ],
+    "de": "Switch on `@pipeline().parameters.domain`: case 'orders' → Execute Pipeline bronze orders; case 'products' → products; default → Fail unknown domain — single entry pipeline for ADLS medallion.",
+    "mistake": "Five nested If activities — unreadable canvas; Switch is the fix.",
+    "interviewTip": "Give switch expression and two cases — shows practical routing.",
+    "syntax": "{ \"on\": { \"value\": \"@pipeline().parameters.file_type\", \"cases\": { \"csv\": [...], \"json\": [...] } } }"
+  },
+  "56": {
+    "answer": "Mapping Data Flow provides visual ETL transformations at scale — source, select, join, aggregate, pivot, window, sink. It runs on Apache Spark under the hood via ADF-managed Spark clusters. Purpose: code-free transformations between ADLS layers when team prefers visual design over Databricks notebooks — with Spark parallelism for large volumes.",
+    "points": [
+      "Visual ETL designer in ADF",
+      "Engine: Apache Spark (managed cluster)",
+      "Transforms: join, aggregate, derive, split",
+      "Scales with partition and cluster size",
+      "Sinks: ADLS, SQL, Delta",
+      "Orchestrated by pipeline Data Flow activity"
+    ],
+    "de": "Data Flow reads bronze parquet from ADLS, joins to reference dimension, writes Delta silver — ADF pipeline schedules nightly after Copy completes, before gold Databricks aggregation.",
+    "mistake": "Thinking Data Flow is ADF-native engine — it's Spark; plan for cluster time.",
+    "interviewTip": "Always say 'Spark under the hood' — separates you from UI-only answers.",
+    "syntax": "// Pipeline activity type: ExecuteDataFlow → mappingDataflow reference"
+  },
+  "57": {
+    "answer": "ADF does not support true nested If Condition inside another If's true/false branch in the same pipeline. Workaround: in outer If's branch, call Execute Pipeline child that contains the inner If Condition. Alternatively use Switch for multi-branch routing. Same composition pattern as nested ForEach.",
+    "points": [
+      "No nested If in single pipeline canvas",
+      "Execute Pipeline child holds inner If",
+      "Switch alternative for multi-way branch",
+      "Pass outer condition result as parameter",
+      "Modular child pipelines improve clarity",
+      "Same limitation pattern as nested ForEach"
+    ],
+    "de": "Outer If checks `files_exist`; True branch Execute Pipeline `pl_process_files` where inner If routes CSV vs JSON to different ADLS bronze paths before Databricks.",
+    "mistake": "Attempting nested If on canvas — blocked; wasted design time.",
+    "interviewTip": "Pair with nested ForEach answer — 'ADF composes via child pipelines'.",
+    "syntax": "// Outer If True → ExecutePipeline pl_inner_validation"
+  },
+  "58": {
+    "answer": "Three Integration Runtime types: Azure IR (fully managed cloud-to-cloud data movement and Data Flow compute), Self-hosted IR (SHIR — on-prem/VM agent for private or on-prem sources), Azure-SSIS IR (hosts SSIS packages lifted to Azure). Choose IR per linked service based on where data lives and network reachability.",
+    "points": [
+      "Azure IR: cloud sources, Data Flow, Copy cloud-to-cloud",
+      "SHIR: on-prem, private VNet, VM-local files",
+      "Azure-SSIS IR: legacy SSIS package execution",
+      "IR selected on linked service/dataset",
+      "SHIR requires install + registration key",
+      "Multiple SHIR nodes for HA scaling"
+    ],
+    "de": "Azure IR for ADLS↔Synapse Copy; SHIR for on-prem SQL extract to ADLS bronze; Databricks triggered separately — medallion hybrid connectivity.",
+    "mistake": "Installing SHIR when both source and sink are Azure PaaS — unnecessary ops overhead.",
+    "interviewTip": "Map each source type to IR in one sentence — classic ADF fundamentals.",
+    "table": [
+      [
+        "IR type",
+        "Use case",
+        "Hosting"
+      ],
+      [
+        "Azure IR",
+        "Cloud-to-cloud, Data Flow",
+        "Microsoft-managed"
+      ],
+      [
+        "Self-hosted IR",
+        "On-prem, VNet private",
+        "Your VM/on-prem"
+      ],
+      [
+        "Azure-SSIS IR",
+        "SSIS packages",
+        "Azure-managed SSIS nodes"
+      ]
+    ]
+  },
+  "59": {
+    "answer": "Create Self-hosted IR in ADF Manage tab — copy authentication key. Download Integration Runtime installer on on-prem Windows VM with network access to sources. Run installer, register with key, verify 'Running' status in ADF. Configure linked services to use SHIR. For HA, register multiple nodes to same SHIR. Ensure outbound HTTPS to Azure and firewall rules to data sources.",
+    "points": [
+      "Create SHIR in ADF → get auth key",
+      "Install IR software on accessible VM",
+      "Register with key — status Running",
+      "Linked services reference SHIR name",
+      "Multi-node registration for HA",
+      "Outbound 443 to Azure required"
+    ],
+    "de": "SHIR on on-prem ETL server connects to SQL Server and file share; nightly Copy to ADLS `bronze/onprem/`; Azure IR handles ADLS to Databricks — split IR by hop.",
+    "mistake": "SHIR on machine without route to SQL port — Copy fails with timeout; misdiagnosed as ADF bug.",
+    "interviewTip": "List steps in order: create → install → register → verify → link.",
+    "syntax": "// Manage → Integration runtimes → New → Self-Hosted → copy key"
+  },
+  "60": {
+    "answer": "Delete activity needs exactly one Integration Runtime — the IR associated with the dataset's linked service being deleted from. Azure IR for cloud ADLS/Blob deletes; Self-hosted IR for on-prem file share deletes. Delete removes files or folders at specified dataset path — use carefully in production with parameter guards.",
+    "points": [
+      "One IR via dataset linked service",
+      "Azure IR for cloud storage delete",
+      "SHIR for on-prem path delete",
+      "No IR for Wait/Fail — Delete needs IR",
+      "Dangerous in prod — parameterize path",
+      "Often used for staging cleanup post-load"
+    ],
+    "de": "After successful bronze Copy, Delete activity removes `staging/tmp/dt=@{date}/` on ADLS via Azure IR — keeps lake clean before Databricks reads final bronze path.",
+    "mistake": "Delete with wildcard path typo — wipes entire bronze container.",
+    "interviewTip": "Mention IR count = 1 and warn about production delete risk.",
+    "syntax": "{ \"name\": \"DeleteStaging\", \"type\": \"Delete\", \"typeProperties\": { \"dataset\": { \"referenceName\": \"ds_staging_folder\" } } }"
+  },
+  "61": {
+    "answer": "Fail activity requires zero linked services and zero datasets — it only raises a pipeline error with custom message and code. It does not connect to any external system. This is a common interview trick question paired with Stored Procedure (needs IR + linked service) and Wait (no IR).",
+    "points": [
+      "Fail activity: 0 linked services",
+      "No dataset reference required",
+      "Control-plane only — raises error",
+      "Custom message and errorCode properties",
+      "Contrast with Stored Procedure (needs SQL LS)",
+      "Used for validation circuit breaker"
+    ],
+    "de": "Fail activity after empty file check needs no connections — purely stops pipeline before any Copy linked service touches ADLS or SQL.",
+    "mistake": "Searching for linked service dropdown on Fail activity — there isn't one; confusion with Lookup.",
+    "interviewTip": "Answer confidently: 'zero linked services' — quick win question.",
+    "syntax": "{ \"type\": \"Fail\", \"typeProperties\": { \"message\": \"Validation failed\", \"errorCode\": \"400\" } }"
+  },
+  "62": {
+    "answer": "Web activity sends HTTP request and immediately continues when response returns — synchronous call. Web Hook sends request including callbackUrl, then pauses pipeline until external system POSTs to callback or timeout. Use Web for notifications and API calls; Web Hook for human approval or async external process completion.",
+    "points": [
+      "Web: synchronous HTTP, continues after response",
+      "Web Hook: async pause until callback",
+      "Web Hook body includes listCallbackUrl()",
+      "Web for alerts, REST API integration",
+      "Web Hook for approval workflows",
+      "Both support auth headers and body"
+    ],
+    "de": "Web POSTs Slack alert on Copy failure immediately; Web Hook waits for data steward approval before ADF triggers destructive ADLS overwrite in silver remediation pipeline.",
+    "mistake": "Using Web Hook for simple email — overkill; Web + Logic App is simpler.",
+    "interviewTip": "One sentence each: 'Web returns and moves on' vs 'Web Hook sleeps until callback'.",
+    "table": [
+      [
+        "Aspect",
+        "Web activity",
+        "Web Hook activity"
+      ],
+      [
+        "Execution",
+        "Synchronous",
+        "Waits for callback"
+      ],
+      [
+        "Pipeline state",
+        "Continues immediately",
+        "Paused until resume"
+      ],
+      [
+        "Use case",
+        "Alerts, API calls",
+        "Manual/async approval"
+      ]
+    ]
+  },
+  "63": {
+    "answer": "Azure Storage redundancy options: LRS (3 copies in one datacenter), ZRS (3 zones in region), GRS (6 copies — secondary region), RA-GRS (read access to secondary), GZRS (zone + geo), RA-GZRS. Trade-off between cost and disaster recovery. ADLS Gen2 inherits blob redundancy — choose GRS/RA-GRS for prod medallion bronze requiring geo-recovery.",
+    "points": [
+      "LRS: single datacenter, lowest cost",
+      "ZRS: zone-redundant within region",
+      "GRS: geo-replicated secondary region",
+      "RA-GRS: read secondary for DR drills",
+      "GZRS/RA-GZRS: zone + geo combined",
+      "ADLS redundancy set at storage account level"
+    ],
+    "de": "Prod ADLS bronze uses GZRS — zone failure tolerance plus geo replica; dev uses LRS for cost; ADF Copy targets same account redundancy regardless of IR.",
+    "mistake": "Assuming ADLS has separate redundancy from underlying storage account — it's configured at account creation.",
+    "interviewTip": "Name LRS vs GRS and when you'd pick RA-GRS for DR read access.",
+    "table": [
+      [
+        "Type",
+        "Copies",
+        "DR scope"
+      ],
+      [
+        "LRS",
+        "3 in one DC",
+        "Local"
+      ],
+      [
+        "ZRS",
+        "3 across zones",
+        "Regional zones"
+      ],
+      [
+        "GRS",
+        "6 cross-region",
+        "Geo"
+      ],
+      [
+        "RA-GRS",
+        "6 + read secondary",
+        "Geo + read DR"
+      ]
+    ]
+  },
+  "64": {
+    "answer": "Azure Blob/ADLS access tiers: Hot (frequent access, highest storage cost, lowest access cost), Cool (infrequent, 30-day minimum), Archive (rare access, hours retrieval latency, cheapest storage). Lifecycle management policies auto-tier bronze aged partitions to Cool/Archive — ADF rarely sets tier; storage policies optimize medallion cost.",
+    "points": [
+      "Hot: active data, frequent reads/writes",
+      "Cool: infrequent, lower storage cost",
+      "Archive: long-term retention, high retrieval latency",
+      "Minimum retention periods per tier",
+      "Lifecycle policy automates tier transitions",
+      "Bronze hot → cool after N days common pattern"
+    ],
+    "de": "ADLS bronze `dt=2024-*` partitions lifecycle to Cool after 90 days; current month Hot for Databricks daily reads; Archive for compliance years — ADF pipelines unchanged.",
+    "mistake": "Archive tier for active bronze ingest path — retrieval delay breaks nightly SLA.",
+    "interviewTip": "Connect tiers to medallion layer age — hot recent bronze, cool/archive historical.",
+    "syntax": "// Storage lifecycle: if last_modified > 90d → tier Cool"
+  },
+  "65": {
+    "answer": "Azure Storage encryption at rest uses Microsoft-managed keys (MMK) by default or customer-managed keys (CMK) in Key Vault for compliance. Encryption in transit requires HTTPS/TLS for all ADF Copy and Data Flow connections. Double encryption available in some regions. ADF linked services should enforce secure transfer required on storage accounts.",
+    "points": [
+      "At rest: MMK default or CMK via Key Vault",
+      "In transit: HTTPS/TLS mandatory",
+      "Secure transfer required on storage account",
+      "CMK for regulatory key control",
+      "ADF honors storage encryption settings",
+      "No plaintext HTTP to storage"
+    ],
+    "de": "Prod ADLS CMK in Key Vault; ADF MSI + secure transfer; SHIR Copy uses TLS to `*.dfs.core.windows.net` — encrypted bronze landing for medallion.",
+    "mistake": "Disabling secure transfer required for 'compatibility' — exposes data in transit.",
+    "interviewTip": "Mention both at-rest (MMK/CMK) and in-transit (HTTPS).",
+    "syntax": "// Storage account: enableSecureTransferRequired = true"
+  },
+  "66": {
+    "answer": "Azure SQL Database service tiers: DTU-based (Basic, Standard, Premium) bundle compute/storage/I/O; vCore-based (General Purpose, Business Critical, Hyperscale) offer separate compute scaling and better I/O. ADF Copy sink performance depends on tier — Premium/Business Critical for heavy MERGE workloads in gold layer staging.",
+    "points": [
+      "DTU: Basic/Standard/Premium bundled model",
+      "vCore: GP, Business Critical, Hyperscale",
+      "Hyperscale for very large warehouse staging",
+      "Tier affects Copy sink throughput and MERGE speed",
+      "Elastic pool for many small databases",
+      "Match tier to incremental load volume"
+    ],
+    "de": "ADF Copy incremental to Synapse staging on GP Gen5 8 vCore; heavy MERGE moved to Databricks Delta gold — SQL tier right-sized for control tables only.",
+    "mistake": "Basic tier for high-throughput ADF Copy sink — throttling and timeouts.",
+    "interviewTip": "Mention vCore GP for most DE workloads; Hyperscale for TB-scale SQL sink.",
+    "table": [
+      [
+        "Model",
+        "Tiers",
+        "Best for"
+      ],
+      [
+        "DTU",
+        "Basic, Standard, Premium",
+        "Simple bundled sizing"
+      ],
+      [
+        "vCore",
+        "GP, BC, Hyperscale",
+        "Scalable DE staging/warehouse"
+      ]
+    ]
+  },
+  "67": {
+    "answer": "Azure Blob Storage is flat-namespace object storage for general files. ADLS Gen2 adds hierarchical namespace (true directories), POSIX ACLs, and optimization for analytics — Hadoop/Spark compatible via abfss:// driver. Medallion lakes use ADLS Gen2 for bronze/silver/gold Delta tables; Blob without HNS lacks efficient directory operations at scale.",
+    "points": [
+      "Blob: flat namespace, general purpose",
+      "ADLS Gen2: hierarchical namespace on Blob",
+      "ADLS: POSIX ACLs, atomic directory ops",
+      "Spark/Databricks prefer abfss ADLS Gen2",
+      "HNS must be enabled at account creation",
+      "ADF supports both; ADLS for data lake patterns"
+    ],
+    "de": "Medallion on `abfss://silver@stg.dfs.core.windows.net/` ADLS Gen2; partition folders `dt=2026-09-05/` — Databricks OPTIMIZE uses HNS efficiently; plain Blob would flatten poorly.",
+    "mistake": "Creating storage without HNS then expecting ADLS Gen2 features — requires new account.",
+    "interviewTip": "Say hierarchical namespace + abfss + Spark — three keywords interviewers want.",
+    "table": [
+      [
+        "Aspect",
+        "Blob Storage",
+        "ADLS Gen2"
+      ],
+      [
+        "Namespace",
+        "Flat",
+        "Hierarchical (HNS)"
+      ],
+      [
+        "Analytics",
+        "General files",
+        "Spark/Hadoop optimized"
+      ],
+      [
+        "Path driver",
+        "wasb/https",
+        "abfss recommended"
+      ]
+    ]
+  },
+  "68": {
+    "answer": "Full load extracts and replaces or appends entire dataset every run — simple but expensive for large sources. Incremental load extracts only new/changed records since last run using watermark, CDC, or change tracking — faster, lighter on source and network. Medallion bronze typically incremental; full load for small dimensions or initial migration.",
+    "points": [
+      "Full: entire dataset each run",
+      "Incremental: delta since watermark/CDC",
+      "Full simpler but costly at scale",
+      "Incremental needs watermark + idempotent sink",
+      "Initial load often full then switch incremental",
+      "ADF Copy supports both via source query"
+    ],
+    "de": "Day 1 full Copy on-prem orders → ADLS bronze; day 2+ incremental `WHERE modified_ts > watermark` — Databricks silver MERGE idempotent on `order_id`.",
+    "mistake": "Incremental without MERGE idempotency — reruns duplicate rows in silver.",
+    "interviewTip": "State watermark mechanism when discussing incremental — not just the word.",
+    "table": [
+      [
+        "Aspect",
+        "Full load",
+        "Incremental load"
+      ],
+      [
+        "Volume",
+        "Entire dataset",
+        "Changed rows only"
+      ],
+      [
+        "Complexity",
+        "Low",
+        "Watermark/CDC required"
+      ],
+      [
+        "Use case",
+        "Small tables, initial load",
+        "Large fact tables daily"
+      ]
+    ]
+  },
+  "69": {
+    "answer": "Incremental pipeline reads watermark (last max modified timestamp or ID) from control table via Lookup. Source query filters records where audit column exceeds watermark — these are new or updated since last run. Unchanged records are not re-extracted. After successful silver commit, update watermark to new maximum. Deletes may need CDC or soft-delete flag if not captured by timestamp alone.",
+    "points": [
+      "Watermark stores last processed boundary",
+      "Compare source audit column vs watermark",
+      "New/updated: audit col > watermark",
+      "Old unchanged records skipped at source",
+      "Update watermark after successful run",
+      "Deletes need CDC or separate detection"
+    ],
+    "de": "Daily ADF: Lookup `wm=2026-09-04` from `etl.watermark`; Copy SQL `WHERE modified_ts > wm`; Databricks MERGE silver; SP sets `wm=MAX(modified_ts)` only after MERGE succeeds.",
+    "mistake": "Timestamp-only incremental misses hard deletes — gold diverges from source.",
+    "interviewTip": "Mention delete handling gap — senior signal beyond basic watermark.",
+    "syntax": "SELECT * FROM orders WHERE modified_ts > @{activity('LookupWM').output.firstRow.wm}"
+  },
+  "70": {
+    "answer": "Implement SCD Type 2 in Mapping Data Flow: source stream joins target on business key via Exists/Lookup; Conditional Split into insert/update/no-change; Alter Row marks expired rows (end_date, is_current=false); sink inserts new current versions. Orchestrate with pipeline Data Flow activity. Alternative: ADF triggers Databricks Delta MERGE — more maintainable at scale.",
+    "points": [
+      "Exists/Lookup compares business key to target",
+      "Conditional Split: new, changed, unchanged",
+      "Expire old row: end_date, is_current=0",
+      "Insert new current version row",
+      "Data Flow sink to Delta or SQL dimension",
+      "Databricks MERGE alternative for complex SCD2"
+    ],
+    "de": "Customer dimension Type 2: Data Flow reads bronze ADLS CDC, compares to silver Delta dim, expires changed rows, inserts new — ADF schedules after nightly bronze Copy.",
+    "mistake": "Type 2 without handling duplicate business keys in bronze — multiple current rows.",
+    "interviewTip": "Walk split paths: new insert, change expire+insert, unchanged skip.",
+    "syntax": "// Alter Row: updateMatchingRows for expire; insertNewRows for new version"
+  },
+  "71": {
+    "answer": "Typically one pipeline per distinct source pattern — often four pipelines (Blob, ADLS, on-prem MongoDB, on-prem SQL) because each needs different linked service, connector, and possibly different IR (SHIR for on-prem). Alternatively one metadata-driven master with Execute Pipeline children per source type. Master pipeline orchestrates parallel migration waves.",
+    "points": [
+      "Different linked service per source type",
+      "On-prem sources need SHIR",
+      "Blob vs ADLS may share Azure IR",
+      "MongoDB connector distinct from SQL",
+      "Master pipeline orchestrates children",
+      "Metadata-driven reduces pipeline count"
+    ],
+    "de": "Four child pipelines: `pl_migrate_blob`, `pl_migrate_adls`, `pl_migrate_mongo`, `pl_migrate_sql` — master Execute Pipeline parallel to ADLS bronze landing zones per domain.",
+    "mistake": "One Copy pipeline with four sources — ADF doesn't support multi-source single Copy.",
+    "interviewTip": "Justify count by connector + IR differences, then mention master orchestrator.",
+    "syntax": "// Master: 4x Execute Pipeline in parallel ForEach or parallel branches"
+  },
+  "72": {
+    "answer": "ForEach Sequential processes items one at a time in order — lower parallelism, safer for rate-limited sources. Batch (parallel) processes multiple items concurrently up to batch count — faster but risks throttling source, IR CPU saturation, or sink locking. Tune batch count based on source capacity and SHIR node count.",
+    "points": [
+      "Sequential: one item at a time, ordered",
+      "Parallel batch: concurrent iterations",
+      "Batch count caps max parallelism",
+      "Sequential for order-dependent or fragile sources",
+      "Parallel for independent file copies",
+      "Monitor IR CPU when parallel batch high"
+    ],
+    "de": "Parallel batch 5 for ADLS file Copies to bronze — independent files; Sequential for on-prem API calls with rate limit 1 req/sec before Databricks trigger.",
+    "mistake": "Batch count 50 on single-node SHIR — OOM and source connection exhaustion.",
+    "interviewTip": "Give numbers: 'batch 5 parallel for files, sequential for API'.",
+    "table": [
+      [
+        "Mode",
+        "Concurrency",
+        "When to use"
+      ],
+      [
+        "Sequential",
+        "1 at a time",
+        "Rate limits, ordering"
+      ],
+      [
+        "Parallel batch",
+        "Up to batch count",
+        "Independent file loads"
+      ]
+    ]
+  },
+  "73": {
+    "answer": "Final parent pipeline status is Failed. When Execute Pipeline child fails, parent activity fails and propagates failure up the chain. Even if pipelines 1-3 succeeded, pipeline 4 failure causes the top-level orchestrator to show Failed — assuming synchronous Execute Pipeline waits for child completion.",
+    "points": [
+      "Child failure fails parent Execute Pipeline",
+      "Failure propagates up entire chain",
+      "Top orchestrator shows Failed status",
+      "Earlier successful children stay succeeded",
+      "Synchronous wait — parent blocks on child",
+      "Monitor shows which Execute Pipeline failed"
+    ],
+    "de": "Medallion chain: bronze OK, silver OK, gold OK, audit log child fails — master `pl_daily` shows Failed despite gold data correct; ops reruns from failed audit child.",
+    "mistake": "Thinking overall status is PartiallySucceeded — ADF parent is Failed or Succeeded.",
+    "interviewTip": "Clear answer: 'Failed' — then explain propagation mechanism.",
+    "syntax": "// Execute Pipeline dependencyConditions: [Succeeded] on child"
+  },
+  "74": {
+    "answer": "Remove or delete the Execute Pipeline activity linking the unwanted child, or reroute its dependency arrows so the chain skips that stage. Child pipeline itself remains in factory — only orchestration connection changes. Update downstream dependencies to connect previous activity directly to next required stage. Republish after Git commit.",
+    "points": [
+      "Delete Execute Pipeline activity from parent",
+      "Reroute dependency arrows around it",
+      "Child pipeline unaffected — only orchestration",
+      "Update downstream to connect prior → next",
+      "Test in dev before prod publish",
+      "Document change in PR for audit"
+    ],
+    "de": "Deprecated vendor bronze Execute Pipeline removed from master; master now goes Copy → Databricks silver directly — ADLS paths unchanged, only orchestration graph updated.",
+    "mistake": "Deleting child pipeline instead of unlinking — breaks other chains still using it.",
+    "interviewTip": "Distinguish 'remove from chain' vs 'delete pipeline resource'.",
+    "syntax": "// Author: delete ExecutePipeline activity + reconnect arrows"
+  },
+  "75": {
+    "answer": "Yes — SHIR can read from cloud sources when Azure IR cannot reach them due to private endpoints, IP restrictions, or VNet isolation. SHIR in VNet with private endpoint access can pull from locked-down ADLS or SQL. However, standard cloud-to-cloud movement should use Azure IR — SHIR adds operational overhead.",
+    "points": [
+      "SHIR not limited to on-prem only",
+      "Use when private endpoint blocks Azure IR",
+      "SHIR in VNet reaches private-linked storage",
+      "Azure IR preferred for open cloud-to-cloud",
+      "Hybrid: SHIR extract, Azure IR load",
+      "Operational cost of maintaining SHIR VMs"
+    ],
+    "de": "Prod ADLS private endpoint only — SHIR in hub VNet pulls to staging; Azure IR Copy from staging to Databricks-accessible ADLS bronze — cloud data via SHIR due to network policy.",
+    "mistake": "Defaulting SHIR for all cloud copies — unnecessary VM maintenance.",
+    "interviewTip": "Yes, but explain network constraint reason — not ignorance of Azure IR.",
+    "syntax": "// Linked service IR = SelfHosted when storage firewall blocks Azure IR"
+  },
+  "76": {
+    "answer": "Use Self-hosted Integration Runtime installed on the VM (or a jump box with access to VM storage). Azure IR cannot reach arbitrary VM file systems. Install SHIR, create linked service pointing to VM file path or share, use Copy activity with SHIR to move data to ADLS bronze via Azure IR second hop if needed.",
+    "points": [
+      "SHIR installed on VM or accessible host",
+      "File System linked service with SHIR",
+      "Azure IR cannot read local VM disks",
+      "Copy VM files → ADLS landing zone",
+      "Ensure VM outbound 443 to Azure",
+      "Consider AzCopy alternative for one-time bulk"
+    ],
+    "de": "SHIR on migration VM reads `D:\\exports\\*.csv` → Copy to `abfss://bronze@stg.dfs.core.windows.net/migration/` → Databricks ingests Delta silver.",
+    "mistake": "Selecting Azure IR for VM local path — connection impossible.",
+    "interviewTip": "One line: 'VM files need SHIR' — common straightforward IR question.",
+    "syntax": "{ \"type\": \"FileServer\", \"host\": \"\\\\vm\\share\", \"linkedServiceName\": \"ls_shir\" }"
+  },
+  "77": {
+    "answer": "Same CI/CD promotion: merge tested changes to collaboration branch, Publish from Dev factory, CI/CD release pipeline deploys ARM template to SIT factory using SIT.parameters.json overriding linked services (ADLS, SQL, Key Vault URIs). Validate with SIT trigger run before prod promotion. Separate factory or same factory different RG — parameter files drive environment differences.",
+    "points": [
+      "ARM deploy Dev → SIT via release pipeline",
+      "SIT.parameters.json swaps endpoints",
+      "Publish before ARM generation",
+      "Smoke test trigger on SIT factory",
+      "Key Vault secrets per environment",
+      "No manual recreate in SIT UI"
+    ],
+    "de": "Dev `adf-dev` published ARM deployed to `adf-sit` with SIT params pointing to `stgsit` ADLS — trigger `pl_medallion` against synthetic data before prod ARM promote.",
+    "mistake": "Copy-paste pipelines in SIT UI — drift from Dev Git source within days.",
+    "interviewTip": "Identical to prod promotion story — parameter file name changes.",
+    "syntax": "az deployment group create -f ARMTemplateForFactory.json -p SIT.parameters.json"
+  },
+  "78": {
+    "answer": "Yes — Lookup activity supports stored procedure as source type. Configure dataset with stored procedure name and parameters; Lookup returns result set (within 5K row / 4 MB limit). Useful for complex watermark logic encapsulated in SP or returning small config result sets from database-side logic.",
+    "points": [
+      "Lookup source type: stored procedure",
+      "Dataset defines SP name and parameters",
+      "Same 5K row / 4 MB limits apply",
+      "Returns firstRow and value array",
+      "Good for encapsulated watermark logic",
+      "Alternative to inline SQL query"
+    ],
+    "de": "Lookup executes `etl.usp_get_watermark @source='orders'` returning one row — drives incremental Copy predicate to ADLS bronze.",
+    "mistake": "SP returning 10K config rows — exceeds Lookup cap; use Copy to temp table.",
+    "interviewTip": "Yes + mention caps still apply — shows complete understanding.",
+    "syntax": "{ \"type\": \"Lookup\", \"typeProperties\": { \"source\": { \"type\": \"SqlSource\", \"sqlReaderStoredProcedureName\": \"etl.usp_get_wm\" } } }"
+  },
+  "79": {
+    "answer": "For more than 5,000 rows use Copy activity to staging table, Mapping Data Flow, or paginated loop with parameterized query (TOP/OFFSET) across multiple Lookup iterations. Best practice: restructure so Lookup only fetches control data; bulk keys and dimensions belong in Copy/Spark. Never force Lookup for fact-table extracts.",
+    "points": [
+      "Copy activity — no 5K row cap",
+      "Data Flow for transform + large reads",
+      "Paginate: TOP/OFFSET loop with ForEach",
+      "Stage large lookup to temp table then Copy",
+      "Redesign: Lookup for control only",
+      "Databricks join for large dimension loads"
+    ],
+    "de": "50K store IDs needed for filter — Copy IDs to `staging.store_ids` then SQL join in source query; Lookup only reads single watermark row for ADF incremental bronze.",
+    "mistake": "Increasing Lookup timeout hoping cap increases — hard platform limit.",
+    "interviewTip": "Offer three alternatives: Copy, pagination, redesign — pick Copy first.",
+    "syntax": "SELECT id FROM big_table ORDER BY id OFFSET @{offset} ROWS FETCH NEXT 1000 ROWS ONLY"
+  },
+  "80": {
+    "answer": "Yes to both — Lookup supports SQL query against table (inline query or table name) and stored procedure execution. Returns result within 5,000 rows and 4 MB. Access via output.firstRow for single value or output.value array for ForEach. Primary use: watermarks, config, validation counts — not bulk extracts.",
+    "points": [
+      "Table/query source: inline SQL supported",
+      "Stored procedure source supported",
+      "firstRow for single-value watermark",
+      "value array for small multi-row config",
+      "5K rows / 4 MB limits always apply",
+      "Dataset uses SQL linked service + IR"
+    ],
+    "de": "Lookup table `etl.config` for active sources; Lookup SP `usp_validation` returning pass/fail row before Databricks silver notebook trigger.",
+    "mistake": "Lookup entire dimension table daily — wrong tool; use Copy or Spark broadcast.",
+    "interviewTip": "Confirm both yes, immediately state caps and intended use case.",
+    "syntax": "// Query: SELECT wm FROM etl.watermark\n// SP: etl.usp_get_config @env='prod'"
+  },
+  "81": {
+    "answer": "Likely cause: growing data volume without scaling — fixed Copy DIU, missing sink indexes/partitions, watermark filter not applied (full scan creep), Data Flow cluster undersized, or growing staging tables. Fix: add/optimize indexes, partition sink by date, increase DIU or parallel copies, right-size Data Flow compute, verify incremental predicate, archive old partitions to Cool tier.",
+    "points": [
+      "Profile Monitor duration trend per activity",
+      "Verify incremental predicate still active",
+      "Add indexes on merge/join keys at sink",
+      "Increase DIU / parallelCopies on Copy",
+      "Right-size Data Flow cluster type",
+      "Archive old ADLS partitions"
+    ],
+    "de": "Orders bronze grew 10x; Copy still 4 DIU full scan after watermark bug — fixed predicate + bumped DIU to 16 + Databricks OPTIMIZE on `order_date` restored 8-min SLA.",
+    "mistake": "Only scaling IR nodes when SQL MERGE missing index is root cause.",
+    "interviewTip": "Structure: symptom → diagnose in Monitor → source vs sink vs transform fix.",
+    "syntax": "WHERE modified_ts > @{watermark}  -- confirm in Copy source query"
+  },
+  "82": {
+    "answer": "Config-driven pipeline reads metadata from control table defining sources, targets, formats, schedules, and active flags. One generic pipeline processes many objects by Lookup → ForEach → parameterized activities. Benefits: faster onboarding (INSERT row not new pipeline), centralized logging, consistent error handling, and reduced CI/CD surface across medallion ingestion.",
+    "points": [
+      "Control table = operational metadata catalog",
+      "Single generic pipeline scales to N objects",
+      "Onboard via config INSERT not pipeline clone",
+      "is_active flag enables/disable loads",
+      "Separate from watermark (state tracking)",
+      "Platform team pattern for data mesh ingest"
+    ],
+    "de": "`etl.ingest_config` 80 rows drive `pl_universal_bronze` — new vendor adds one config row pointing to ADLS path and Databricks notebook param; no new ADF pipeline deployment.",
+    "mistake": "Config table without environment column — dev row accidentally loads to prod ADLS path.",
+    "interviewTip": "Sell business value: 'onboard table in minutes' not just technical pattern.",
+    "syntax": "SELECT * FROM etl.ingest_config WHERE is_active=1 AND environment='prod'"
+  },
+  "83": {
+    "answer": "Cloud computing delivers compute, storage, databases, and networking over the internet on pay-as-you-go pricing. Benefits: elastic scaling, no upfront hardware CapEx, global availability, managed services (ADF, ADLS, Databricks), faster time-to-market, and built-in security/compliance options. DE teams leverage cloud for medallion lakes without operating data centers.",
+    "points": [
+      "On-demand resource provisioning",
+      "Pay-as-you-go / consumption pricing",
+      "Elastic scale up/down for ETL workloads",
+      "Managed PaaS: ADF, ADLS, Databricks",
+      "Global regions for data residency",
+      "Reduced infrastructure operations burden"
+    ],
+    "de": "Medallion platform on Azure: ADF orchestration + ADLS Gen2 + Databricks — scale Databricks job cluster for month-end gold without buying servers.",
+    "mistake": "Assuming cloud is always cheaper — poor sizing costs more than on-prem at steady state.",
+    "interviewTip": "Tie benefits to DE: elastic ETL, managed ADF, no rack management.",
+    "syntax": "// Azure: consumption-based billing per DIU, storage GB, DBU"
+  },
+  "84": {
+    "answer": "IaaS (Infrastructure as a Service) provides virtual machines, storage, and networking while customer manages OS, middleware, and applications. Azure examples: VMs running SHIR, custom ETL tools. Contrast PaaS (ADF, ADLS — Microsoft manages platform) and SaaS. DE uses IaaS mainly for SHIR hosts, jump boxes, or legacy tools not available as PaaS.",
+    "points": [
+      "Provider: hardware, virtualization, network",
+      "Customer: OS, runtime, applications",
+      "Example: Azure VM for SHIR agent",
+      "Contrast PaaS: ADF manages platform layer",
+      "More control but more ops responsibility",
+      "Patching and HA your responsibility on VMs"
+    ],
+    "de": "SHIR runs on Azure VM (IaaS) to reach on-prem SQL via VPN; data lands ADLS (PaaS) processed by Databricks (PaaS) — hybrid model in medallion migration.",
+    "mistake": "Calling ADF IaaS — it's PaaS; only SHIR host VM is IaaS.",
+    "interviewTip": "Give VM-for-SHIR example — connects cloud theory to ADF work.",
+    "table": [
+      [
+        "Layer",
+        "IaaS",
+        "PaaS (ADF/ADLS)"
+      ],
+      [
+        "You manage",
+        "OS, SHIR install",
+        "Pipelines, data"
+      ],
+      [
+        "Azure manages",
+        "Hardware, hypervisor",
+        "Platform, scaling"
+      ]
+    ]
+  },
+  "85": {
+    "answer": "Cloud ETL/ELT services include Azure Data Factory, Azure Synapse Pipelines, Databricks (notebooks/jobs), AWS Glue, Google Cloud Dataflow, Informatica Cloud, and Fivetran for SaaS ingest. ADF is orchestration-focused; Databricks is transform-focused — common pattern: ADF + ADLS + Databricks medallion. Mention both proprietary Azure and multi-cloud awareness.",
+    "points": [
+      "Azure: ADF, Synapse Pipelines, Databricks",
+      "AWS: Glue, EMR, Step Functions",
+      "GCP: Dataflow, Dataproc, Cloud Composer",
+      "SaaS: Fivetran, Stitch for SaaS sources",
+      "ADF orchestrates; Databricks transforms",
+      "Synapse unifies SQL pool + pipelines"
+    ],
+    "de": "Current stack: ADF orchestrates nightly Copy to ADLS bronze, Databricks Workflow silver/gold Delta — evaluated Glue for AWS subsidiary but stayed Azure-native.",
+    "mistake": "Saying ADF does all transforms — it's orchestration; pair with Databricks/Spark.",
+    "interviewTip": "List Azure trio (ADF, ADLS, Databricks) then one AWS/GCP name for breadth.",
+    "syntax": "// Pattern: ADF (orchestrate) + ADLS (store) + Databricks (transform)"
+  },
+  "86": {
+    "answer": "ADF core components: Pipelines (workflow containers grouping activities), Activities (Copy, Lookup, Data Flow, Execute Pipeline, etc.), Datasets (data location schema/structure referencing linked services), Linked Services (connection definitions), Integration Runtime (compute for activities), and Triggers (schedule, tumbling window, event). Together they implement orchestrated medallion data movement on Azure.",
+    "points": [
+      "Pipeline: logical workflow grouping",
+      "Activity: atomic step (Copy, Lookup, etc.)",
+      "Dataset: structure + location via linked service",
+      "Linked Service: connection to store/compute",
+      "IR: executes data movement/transform",
+      "Trigger: initiates pipeline runs"
+    ],
+    "de": "Trigger starts pipeline → Copy activity uses dataset `ds_adls_bronze` → linked service `ls_adls` with Azure IR → lands files for Databricks silver — full component chain.",
+    "mistake": "Confusing dataset with linked service — dataset is location; linked service is connection.",
+    "interviewTip": "Recite six components in dependency order: LS → Dataset → Activity → Pipeline → IR → Trigger.",
+    "syntax": "// LS (connection) → Dataset (path) → Activity (Copy) → Pipeline → Trigger"
+  },
+  "87": {
+    "answer": "Linked service is a connection configuration object defining how ADF connects to external data stores or compute — connection strings, URLs, authentication method. Datasets reference linked services to resolve where data lives; activities reference datasets. Store secrets in Key Vault references within linked services. One linked service reused across many datasets and pipelines.",
+    "points": [
+      "Defines endpoint + authentication",
+      "Referenced by datasets and some activities",
+      "Examples: ADLS, SQL, Databricks, REST",
+      "Key Vault for secret properties",
+      "IR specified on linked service",
+      "Reusable across factory artifacts"
+    ],
+    "de": "`ls_adls_prod` linked service with MSI → `ds_bronze_orders` dataset path `bronze/orders/` → Copy activity in `pl_daily_medallion` — one LS, many datasets.",
+    "mistake": "Creating duplicate linked services per pipeline — secret rotation nightmare.",
+    "interviewTip": "Analogy: linked service = JDBC connection; dataset = table/path.",
+    "syntax": "{ \"name\": \"ls_adls\", \"type\": \"AzureBlobFS\", \"typeProperties\": { \"url\": \"https://stg.dfs.core.windows.net\" } }"
+  },
+  "88": {
+    "answer": "Triggers define when pipelines run. Types: Schedule (cron-like wall clock), Tumbling Window (fixed stateful non-overlapping intervals with backfill), Event (Blob Created/Deleted on storage), and manual/on-demand. Triggers must be started and pipeline published to fire. Parameters can be passed at trigger time for dynamic medallion partition processing.",
+    "points": [
+      "Schedule: daily/hourly cron schedule",
+      "Tumbling window: stateful time slices",
+      "Event: storage blob events",
+      "Manual: ad-hoc Run trigger button",
+      "Trigger must be Started state",
+      "Pipeline must be published"
+    ],
+    "de": "Schedule trigger 02:00 UTC runs `pl_medallion_daily`; Event trigger on `landing/` for real-time vendor files; tumbling window hourly for streaming bronze partitions.",
+    "mistake": "Created trigger but left Stopped — pipeline never runs, confused with Publish issue.",
+    "interviewTip": "List four types with one-line use case each — fundamentals question.",
+    "table": [
+      [
+        "Type",
+        "Fires when",
+        "Stateful"
+      ],
+      [
+        "Schedule",
+        "Wall-clock time",
+        "No"
+      ],
+      [
+        "Tumbling window",
+        "Fixed intervals",
+        "Yes"
+      ],
+      [
+        "Event",
+        "Blob created/deleted",
+        "No"
+      ],
+      [
+        "Manual",
+        "User/API invoke",
+        "No"
+      ]
+    ]
+  },
+  "89": {
+    "answer": "Azure Pricing Calculator estimates monthly cost for Azure services before deployment — ADF pipeline runs (IR hours, DIU), ADLS storage tiers, Databricks DBUs, SQL tiers. Used in architecture reviews and client proposals rather than daily pipeline development. Helps right-size medallion platform and compare incremental load vs full load cost.",
+    "points": [
+      "Web tool: azure.microsoft.com/pricing/calculator",
+      "Estimates monthly Azure spend",
+      "Model ADF activity runs + DIU hours",
+      "Include ADLS capacity and access tier",
+      "Databricks DBU and cluster hours",
+      "Used in design/proposal phase"
+    ],
+    "de": "Before prod cutover, calculator estimated ADF 4 DIU nightly Copy + ADLS 5TB Hot + Databricks job cluster — justified Cool tier lifecycle for bronze archives in steering committee.",
+    "mistake": "Ignoring Data Flow cluster cost in estimate — surprise bill vs Copy-only model.",
+    "interviewTip": "Honest answer: 'used in planning and proposals, not daily dev' — then name what you'd estimate.",
+    "syntax": "// Calculator inputs: ADF activities/month, DIU, ADLS TB, Databricks DBU hours"
+  }
+}

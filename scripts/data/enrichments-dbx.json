@@ -1,0 +1,1595 @@
+{
+  "1": {
+    "answer": "Connect ADLS Gen2 to Databricks using OAuth with a service principal or managed identity — preferred over account keys. Modern approach: Unity Catalog external locations with `abfss://` paths and storage credentials; legacy approach uses `dbutils.fs.mount` with Hadoop configs. Grant the cluster identity Storage Blob Data Contributor on the container.",
+    "points": [
+      "Use abfss:// (ADLS Gen2) not wasbs:// for new workloads",
+      "OAuth + service principal or MSI — never hard-code account keys",
+      "Unity Catalog external locations replace most mount use cases",
+      "Set fs.azure.account.* Hadoop configs for mount-based access",
+      "Validate with dbutils.fs.ls after connecting"
+    ],
+    "de": "Silver layer at `abfss://datalake@prodacct.dfs.core.windows.net/silver/` — UC external location + MSI on job cluster; ADF Copy lands bronze, Databricks notebook reads via catalog path.",
+    "mistake": "Using account keys in notebook configs committed to Git, or mounting when UC external locations already govern the path.",
+    "interviewTip": "Lead with UC + abfss + MSI, mention mounts only as legacy; draw path from ADF → ADLS → Databricks cluster identity.",
+    "syntax": "configs = {\n  \"fs.azure.account.auth.type\": \"OAuth\",\n  \"fs.azure.account.oauth.provider.type\": \"org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider\",\n  \"fs.azure.account.oauth2.client.id\": \"<app-id>\",\n  \"fs.azure.account.oauth2.client.secret\": \"<secret>\",\n  \"fs.azure.account.oauth2.client.endpoint\": \"https://login.microsoftonline.com/<tenant>/oauth2/token\"\n}\ndbutils.fs.mount(\n  source=\"abfss://container@storage.dfs.core.windows.net/\",\n  mount_point=\"/mnt/data\",\n  extra_configs=configs\n)"
+  },
+  "2": {
+    "answer": "Read/write SQL Server (Azure SQL / Synapse) via Spark JDBC. Configure url, dbtable or query, user/password (or Key Vault), and optional fetchsize/numPartitions for parallelism. For Synapse dedicated pool use the Synapse connector; for serverless use JDBC with appropriate driver.",
+    "points": [
+      "spark.read.format('jdbc') with SQL Server driver on cluster",
+      "Use query option for pushdown filters — avoid SELECT *",
+      "numPartitions + partitionColumn for large fact extracts",
+      "Write with mode append/overwrite; watch identity columns",
+      "Store credentials in Key Vault secrets scope, not notebooks"
+    ],
+    "de": "Nightly JDBC read from `dbo.orders` with `query` filtering `order_date = @run_date` → Delta silver; gold aggregates stay in Databricks, BI reads gold via JDBC or Unity Catalog federation.",
+    "mistake": "Single-partition JDBC read on a 200M-row table — driver OOM or 8-hour extract.",
+    "interviewTip": "Mention pushdown predicate, partition column for parallelism, and when to use Synapse COPY vs Spark JDBC.",
+    "syntax": "df = (spark.read.format(\"jdbc\")\n  .option(\"url\", \"jdbc:sqlserver://server:1433;database=db\")\n  .option(\"dbtable\", \"dbo.customers\")\n  .option(\"user\", user).option(\"password\", pwd)\n  .option(\"numPartitions\", 8)\n  .option(\"partitionColumn\", \"customer_id\")\n  .option(\"lowerBound\", 1).option(\"upperBound\", 10000000)\n  .load())"
+  },
+  "3": {
+    "answer": "Databricks transformations span the full ETL spectrum: cleansing (null handling, type casting), deduplication (window functions / dropDuplicates), joins across bronze sources, aggregations, pivot/unpivot, nested JSON flattening (explode), and SCD Type 1/2 via Delta MERGE. Production pipelines add expectations/DQ checks before silver publish.",
+    "points": [
+      "Bronze: parse, cast, quarantine bad rows",
+      "Silver: dedup on business key, conform dimensions",
+      "Gold: aggregations, KPI rollups",
+      "SCD Type 2 with MERGE + is_current flag",
+      "Window functions for ranking and running totals"
+    ],
+    "de": "CDC JSON bronze → filter `op != 'D'` → `ROW_NUMBER` dedup on `customer_id` by `event_ts` → MERGE into `silver.dim_customer` Type 2.",
+    "mistake": "Listing only `filter` and `groupBy` without mentioning MERGE, SCD, or data quality gates.",
+    "interviewTip": "Structure answer as bronze → silver → gold with one concrete transformation per layer.",
+    "syntax": "from pyspark.sql.window import Window\nfrom pyspark.sql.functions import row_number, col\n\nw = Window.partitionBy(\"order_id\").orderBy(col(\"event_ts\").desc())\ndeduped = (bronze.withColumn(\"rn\", row_number().over(w))\n  .filter(col(\"rn\") == 1).drop(\"rn\"))"
+  },
+  "4": {
+    "answer": "Write a DataFrame to Delta using `.format('delta')` with save path or saveAsTable. Choose mode (overwrite, append, mergeSchema) based on pipeline idempotency. Managed tables register in the metastore/Unity Catalog; path-based writes land files plus _delta_log.",
+    "points": [
+      "df.write.format('delta').mode('overwrite').save(path)",
+      "saveAsTable registers in catalog — preferred with UC",
+      "mergeSchema option for evolving bronze schemas",
+      "partitionBy for low-cardinality filter columns",
+      "replaceWhere for partition-level overwrites"
+    ],
+    "de": "Bronze Parquet → `df.write.format('delta').mode('append').partitionBy('ingest_date').saveAsTable('bronze.events')`.",
+    "mistake": "Overwrite entire table when only one partition changed — use replaceWhere or MERGE instead.",
+    "interviewTip": "Contrast path write vs saveAsTable and when mergeSchema belongs in bronze ingestion.",
+    "syntax": "df.write.format(\"delta\").mode(\"overwrite\").save(\"/mnt/data/mytable\")\n# or\ndf.write.format(\"delta\").mode(\"append\").saveAsTable(\"catalog.schema.mytable\")"
+  },
+  "5": {
+    "answer": "Every Delta table has a `_delta_log` directory containing JSON commit files (and periodic Parquet checkpoints). Each commit records file additions/removals atomically — this transaction log is what enables ACID, time travel, concurrent writes, and metadata scalability on top of Parquet files.",
+    "points": [
+      "_delta_log stores ordered transaction commits",
+      "Each JSON file = one table version",
+      "Checkpoints summarize log for faster reads",
+      "Enables ACID, time travel, and optimistic concurrency",
+      "Never manually edit _delta_log in production"
+    ],
+    "de": "After MERGE into `silver.orders`, a new commit in `_delta_log` records added/removed Parquet files — auditors use DESCRIBE HISTORY to trace who changed what.",
+    "mistake": "Deleting Parquet files manually without going through Delta commands — corrupts the table.",
+    "interviewTip": "Explain Delta as Parquet + transaction log; draw add/remove file operations per commit.",
+    "syntax": "-- Inspect log location\nDESCRIBE DETAIL catalog.schema.my_table;\n-- Shows location including _delta_log path"
+  },
+  "6": {
+    "answer": "Create an empty Delta table with CREATE TABLE ... USING DELTA in SQL, or DataFrameWriter with an empty schema. Useful for contract-first silver tables where schema is defined before first data load.",
+    "points": [
+      "CREATE TABLE ... USING DELTA with explicit column types",
+      "Can specify LOCATION for external tables",
+      "Add constraints (NOT NULL, CHECK) at creation",
+      "Register in Unity Catalog: catalog.schema.table",
+      "First write can append rows later via INSERT/MERGE"
+    ],
+    "de": "Pre-create `silver.customer` with PK column types and NOT NULL on `customer_id` before Auto Loader bronze feed starts MERGE.",
+    "mistake": "Creating via inferred schema from messy bronze — locks in wrong types.",
+    "interviewTip": "Mention contract-first design and UC three-level naming.",
+    "syntax": "CREATE TABLE catalog.schema.my_table (\n  id INT NOT NULL,\n  name STRING,\n  salary DOUBLE\n) USING DELTA;"
+  },
+  "7": {
+    "answer": "All-purpose clusters are long-lived, multi-user, interactive compute for notebook development — they stay running until terminated. Job clusters are ephemeral: spun up per workflow/job run, execute tasks, then auto-terminate. Production ADF pipelines should use job clusters for isolation and cost control.",
+    "points": [
+      "All-purpose: shared, interactive, manual/auto termination",
+      "Job cluster: one run, auto-terminate after job",
+      "Job clusters avoid cross-user contention",
+      "All-purpose faster for ad-hoc if already warm",
+      "ADF production → job cluster or job cluster key in notebook activity"
+    ],
+    "de": "Dev team shares all-purpose for debugging; nightly ADF Workflow triggers job cluster for silver MERGE — no idle DBU burn.",
+    "mistake": "Running production ADF notebooks on a shared all-purpose cluster — noisy neighbor and restart risk.",
+    "interviewTip": "Use a cost + isolation framing: dev vs prod compute separation.",
+    "table": [
+      [
+        "Aspect",
+        "All-Purpose",
+        "Job Cluster"
+      ],
+      [
+        "Lifecycle",
+        "Long-lived until stopped",
+        "Created per job run, auto-terminates"
+      ],
+      [
+        "Users",
+        "Shared across team",
+        "Dedicated to one job"
+      ],
+      [
+        "ADF prod use",
+        "Discouraged",
+        "Recommended"
+      ],
+      [
+        "Cost",
+        "Idle DBUs if left running",
+        "Pay only for job duration"
+      ]
+    ],
+    "syntax": "# All-purpose: create via UI, attach notebooks interactively\n# Job cluster: defined in Workflow job, terminates after run\n{\n  \"new_cluster\": {\n    \"spark_version\": \"14.3.x-scala2.12\",\n    \"node_type_id\": \"Standard_E8s_v3\",\n    \"num_workers\": 4\n  }\n}"
+  },
+  "8": {
+    "answer": "Right-size cluster for workload: pick instance type (memory vs compute optimized), worker count, enable autoscaling within min/max, use spot instances for non-critical workloads, enable auto-termination on all-purpose, use Photon on DBR for SQL/DataFrame speed, and prefer job clusters for scheduled ETL.",
+    "points": [
+      "Match memory to shuffle/working set size",
+      "Autoscaling handles variable load",
+      "Photon accelerates scan/join/agg",
+      "Spot VMs for batch with retry tolerance",
+      "Auto-termination prevents idle cost on all-purpose"
+    ],
+    "de": "1 TB daily batch: 8-worker memory-optimized job cluster with autoscale 4–12, Photon enabled, terminates after Workflow completes.",
+    "mistake": "Giant all-purpose cluster left running 24/7 for one nightly job.",
+    "interviewTip": "Give a sizing heuristic: data volume + parallelism + memory per task, then mention autoscale and Photon.",
+    "syntax": "# Cluster config (conceptual)\n# Worker type: Standard_E8s_v3, min_workers: 2, max_workers: 8\n# runtime_engine: PHOTON, autotermination_minutes: 30"
+  },
+  "9": {
+    "answer": "Optimize Delta tables with OPTIMIZE (file compaction) and ZORDER BY on filter/join columns. Partition on low-cardinality columns, enable Auto Optimize/Auto Compaction for streaming, run VACUUM for storage reclamation, and rely on data-skipping statistics. For queries, push filters on partition/Z-order columns.",
+    "points": [
+      "OPTIMIZE compacts small files into larger ones",
+      "ZORDER co-locates related data for skipping",
+      "Partition only low-cardinality columns (date, region)",
+      "VACUUM removes unreferenced files after retention",
+      "Liquid Clustering alternative to rigid partitioning"
+    ],
+    "de": "Weekly `OPTIMIZE catalog.silver.fact_sales ZORDER BY (customer_id, order_date)` after append-heavy CDC loads.",
+    "mistake": "Partitioning on high-cardinality `customer_id` — millions of tiny directories.",
+    "interviewTip": "Walk through small-file problem → OPTIMIZE → ZORDER → VACUUM lifecycle.",
+    "syntax": "OPTIMIZE catalog.schema.fact_sales ZORDER BY (customer_id, order_date);\nVACUUM catalog.schema.fact_sales RETAIN 168 HOURS;"
+  },
+  "10": {
+    "answer": "Use DESCRIBE HISTORY to list all versions of a Delta table with operation, timestamp, and user. Version count equals number of commits in the transaction log (minus checkpoint nuance). VERSION AS OF N references a specific commit.",
+    "points": [
+      "DESCRIBE HISTORY shows version, operation, timestamp",
+      "Each write/MERGE/OPTIMIZE creates a new version",
+      "versionAsOf option for DataFrame reads",
+      "Useful for audit and debugging bad deploys",
+      "RETAIN 0 versions only in dev — prod needs history for time travel"
+    ],
+    "de": "After bad MERGE deploy, DESCRIBE HISTORY shows version 47 = MERGE by pipeline_svc — trigger RESTORE to version 46.",
+    "mistake": "Assuming version number equals number of Parquet files — versions are logical commits.",
+    "interviewTip": "Mention audit use case: who wrote what when.",
+    "syntax": "DESCRIBE HISTORY catalog.schema.my_table;"
+  },
+  "11": {
+    "answer": "RESTORE TABLE rewinds logical table state to a prior version or timestamp without manually swapping files. It creates a new commit that references the file set from the target version. Physical old files remain until VACUUM retention passes.",
+    "points": [
+      "RESTORE TABLE t TO VERSION AS OF n",
+      "Also supports TIMESTAMP AS OF",
+      "Creates new version — not destructive to log",
+      "Old files remain on storage until VACUUM",
+      "Requires appropriate table permissions in UC"
+    ],
+    "de": "Ops restores `gold.revenue` to pre-deployment version after bad logic introduced duplicate rows.",
+    "mistake": "Manually copying old Parquet files instead of RESTORE — breaks log consistency.",
+    "interviewTip": "Clarify logical restore vs physical file deletion (VACUUM).",
+    "syntax": "RESTORE TABLE catalog.schema.my_table TO VERSION AS OF 3;\n-- or\nRESTORE TABLE catalog.schema.my_table TO TIMESTAMP AS OF '2024-06-01T00:00:00';"
+  },
+  "12": {
+    "answer": "VACUUM physically deletes data files no longer referenced by the Delta log and older than the retention period (default 168 hours / 7 days). It reclaims storage but removes ability to time-travel before retention. Run after OPTIMIZE compaction.",
+    "points": [
+      "Removes unreferenced files past retention threshold",
+      "Default RETAIN 168 HOURS (7 days)",
+      "Cannot time-travel to versions whose files were vacuumed",
+      "Run periodically after OPTIMIZE",
+      "VACUUM LITE available on newer DBR for metadata-only cleanup"
+    ],
+    "de": "Monthly maintenance: OPTIMIZE silver tables, then VACUUM RETAIN 168 HOURS — reclaims 2 TB after heavy MERGE churn.",
+    "mistake": "VACUUM RETAIN 0 HOURS in prod — destroys audit/time-travel recovery window.",
+    "interviewTip": "Balance storage cost vs compliance retention requirements.",
+    "syntax": "VACUUM catalog.schema.my_table RETAIN 168 HOURS;"
+  },
+  "13": {
+    "answer": "Select columns from Delta via DataFrame API (select/col), Spark SQL SELECT, or table(). Delta tables are standard Spark relations — no special syntax beyond table reference.",
+    "points": [
+      "df.select('col1', 'col2') or select(col('col1'))",
+      "spark.sql('SELECT col1 FROM delta.`path`')",
+      "spark.read.format('delta').load(path).select(...)",
+      "UC: SELECT from catalog.schema.table",
+      "Project only needed columns for performance"
+    ],
+    "de": "Downstream gold job selects 8 of 120 bronze columns early to reduce shuffle width.",
+    "mistake": "SELECT * on wide bronze tables through entire pipeline — wastes IO and shuffle.",
+    "interviewTip": "Mention column pruning with Parquet/Delta statistics.",
+    "syntax": "df = spark.read.format(\"delta\").table(\"catalog.schema.my_table\")\ndf.select(\"col1\", \"col2\", \"order_date\")"
+  },
+  "14": {
+    "answer": "Time travel reads query historical table versions using VERSION AS OF or TIMESTAMP AS OF in SQL, or versionAsOf/timestampAsOf options in DataFrame reader. Powered by the transaction log retaining historical file references.",
+    "points": [
+      "SELECT * FROM t VERSION AS OF 2",
+      "TIMESTAMP AS OF '2024-01-15'",
+      "DataFrame: .option('versionAsOf', 2)",
+      "Compare versions for debugging/audit",
+      "Limited by VACUUM retention period"
+    ],
+    "de": "Reconcile today's gold total vs yesterday: query `VERSION AS OF` prior commit before suspected bad MERGE.",
+    "mistake": "Not knowing VACUUM invalidates old versions — time travel has a retention window.",
+    "interviewTip": "Give audit/debug scenario, not just syntax.",
+    "syntax": "SELECT * FROM catalog.schema.my_table VERSION AS OF 2;\nSELECT * FROM catalog.schema.my_table TIMESTAMP AS OF '2024-06-01';\n\n# DataFrame\nspark.read.format(\"delta\").option(\"versionAsOf\", 2).table(\"my_table\")"
+  },
+  "19": {
+    "answer": "Delta Lake is an open-source storage layer on Parquet that adds ACID transactions, schema enforcement/evolution, unified batch+streaming, time travel, and DML (MERGE/UPDATE/DELETE). It is the foundation of the Databricks lakehouse — one copy of data serves BI and ML.",
+    "points": [
+      "Open format: Parquet files + _delta_log",
+      "ACID via optimistic concurrency on log",
+      "Schema enforcement and mergeSchema evolution",
+      "Time travel and audit via version history",
+      "MERGE/UPDATE/DELETE unlike plain data lake files"
+    ],
+    "de": "Single `silver.transactions` Delta table feeds Power BI (SQL warehouse) and ML feature store — no separate warehouse copy.",
+    "mistake": "Calling Delta just 'Parquet' — misses transaction log and ACID guarantees.",
+    "interviewTip": "Position Delta as the lakehouse bridge between data lake flexibility and warehouse reliability.",
+    "syntax": "-- Create and query\nCREATE TABLE catalog.schema.events USING DELTA AS SELECT * FROM bronze_raw;"
+  },
+  "20": {
+    "answer": "ACID ensures reliable concurrent writes. Atomicity: transaction fully commits or rolls back. Consistency: table always satisfies schema/constraints. Isolation: concurrent readers/writers see consistent snapshots. Durability: committed data survives failures. Delta implements this via the transaction log.",
+    "points": [
+      "Atomicity — all-or-nothing commit in _delta_log",
+      "Consistency — schema + CHECK constraints on write",
+      "Isolation — snapshot isolation per reader version",
+      "Durability — commits persisted to cloud storage",
+      "Delta uses optimistic concurrency for writers"
+    ],
+    "de": "Two MERGE jobs on `silver.inventory` — Delta serializes conflicting commits; one succeeds, other retries instead of corrupting data.",
+    "mistake": "Explaining only 'A' and forgetting Durability, or not tying to _delta_log.",
+    "interviewTip": "Map each letter to a Delta feature — atomicity = log commit, durability = cloud persistence.",
+    "table": [
+      [
+        "Property",
+        "Meaning",
+        "Delta implementation"
+      ],
+      [
+        "Atomicity",
+        "All or nothing",
+        "Single commit record in _delta_log"
+      ],
+      [
+        "Consistency",
+        "Valid state always",
+        "Schema enforcement + constraints"
+      ],
+      [
+        "Isolation",
+        "Concurrent access safe",
+        "Snapshot per version"
+      ],
+      [
+        "Durability",
+        "Survives crash",
+        "Parquet + log on durable storage"
+      ]
+    ],
+    "syntax": "-- Delta ACID in action\nBEGIN;  -- logical transaction\nMERGE INTO silver.orders t USING updates s ON t.id = s.id\nWHEN MATCHED THEN UPDATE SET *;\n-- Commit writes single _delta_log entry (atomicity + durability)"
+  },
+  "23": {
+    "answer": "Photon is Databricks' native vectorized C++ query engine that accelerates SQL and DataFrame operations (scans, joins, aggregations) while remaining Spark API-compatible. Enable via runtime_engine PHOTON on supported DBR versions for significant speedups on analytical workloads.",
+    "points": [
+      "Vectorized execution in C++ — not JVM bytecode",
+      "API-compatible with Spark SQL/DataFrames",
+      "Biggest gains on scan, join, aggregation",
+      "Enable on cluster: runtime_engine = PHOTON",
+      "Works with Delta Lake natively"
+    ],
+    "de": "Gold aggregation over 500M rows: Photon job cluster finishes in 12 min vs 35 min on standard Spark engine.",
+    "mistake": "Claiming Photon replaces Spark entirely — it's an execution engine within Spark.",
+    "interviewTip": "Mention when it helps (heavy SQL/DF analytics) and that APIs stay the same.",
+    "syntax": "# Cluster setting\n# runtime_engine: PHOTON\n# Or SQL: SET spark.databricks.photon.enabled = true"
+  },
+  "24": {
+    "answer": "Databricks compute types include All-purpose (interactive), Job clusters (ephemeral per workflow), Single Node (driver only, small data), High Concurrency (legacy shared SQL), and Serverless (fully managed SQL/compute). Choose based on interactive vs batch and governance needs.",
+    "points": [
+      "All-purpose — notebooks, exploration",
+      "Job cluster — production workflows",
+      "Single Node — small/local dev workloads",
+      "Serverless SQL warehouse — no cluster management",
+      "Pools accelerate job cluster startup"
+    ],
+    "de": "Analysts use serverless SQL warehouse; ETL uses job clusters via ADF Workflow; devs use all-purpose for debugging.",
+    "mistake": "Using all-purpose for everything — cost and isolation issues in prod.",
+    "interviewTip": "Match cluster type to persona: analyst vs engineer vs scheduled job.",
+    "table": [
+      [
+        "Type",
+        "Use case",
+        "Lifecycle"
+      ],
+      [
+        "All-purpose",
+        "Interactive dev",
+        "Long-lived"
+      ],
+      [
+        "Job",
+        "Scheduled ETL",
+        "Per-run"
+      ],
+      [
+        "Serverless",
+        "Ad-hoc SQL/BI",
+        "Managed ephemeral"
+      ],
+      [
+        "Single Node",
+        "Tiny jobs",
+        "Per configuration"
+      ]
+    ],
+    "syntax": "# Cluster types in API\n# All-purpose: long-lived, \"cluster_source\": \"UI\"\n# Job: ephemeral, created per runs.submit"
+  },
+  "33": {
+    "answer": "Azure blob/ADLS paths use URI schemes: wasbs:// for Blob (legacy), abfss:// for ADLS Gen2 (preferred). Format: scheme://container@account.endpoint/path. Use abfss with OAuth/MSI in modern Databricks + UC setups.",
+    "points": [
+      "abfss:// — ADLS Gen2 (Hadoop ABFS driver)",
+      "wasbs:// — legacy Blob storage",
+      "s3:// — AWS; gs:// — GCP in multi-cloud",
+      "UC external locations wrap these paths",
+      "Never hard-code SAS tokens in notebooks"
+    ],
+    "de": "All pipeline paths standardized to `abfss://raw@prodlake.dfs.core.windows.net/bronze/orders/`.",
+    "mistake": "Using wasbs when storage account has hierarchical namespace (ADLS Gen2) — use abfss.",
+    "interviewTip": "State abfss as default for Azure lakehouse; mention UC external location abstraction.",
+    "syntax": "abfss://container@storageaccount.dfs.core.windows.net/path/to/data\nwasbs://container@storageaccount.blob.core.windows.net/path/to/data"
+  },
+  "34": {
+    "answer": "Convert DataFrame to registered Delta table with saveAsTable (managed) or save to path then CREATE TABLE ... USING DELTA LOCATION. saveAsTable is preferred under Unity Catalog for governance.",
+    "points": [
+      "df.write.format('delta').saveAsTable('catalog.schema.table')",
+      "Overwrite vs append mode",
+      "mergeSchema for evolving sources",
+      "partitionBy at write time",
+      "Alternative: save path + external table DDL"
+    ],
+    "de": "Bronze DataFrame after Auto Loader batch → `saveAsTable('catalog.bronze.raw_events')` with append mode.",
+    "mistake": "Writing to path without registering in UC — orphan data, no lineage/ACLs.",
+    "interviewTip": "Prefer UC managed tables vs hidden path writes.",
+    "syntax": "df.write.format(\"delta\").mode(\"overwrite\").saveAsTable(\"catalog.schema.my_delta_table\")"
+  },
+  "35": {
+    "answer": "DESCRIBE TABLE shows column names and types. DESCRIBE HISTORY shows commit log (versions, operations, users). DESCRIBE DETAIL (extended) shows location, format, size, partition columns, and table properties.",
+    "points": [
+      "DESCRIBE / DESCRIBE TABLE — schema only",
+      "DESCRIBE HISTORY — version audit trail",
+      "DESCRIBE DETAIL — storage metadata + properties",
+      "DESCRIBE EXTENDED is alias for DETAIL in many contexts",
+      "Use HISTORY for ops debugging"
+    ],
+    "de": "On-call checks DESCRIBE DETAIL for partition columns, then HISTORY to find which MERGE caused row explosion.",
+    "mistake": "Using DESCRIBE expecting history — wrong command for version audit.",
+    "interviewTip": "Quick mnemonic: schema vs audit log vs storage metadata.",
+    "table": [
+      [
+        "Command",
+        "Shows",
+        "When to use"
+      ],
+      [
+        "DESCRIBE TABLE",
+        "Columns, types",
+        "Schema check"
+      ],
+      [
+        "DESCRIBE HISTORY",
+        "Versions, ops",
+        "Audit/debug"
+      ],
+      [
+        "DESCRIBE DETAIL",
+        "Location, size, partitions",
+        "Ops/metadata"
+      ]
+    ],
+    "syntax": "DESCRIBE TABLE catalog.schema.my_table;\nDESCRIBE HISTORY catalog.schema.my_table;\nDESCRIBE DETAIL catalog.schema.my_table;"
+  },
+  "36": {
+    "answer": "Compare Delta versions by reading each with versionAsOf and computing set difference (except/subtract) on business keys, or use table_changes/CDF for incremental diffs. SQL EXCEPT compares row sets between two SELECT results.",
+    "points": [
+      "Read v1 and v2 with versionAsOf",
+      "df1.exceptAll(df2) for row-level diff",
+      "CDF/table_changes for structured change feed",
+      "Key-based anti-join for large tables",
+      "DESCRIBE HISTORY shows high-level operation diff"
+    ],
+    "de": "Validate MERGE: diff version N vs N-1 on `order_id` — expect only changed keys, not full table scan.",
+    "mistake": "Full outer join without key — expensive and hard to interpret on billion-row tables.",
+    "interviewTip": "Offer exceptAll for small tables, CDF for production incremental audit.",
+    "syntax": "v1 = spark.read.format(\"delta\").option(\"versionAsOf\", 1).table(\"my_table\")\nv2 = spark.read.format(\"delta\").option(\"versionAsOf\", 2).table(\"my_table\")\ndiff = v1.exceptAll(v2)"
+  },
+  "37": {
+    "answer": "EXCEPT returns distinct rows in the first query not in the second (deduplicates). EXCEPT ALL preserves duplicate counts — only removes matching duplicate rows up to the count in the second set. Use EXCEPT ALL when row multiplicity matters.",
+    "points": [
+      "EXCEPT — set difference with dedup",
+      "EXCEPT ALL — multiset difference",
+      "Same semantics as MINUS in some dialects",
+      "Useful for version diff and data reconciliation",
+      "NULL handling: NULL = NULL for matching in EXCEPT"
+    ],
+    "de": "Reconcile staging vs prod row counts including intentional duplicates in event stream — EXCEPT ALL catches missing duplicate events.",
+    "mistake": "Using EXCEPT when duplicate counts matter — silent under-count.",
+    "interviewTip": "Give tiny 3-row example showing duplicate behavior difference.",
+    "syntax": "SELECT * FROM v1 EXCEPT SELECT * FROM v2;\nSELECT * FROM v1 EXCEPT ALL SELECT * FROM v2;"
+  },
+  "38": {
+    "answer": "Check DBR version in cluster UI (Spark tab) or runtime config. In notebook: spark.conf.get('spark.databricks.clusterUsageTags.sparkVersion') or display cluster info. Always state the actual LTS version your project runs (e.g., 14.3 LTS, 15.4 LTS).",
+    "points": [
+      "Cluster UI shows Databricks Runtime version",
+      "spark.conf cluster usage tags in notebook",
+      "LTS vs standard runtime tradeoffs",
+      "Feature availability depends on DBR version",
+      "Upgrade planning: Photon, UC, Liquid Clustering versions"
+    ],
+    "de": "Team standardized on DBR 14.3 LTS — Liquid Clustering requires newer runtime, so upgrade planned.",
+    "mistake": "Guessing version in interview — always cite your project's actual DBR.",
+    "interviewTip": "Mention you verify in UI and track LTS for prod stability.",
+    "syntax": "spark.conf.get(\"spark.databricks.clusterUsageTags.sparkVersion\")"
+  },
+  "39": {
+    "answer": "Autoscaling dynamically adds/removes workers between min and max based on load. Auto-termination shuts down cluster after idle minutes. Together they optimize cost: scale up for peaks, scale down and stop when idle.",
+    "points": [
+      "Autoscale min/max worker range",
+      "Scales on task backlog / shuffle demand",
+      "Auto-termination after N idle minutes",
+      "All-purpose benefits most from auto-termination",
+      "Job clusters terminate after job by default"
+    ],
+    "de": "All-purpose dev cluster: autoscale 1–4, auto-terminate 30 min — saves DBUs overnight.",
+    "mistake": "Autoscale max too low — jobs queue forever at peak.",
+    "interviewTip": "Separate the two concepts clearly; both are cost levers.",
+    "syntax": "# Cluster config\n# autoscale: min_workers=1, max_workers=8\n# autotermination_minutes=30"
+  },
+  "40": {
+    "answer": "Yes — you can edit autoscaling min/max on an existing cluster via cluster configuration. Changes may require cluster restart to take effect. Increasing max from 4 to 6 helps handle larger peak loads without new cluster.",
+    "points": [
+      "Editable in cluster UI or API",
+      "May need restart to apply",
+      "Cannot shrink below running worker count instantly",
+      "Plan max for peak shuffle/memory",
+      "Document changes for cost forecasting"
+    ],
+    "de": "Black Friday prep: bump job cluster max_workers 4→8 for November, revert in December.",
+    "mistake": "Assuming changes apply mid-run without restart — running jobs may not see new max immediately.",
+    "interviewTip": "Yes with caveat: restart may be needed; mention change management.",
+    "syntax": "# Via CLI/API: edit cluster_id autoscale max_workers=6"
+  },
+  "41": {
+    "answer": "Cluster pools maintain idle VM instances pre-provisioned in your cloud account. New clusters attach to pooled instances for near-instant startup instead of cold VM provisioning. Tradeoff: small cost for idle pool vs faster job SLA.",
+    "points": [
+      "Pre-warmed VMs in customer subscription",
+      "Reduces job cluster startup from minutes to seconds",
+      "Configure pool size, instance type, idle timeout",
+      "On-demand vs pool-backed cluster attach",
+      "Critical for SLA-sensitive ADF chains"
+    ],
+    "de": "ADF pipeline with 20 sequential notebooks — pool cuts startup from 7 min to 45 sec per job.",
+    "mistake": "Oversized pool running 24/7 without enough jobs — paying for idle VMs.",
+    "interviewTip": "Frame as startup latency vs idle cost tradeoff.",
+    "syntax": "# Attach cluster to pool_id in cluster create API or UI"
+  },
+  "42": {
+    "answer": "inferSchema=True lets Spark infer column types from data scan — convenient for exploration but requires an extra pass, can mis-infer types (all strings), and is non-deterministic on heterogeneous files. Production bronze should use explicit schema.",
+    "points": [
+      "Extra full data scan — slower ingestion",
+      "Risk: numeric IDs inferred as int when alphanumeric",
+      "Use explicit StructType schema in prod",
+      "OK for one-off CSV exploration",
+      "mergeSchema on Delta write handles new columns separately"
+    ],
+    "de": "Bronze CSV ingestion uses explicit schema from contract YAML; inferSchema only in dev sandbox.",
+    "mistake": "inferSchema on production Auto Loader — silent type drift and reprocessing.",
+    "interviewTip": "Exploration yes, production no — always state explicit schema preference.",
+    "syntax": "# Avoid in prod:\nspark.read.option(\"inferSchema\", \"true\").csv(\"path\")\n# Prefer:\nspark.read.schema(my_schema).csv(\"path\")"
+  },
+  "43": {
+    "answer": "Read JSON with spark.read.json (option multiline=true for nested files), apply transforms, write as Delta with format('delta'). JSON is common bronze format from APIs — flatten nested structures with explode before silver.",
+    "points": [
+      "spark.read.option('multiline', true).json(path)",
+      "Flatten nested structs for relational silver",
+      "Define or infer schema — prefer explicit in prod",
+      "Write with mergeSchema for new API fields",
+      "Register as Delta table in UC"
+    ],
+    "de": "API landing JSON in ADLS → read → `explode(events)` → cast types → append Delta bronze.",
+    "mistake": "Not setting multiline on pretty-printed JSON arrays — reads as corrupt rows.",
+    "interviewTip": "Mention nested JSON flattening path to Delta silver.",
+    "syntax": "df = spark.read.option(\"multiline\", \"true\").json(\"/path/to/file.json\")\ndf.write.format(\"delta\").mode(\"overwrite\").saveAsTable(\"catalog.bronze.api_events\")"
+  },
+  "44": {
+    "answer": "Read Delta into DataFrame via spark.read.format('delta'), spark.table(), or spark.sql('SELECT * FROM catalog.schema.table'). All are lazy — actions trigger scan of current table version.",
+    "points": [
+      "spark.read.format('delta').table('name')",
+      "spark.table('catalog.schema.table')",
+      "spark.sql for SQL-native teams",
+      "Time travel via versionAsOf option",
+      "Same APIs for managed and external tables"
+    ],
+    "de": "Gold notebook: `df = spark.table('catalog.gold.daily_revenue')` — shared across team via UC.",
+    "mistake": "Using raw Parquet read on Delta folder — bypasses log, may see inconsistent snapshot.",
+    "interviewTip": "Always read via Delta format, not plain Parquet path.",
+    "syntax": "df = spark.sql(\"SELECT * FROM catalog.schema.my_delta_table\")\n# or\ndf = spark.read.format(\"delta\").table(\"catalog.schema.my_delta_table\")"
+  },
+  "46": {
+    "answer": "A data lake is cheap object storage holding files in any format without built-in transactions or schema enforcement. Delta Lake adds ACID, schema management, time travel, and DML on top of that storage — turning the lake into a reliable lakehouse.",
+    "points": [
+      "Data lake: flexible, cheap, schema-on-read",
+      "No ACID — concurrent writes can corrupt",
+      "Delta: Parquet + _delta_log on same storage",
+      "Lakehouse = lake economics + warehouse reliability",
+      "Same storage (ADLS/S3), different table format"
+    ],
+    "de": "Migrated raw Parquet lake folders to Delta tables — eliminated duplicate ETL to warehouse.",
+    "mistake": "Treating ADLS folder of CSVs as 'already a lakehouse' without Delta/UC governance.",
+    "interviewTip": "Draw two-layer diagram: storage vs table format layer.",
+    "table": [
+      [
+        "Aspect",
+        "Data Lake",
+        "Delta Lake"
+      ],
+      [
+        "Storage",
+        "ADLS/S3 files",
+        "Same — Parquet files"
+      ],
+      [
+        "ACID",
+        "No",
+        "Yes via transaction log"
+      ],
+      [
+        "Schema",
+        "Schema-on-read",
+        "Enforced + evolution"
+      ],
+      [
+        "DML",
+        "Rewrite files manually",
+        "MERGE/UPDATE/DELETE"
+      ]
+    ],
+    "syntax": "-- Data lake: files only\nCREATE TABLE external_raw USING PARQUET LOCATION 'abfss://raw@acct.dfs.core.windows.net/data/';\n\n-- Delta lakehouse: ACID table\nCREATE TABLE catalog.silver.events USING DELTA;"
+  },
+  "48": {
+    "answer": "Data skew occurs when a few partition keys hold most rows, making some tasks much slower (stragglers). Mitigations: salting keys, broadcast join for small skewed dimension, AQE skew join hints, repartition, or isolate hot keys to separate processing.",
+    "points": [
+      "Symptom: one task in Spark UI takes 10x longer",
+      "Common cause: null or default key concentration",
+      "Salt high-cardinality join keys with random suffix",
+      "Broadcast small tables to avoid shuffle",
+      "AQE skew join optimization on DBR"
+    ],
+    "de": "99% of orders from `customer_id=0` (null mapped) — filter nulls early, salt remaining skewed keys before join.",
+    "mistake": "Only increasing cluster size without fixing skew — expensive and ineffective.",
+    "interviewTip": "Describe Spark UI symptom first, then two fixes: salt vs broadcast.",
+    "syntax": "from pyspark.sql.functions import concat, lit, col, rand\nsalted = df.withColumn(\"salt_key\", concat(col(\"id\"), lit(\"_\"), (rand()*10).cast(\"int\")))"
+  },
+  "49": {
+    "answer": "Z-ordering co-locates related data in Parquet files using space-filling curves, improving data skipping for multi-column filters. Run OPTIMIZE ... ZORDER BY (col1, col2) periodically after writes.",
+    "points": [
+      "OPTIMIZE ... ZORDER BY (cols)",
+      "Best on columns used together in WHERE/JOIN",
+      "Complements partitioning — not a replacement",
+      "Run after large ingests or weekly maintenance",
+      "Liquid Clustering is newer flexible alternative"
+    ],
+    "de": "`OPTIMIZE catalog.silver.fact_events ZORDER BY (customer_id, event_date)` — BI filters on both columns.",
+    "mistake": "Z-ordering on every column — diminishing returns; pick 2-4 filter columns.",
+    "interviewTip": "Explain data skipping: fewer files read per query.",
+    "syntax": "OPTIMIZE catalog.schema.my_table ZORDER BY (department, join_date);"
+  },
+  "50": {
+    "answer": "Partitioning splits data into directory prefixes by column value (e.g., date=2024-01-01) — great for low-cardinality filter columns. Bucketing hashes rows into fixed buckets within files — good for join optimization. Over-partitioning causes small-file problems.",
+    "points": [
+      "Partition = physical directory per value",
+      "Bucket = hash mod N within files",
+      "Partition on date/region — low cardinality",
+      "Bucket on join keys for equi-joins",
+      "Delta: prefer Z-order/Liquid over excessive partitions"
+    ],
+    "de": "Partition `fact_sales` by `order_month`; Z-order by `customer_id` instead of partitioning on customer.",
+    "mistake": "Partitioning on UUID — millions of directories, metadata explosion.",
+    "interviewTip": "Cardinality test: if >10K distinct values, don't partition — Z-order instead.",
+    "table": [
+      [
+        "Aspect",
+        "Partitioning",
+        "Bucketing"
+      ],
+      [
+        "Mechanism",
+        "Directory per value",
+        "Hash groups in files"
+      ],
+      [
+        "Best for",
+        "Low-cardinality filters",
+        "Join key distribution"
+      ],
+      [
+        "Risk",
+        "Too many small dirs",
+        "Fixed bucket count choice"
+      ]
+    ],
+    "syntax": "# Partition at write\ndf.write.format(\"delta\").partitionBy(\"order_date\").save(path)\n\n# Bucket (legacy Hive)\ndf.write.format(\"delta\").bucketBy(32, \"customer_id\").saveAsTable(\"t\")"
+  },
+  "51": {
+    "answer": "Schema evolution lets Delta accept new columns or compatible type changes on write when mergeSchema is enabled. Enables additive bronze schema changes without breaking pipelines. Breaking changes (drop column, incompatible type) still need migration.",
+    "points": [
+      "option('mergeSchema', 'true') on write",
+      "New columns added automatically",
+      "Type widening may be supported (int→long)",
+      "Not a substitute for schema contracts",
+      "Use with Auto Loader schema hints for control"
+    ],
+    "de": "Source adds `loyalty_tier` column — bronze append with mergeSchema auto-adds to Delta without downtime.",
+    "mistake": "mergeSchema in prod without review — typos become permanent columns.",
+    "interviewTip": "Distinguish additive evolution vs breaking schema changes.",
+    "syntax": "df.write.format(\"delta\").mode(\"append\").option(\"mergeSchema\", \"true\").saveAsTable(\"bronze.events\")"
+  },
+  "52": {
+    "answer": "Cardinality = number of distinct values in a column. High cardinality (customer_id, email) — many unique values; poor partition candidate, good for Z-order/Bloom. Low cardinality (country, status) — few values; good partition candidate.",
+    "points": [
+      "High cardinality: millions of distinct values",
+      "Low cardinality: tens/hundreds of values",
+      "Partition low-cardinality columns only",
+      "High-cardinality → Z-order or Bloom filters",
+      "Skew often correlates with low-cardinality dominant values"
+    ],
+    "de": "`status` has 5 values → partition; `user_id` has 50M values → Z-order, never partition.",
+    "mistake": "Confusing relationship cardinality (1:N in modeling) with column cardinality.",
+    "interviewTip": "Give one example of each and which optimization applies.",
+    "syntax": "-- Check cardinality\nSELECT COUNT(DISTINCT customer_id), COUNT(DISTINCT country) FROM sales;"
+  },
+  "55": {
+    "answer": "Delta supports NOT NULL and CHECK constraints enforced on write. PRIMARY KEY and FOREIGN KEY exist as informational (not enforced) constraints for documentation and optimizer hints. Use expectations/DLT for richer DQ rules.",
+    "points": [
+      "NOT NULL — rejects null writes",
+      "CHECK (col > 0) — predicate enforced",
+      "PK/FK — informational only in Delta",
+      "ALTER TABLE ADD CONSTRAINT in SQL",
+      "DLT expectations for row-level DQ"
+    ],
+    "de": "`ALTER TABLE silver.orders ADD CONSTRAINT valid_amount CHECK (amount >= 0)` — bad CDC rows fail at write.",
+    "mistake": "Assuming PK constraint prevents duplicates — it's not enforced; use MERGE dedup.",
+    "interviewTip": "Clearly state enforced vs informational constraints.",
+    "syntax": "ALTER TABLE catalog.schema.orders ADD CONSTRAINT pk_orders PRIMARY KEY (order_id);\nALTER TABLE catalog.schema.orders ADD CONSTRAINT chk_amount CHECK (amount >= 0);"
+  },
+  "56": {
+    "answer": "Delta indexing strategies: automatic data skipping via file statistics, Z-order clustering, Bloom filter indexes on high-cardinality columns, partitioning, and Liquid Clustering (flexible, runtime-adjustable). No B-tree indexes like RDBMS.",
+    "points": [
+      "File stats — min/max per column automatic",
+      "ZORDER BY — multi-column co-location",
+      "Bloom filters — point lookups on high-cardinality",
+      "Liquid Clustering — replaces rigid partition+Z-order",
+      "OPTIMIZE maintains physical layout"
+    ],
+    "de": "Bloom index on `transaction_id` for point lookups; Z-order on `(store_id, date)` for range scans.",
+    "mistake": "Expecting RDBMS-style secondary indexes — Delta uses layout + stats instead.",
+    "interviewTip": "List skipping → Z-order → Bloom → Liquid progression.",
+    "syntax": "CREATE BLOOMFILTER INDEX ON TABLE my_table FOR COLUMNS(transaction_id);\nOPTIMIZE my_table ZORDER BY (store_id, order_date);"
+  },
+  "57": {
+    "answer": "Serverless compute is fully managed Databricks infrastructure — no cluster configuration, automatic scaling, fast startup, pay-per-use DBUs. Used for serverless SQL warehouses and serverless job compute. Ideal for unpredictable or intermittent workloads.",
+    "points": [
+      "No manual cluster sizing",
+      "Auto-scales compute on demand",
+      "Fast cold start vs traditional clusters",
+      "Billed per DBU consumption",
+      "SQL warehouses and serverless jobs use this model"
+    ],
+    "de": "Analysts query gold tables via serverless SQL warehouse — no cluster admin, scales for Monday morning spike.",
+    "mistake": "Assuming serverless supports all Spark features — check compatibility for RDD/custom libs.",
+    "interviewTip": "Contrast with job clusters: management overhead vs control.",
+    "syntax": "-- Serverless SQL warehouse\nSELECT * FROM catalog.gold.daily_kpis WHERE report_date = current_date();"
+  },
+  "58": {
+    "answer": "All-purpose and interactive cluster refer to the same concept — shared, long-lived compute for notebook development. Opposite is job cluster (ephemeral, single-purpose). High-concurrency was a legacy variant optimized for many SQL users.",
+    "points": [
+      "All-purpose = interactive = multi-user dev",
+      "Persists until terminated",
+      "Not ideal for production ADF pipelines",
+      "Job cluster preferred for scheduled ETL",
+      "Serverless is a third managed option"
+    ],
+    "de": "Team of 5 DEs share one all-purpose for debugging; production runs on job clusters only.",
+    "mistake": "Thinking they're different products — same use case, naming varies by UI version.",
+    "interviewTip": "Acknowledge naming overlap; focus on lifecycle difference vs job cluster.",
+    "table": [
+      [
+        "Term",
+        "Meaning"
+      ],
+      [
+        "All-purpose",
+        "Interactive shared cluster"
+      ],
+      [
+        "Interactive",
+        "Same as all-purpose"
+      ],
+      [
+        "Job cluster",
+        "Ephemeral per workflow run"
+      ]
+    ],
+    "syntax": "# Both refer to interactive shared clusters in Databricks UI\n# cluster_mode: STANDARD (multi-node interactive)"
+  },
+  "59": {
+    "answer": "A node is one VM in the cluster: the driver node coordinates the Spark application (schedules tasks, holds driver memory), worker nodes run executors that process data partitions in parallel. Node type defines CPU, RAM, and local disk.",
+    "points": [
+      "Driver — one per cluster, runs SparkContext",
+      "Workers — run executors and tasks",
+      "Node type = VM SKU (memory/compute optimized)",
+      "Driver OOM from collect() is a common failure",
+      "Single-node cluster: driver only, no workers"
+    ],
+    "de": "8-worker cluster: 1 driver + 8 workers; each worker executor processes 1+ partitions per stage.",
+    "mistake": "Confusing node with executor — one worker node can run multiple executors (usually one).",
+    "interviewTip": "Draw driver → workers → executors → tasks hierarchy.",
+    "syntax": "# Driver hosts spark context; workers host executors\n# spark.executor.memory, spark.executor.cores per worker"
+  },
+  "60": {
+    "answer": "SCD Type 1 overwrites current dimension values via MERGE UPDATE — no history. SCD Type 2 closes old row (end_date, is_current=false) and inserts new current row on attribute change. Implement with Delta MERGE in SQL or PySpark.",
+    "points": [
+      "Type 1: MERGE UPDATE SET on match",
+      "Type 2: close old + insert new row",
+      "Track start_date, end_date, is_current",
+      "Use MERGE ON business key + is_current=true",
+      "Delta MERGE is idempotent for CDC replay"
+    ],
+    "de": "Customer address change → Type 2 MERGE on `customer_id` closes prior row, opens new current version.",
+    "mistake": "Type 2 without is_current flag — multiple 'current' rows per key.",
+    "interviewTip": "Write both MERGE patterns; explain when business needs history vs not.",
+    "syntax": "-- Type 1\nMERGE INTO target t USING source s ON t.id = s.id\nWHEN MATCHED THEN UPDATE SET *\nWHEN NOT MATCHED THEN INSERT *;\n\n-- Type 2 (simplified)\nMERGE INTO dim t USING staging s ON t.id = s.id AND t.is_current = true\nWHEN MATCHED AND t.addr <> s.addr THEN UPDATE SET t.end_date = current_date(), t.is_current = false\nWHEN NOT MATCHED THEN INSERT (id, addr, start_date, end_date, is_current)\n  VALUES (s.id, s.addr, current_date(), null, true);"
+  },
+  "61": {
+    "answer": "CDC (Change Data Capture) is the general pattern of tracking inserts/updates/deletes from source systems. CDF (Change Data Feed) is Delta's built-in feature recording row-level changes with _change_type, _commit_version, _commit_timestamp — queryable via table_changes().",
+    "points": [
+      "CDC — source pattern (Debezium, SQL CT, etc.)",
+      "CDF — Delta-native change log on table",
+      "Enable: ALTER TABLE SET TBLPROPERTIES (delta.enableChangeDataFeed=true)",
+      "Read: table_changes('table', start_version, end_version)",
+      "Downstream incremental processing without re-scan"
+    ],
+    "de": "Silver MERGE enables CDF; gold reads `table_changes` for incremental aggregates instead of full table scan.",
+    "mistake": "Using CDF and source CDC interchangeably — CDF is post-Delta, CDC is pre-load.",
+    "interviewTip": "Diagram: source CDC → bronze → Delta CDF → gold incremental.",
+    "table": [
+      [
+        "Aspect",
+        "CDC",
+        "CDF (Delta)"
+      ],
+      [
+        "Scope",
+        "Source system pattern",
+        "Delta table feature"
+      ],
+      [
+        "Granularity",
+        "Source-defined",
+        "Row-level per Delta commit"
+      ],
+      [
+        "Read API",
+        "Connector-specific",
+        "table_changes()"
+      ]
+    ],
+    "syntax": "ALTER TABLE catalog.schema.orders SET TBLPROPERTIES (delta.enableChangeDataFeed = true);\n\nSELECT * FROM table_changes('catalog.schema.orders', 0, 10);"
+  },
+  "62": {
+    "answer": "Temp views (createOrReplaceTempView) are session-scoped — visible only in the current Spark session/notebook. Global temp views (createOrReplaceGlobalTempView) are cluster-scoped under global_temp database, shared across sessions until cluster terminates.",
+    "points": [
+      "Temp view — dies with session",
+      "Global temp — global_temp.view_name",
+      "Global persists until cluster restart",
+      "UC managed tables preferred for sharing across jobs",
+      "Serverless: treat global temp as unreliable across sessions"
+    ],
+    "de": "Dev notebook creates temp view for intermediate join; production uses UC schema tables instead.",
+    "mistake": "Global temp view in ADF multi-notebook job on job cluster — gone when cluster terminates between runs.",
+    "interviewTip": "Recommend UC tables over global temp for production cross-notebook sharing.",
+    "syntax": "df.createOrReplaceTempView(\"session_view\")\ndf.createOrReplaceGlobalTempView(\"shared_view\")\n# Access: SELECT * FROM global_temp.shared_view"
+  },
+  "64": {
+    "answer": "Managed (internal) Delta tables: Databricks controls both metadata and data location — DROP TABLE deletes data. External tables: metadata in catalog, data at user-specified LOCATION — DROP TABLE removes metadata only, files remain.",
+    "points": [
+      "Managed: no LOCATION needed, DROP deletes data",
+      "External: CREATE TABLE ... LOCATION 'path'",
+      "External: DROP keeps files on storage",
+      "UC external tables + external locations",
+      "Choose external when other tools also read the path"
+    ],
+    "de": "Bronze external on ADLS (ADF also writes there); silver managed in UC for governance.",
+    "mistake": "DROP external table assuming data deleted — orphan files remain, storage cost continues.",
+    "interviewTip": "State DROP behavior difference clearly — #1 gotcha.",
+    "table": [
+      [
+        "Aspect",
+        "Managed (Internal)",
+        "External"
+      ],
+      [
+        "Data location",
+        "UC-controlled",
+        "User-specified path"
+      ],
+      [
+        "DROP TABLE",
+        "Deletes data + metadata",
+        "Metadata only; files remain"
+      ],
+      [
+        "Use when",
+        "Standard UC tables",
+        "Shared ADLS path"
+      ]
+    ],
+    "syntax": "-- Managed (internal)\nCREATE TABLE catalog.schema.t (id INT) USING DELTA;\n\n-- External\nCREATE TABLE catalog.schema.t (id INT) USING DELTA\nLOCATION 'abfss://container@acct.dfs.core.windows.net/silver/t/';"
+  },
+  "65": {
+    "answer": "Time travel queries historical snapshots of a Delta table by version number or timestamp. The transaction log preserves file references for each version. Use for audit, debugging, rollback analysis, and regulatory compliance within retention window.",
+    "points": [
+      "VERSION AS OF n or TIMESTAMP AS OF",
+      "Reader sees consistent snapshot",
+      "No data duplication — log points to files",
+      "Limited by VACUUM retention",
+      "RESTORE reverts table to historical version"
+    ],
+    "de": "Compliance audit: reproduce Q3 revenue numbers exactly as reported using TIMESTAMP AS OF quarter-end.",
+    "mistake": "Assuming unlimited history — VACUUM removes old file references.",
+    "interviewTip": "Pair with RESTORE and VACUUM for complete lifecycle story.",
+    "syntax": "SELECT * FROM my_table VERSION AS OF 10;\nSELECT * FROM my_table TIMESTAMP AS OF '2024-03-31T23:59:59';"
+  },
+  "66": {
+    "answer": "RESTORE to V1 updates the table's logical state to reference only files valid at V1. Physical files from V2-V4 remain on storage until VACUUM exceeds retention — but queries see only V1's data. File count logically matches V1's state.",
+    "points": [
+      "Logical state rewinds to target version",
+      "Physical files not immediately deleted",
+      "VACUUM cleans unreferenced files after retention",
+      "RESTORE creates a new version entry",
+      "Don't manually delete 'old' files before VACUUM"
+    ],
+    "de": "After restore to V1, DESCRIBE DETAIL shows V1 row count; storage still holds V2-V4 files until vacuumed.",
+    "mistake": "Expecting instant storage reclamation on RESTORE — need VACUUM later.",
+    "interviewTip": "Emphasize logical vs physical — classic Delta interview question.",
+    "syntax": "RESTORE TABLE my_table TO VERSION AS OF 1;\n-- Then optionally after retention period:\nVACUUM my_table RETAIN 168 HOURS;"
+  },
+  "68": {
+    "answer": "Auto Loader incrementally ingests new files from cloud storage using Structured Streaming. It tracks processed files via checkpoint and schema inference/evolution. More efficient than listing entire directories on each run.",
+    "points": [
+      "cloudFiles source format",
+      "Structured Streaming with checkpoint",
+      "Schema evolution with schema hints",
+      "Scales to millions of files",
+      "Preferred over batch directory listing for bronze"
+    ],
+    "de": "ADF drops hourly CSVs to ADLS → Auto Loader bronze stream appends to Delta with checkpoint in `/checkpoints/bronze/`.",
+    "mistake": "Batch read entire directory daily on large buckets — slow and non-idempotent.",
+    "interviewTip": "Contrast with COPY INTO and manual file tracking.",
+    "syntax": "df = (spark.readStream.format(\"cloudFiles\")\n  .option(\"cloudFiles.format\", \"csv\")\n  .option(\"cloudFiles.schemaLocation\", \"/checkpoints/schema\")\n  .load(\"abfss://container@account.dfs.core.windows.net/incoming/\"))\n\ndf.writeStream.format(\"delta\").option(\"checkpointLocation\", \"/checkpoints/bronze\")\n  .table(\"catalog.bronze.raw\")"
+  },
+  "69": {
+    "answer": "Use Structured Streaming: spark.readStream for sources, transformations, then writeStream to sink (Delta, console, foreachBatch). Checkpoint location tracks progress. Delta sink supports exactly-once with idempotent MERGE in foreachBatch.",
+    "points": [
+      "readStream / writeStream API",
+      "Checkpoint for fault tolerance",
+      "Delta as streaming sink — ACID micro-batches",
+      "foreachBatch for complex MERGE per micro-batch",
+      "Trigger options: processingTime, availableNow, continuous"
+    ],
+    "de": "Kafka → Structured Streaming → foreachBatch MERGE into silver — checkpoint ensures no duplicate on restart.",
+    "mistake": "No checkpoint location — restarts reprocess all data.",
+    "interviewTip": "Mention trigger modes and foreachBatch for MERGE pattern.",
+    "syntax": "(spark.readStream.format(\"delta\").table(\"bronze.events\")\n  .writeStream.format(\"delta\")\n  .option(\"checkpointLocation\", \"/chk/silver\")\n  .trigger(processingTime=\"1 minute\")\n  .table(\"catalog.silver.events\"))"
+  },
+  "70": {
+    "answer": "Unity Catalog is Databricks' unified governance layer providing centralized access control, auditing, lineage, and data discovery across workspaces. Data is organized as catalog.schema.table (three-level namespace). Permissions, row/column masks, and external locations are managed centrally.",
+    "points": [
+      "Three-level namespace: catalog.schema.table",
+      "Centralized GRANT/REVOKE across workspaces",
+      "Audit logs for compliance",
+      "Lineage tracking for tables and columns",
+      "External locations + storage credentials for ADLS"
+    ],
+    "de": "Prod UC metastore governs `prod_catalog.silver.orders` — analysts get SELECT only on gold, not bronze PII.",
+    "mistake": "Hive metastore per workspace without UC — inconsistent permissions and no cross-workspace lineage.",
+    "interviewTip": "Draw catalog → schema → table and mention external location for ADLS.",
+    "syntax": "GRANT SELECT ON TABLE prod_catalog.gold.revenue TO `analysts@company.com`;\nCREATE EXTERNAL LOCATION bronze_loc URL 'abfss://bronze@acct.dfs.core.windows.net/';"
+  },
+  "71": {
+    "answer": "In Unity Catalog, a catalog is the top-level container grouping related schemas (databases). Analogous to a database server instance. Typically separate catalogs per environment (dev_catalog, prod_catalog) or business domain.",
+    "points": [
+      "Top of hierarchy: catalog.schema.table",
+      "Groups schemas by env or domain",
+      "Catalog-level permissions possible",
+      "Created via CREATE CATALOG",
+      "Replaces workspace-local Hive metastore silos"
+    ],
+    "de": "`dev_catalog`, `staging_catalog`, `prod_catalog` — CI promotes tables across catalogs with controlled grants.",
+    "mistake": "Mixing dev and prod schemas in one catalog — permission blast radius.",
+    "interviewTip": "Relate to SQL Server instance → database → table mental model.",
+    "syntax": "CREATE CATALOG IF NOT EXISTS prod_catalog;\nCREATE SCHEMA prod_catalog.silver;\nCREATE TABLE prod_catalog.silver.orders (...);"
+  },
+  "72": {
+    "answer": "Lakehouse architecture combines data lake economics (cheap object storage) with warehouse reliability (ACID, schema, performance). Delta Lake on ADLS/S3 enables one copy of data for BI, SQL, ML, and streaming without ETL duplication to separate systems.",
+    "points": [
+      "Bronze/silver/gold medallion on object storage",
+      "Delta ACID replaces dual lake+warehouse copies",
+      "Same tables serve BI and ML workloads",
+      "Unity Catalog for governance layer",
+      "Databricks SQL + Spark on same data"
+    ],
+    "de": "Single Delta gold layer feeds Power BI and ML training — eliminated nightly Synapse load.",
+    "mistake": "Lakehouse = just storing Parquet on ADLS without Delta/UC — missing ACID and governance.",
+    "interviewTip": "Medallion + Delta + UC = complete lakehouse story.",
+    "syntax": "-- Medallion flow\n-- bronze.raw_events → silver.clean_events → gold.daily_kpis (all Delta)"
+  },
+  "73": {
+    "answer": "Liquid Clustering is Delta's flexible data layout replacing rigid partitioning + Z-order. Define CLUSTER BY columns at creation; Databricks automatically reorganizes data. Can change clustering columns without full table rewrite.",
+    "points": [
+      "CREATE TABLE ... CLUSTER BY (cols)",
+      "ALTER TABLE CLUSTER BY to change columns",
+      "No fixed partition directories",
+      "AUTO liquid clustering on some DBR versions",
+      "Better than over-partitioning high-cardinality cols"
+    ],
+    "de": "Migrated from partition-by-date + Z-order to Liquid Clustering on `(customer_id, event_date)` — simpler maintenance.",
+    "mistake": "Running both heavy partitioning AND liquid clustering without reason — redundant layout.",
+    "interviewTip": "Position as evolution beyond partition+ZORDER rigidity.",
+    "syntax": "CREATE TABLE my_table (id INT, dept STRING, salary DOUBLE)\nUSING DELTA CLUSTER BY (dept, salary);\n\nALTER TABLE my_table CLUSTER BY (dept, hire_date);"
+  },
+  "74": {
+    "answer": "Parquet: columnar, analytics-optimized, no transactions. Avro: row-based, schema embedded, streaming-friendly. ORC: columnar, Hive ecosystem. Delta: storage layer using Parquet + transaction log for ACID, time travel, DML.",
+    "points": [
+      "Parquet — columnar, wide analytics scans",
+      "Avro — row-based, Kafka/schema evolution",
+      "ORC — columnar, Hive legacy",
+      "Delta — Parquet + _delta_log (not raw format)",
+      "Default choice in Databricks: Delta"
+    ],
+    "de": "Kafka Avro in bronze → convert to Delta silver for ACID MERGE and BI consumption.",
+    "mistake": "Choosing Avro for petabyte analytics warehouse — columnar Parquet/Delta wins.",
+    "interviewTip": "Match format to access pattern: row vs column, batch vs stream.",
+    "table": [
+      [
+        "Format",
+        "Layout",
+        "Best for",
+        "ACID"
+      ],
+      [
+        "Parquet",
+        "Columnar",
+        "Analytics scans",
+        "No"
+      ],
+      [
+        "Avro",
+        "Row",
+        "Streaming/Kafka",
+        "No"
+      ],
+      [
+        "ORC",
+        "Columnar",
+        "Hive workloads",
+        "No"
+      ],
+      [
+        "Delta",
+        "Parquet+log",
+        "Lakehouse default",
+        "Yes"
+      ]
+    ],
+    "syntax": "df_parquet = spark.read.format(\"parquet\").load(\"/path\")\ndf_avro = spark.read.format(\"avro\").load(\"/path\")\ndf_delta = spark.read.format(\"delta\").table(\"catalog.schema.t\")"
+  },
+  "75": {
+    "answer": "Delta is not the same as Parquet. Delta uses Parquet as the physical file format but adds a _delta_log transaction layer providing ACID, concurrent writes, time travel, schema enforcement, and MERGE/UPDATE/DELETE capabilities that plain Parquet lacks.",
+    "points": [
+      "Parquet = file format only",
+      "Delta = Parquet files + JSON commit log",
+      "Plain Parquet: no versioning or atomic writes",
+      "Reading Parquet path skips Delta features",
+      "Always use Delta reader/writer APIs"
+    ],
+    "de": "Team renamed folder to .parquet and read directly — lost MERGE capability and got inconsistent reads during concurrent writes.",
+    "mistake": "spark.read.parquet on Delta table directory — bypasses transaction log.",
+    "interviewTip": "One-liner: Delta = Parquet + brain (transaction log).",
+    "syntax": "# Wrong: spark.read.parquet(\"/delta/table\")\n# Right: spark.read.format(\"delta\").load(\"/delta/table\")"
+  },
+  "76": {
+    "answer": "Delta is the best default for Databricks lakehouse workloads because it retains Parquet columnar performance while adding ACID, schema evolution, time travel, and efficient upserts. Avro suits streaming ingestion; raw Parquet suits read-only archives without mutation needs.",
+    "points": [
+      "Delta for any mutable analytics table",
+      "Avro for Kafka landing if schema-heavy",
+      "Parquet OK for immutable archive exports",
+      "Delta enables MERGE-based CDC patterns",
+      "UC integration strongest with Delta tables"
+    ],
+    "de": "Standardized all silver/gold on Delta — only bronze keeps raw Avro from Kafka for replay.",
+    "mistake": "Using CSV in silver layer — no schema enforcement, poor compression and scan performance.",
+    "interviewTip": "Justify with mutation requirement: if table changes, use Delta.",
+    "syntax": "df.write.format(\"delta\").mode(\"append\").saveAsTable(\"catalog.silver.events\")"
+  },
+  "77": {
+    "answer": "PII masking typically happens at bronze→silver boundary: hash/tokenize/mask sensitive columns before broader access. Bronze may hold raw PII under restricted UC grants; silver/gold expose masked values. Use Unity Catalog column masks or transformation logic in notebooks/DLT.",
+    "points": [
+      "Mask at silver ingress — least privilege downstream",
+      "Bronze: restricted UC access for raw PII",
+      "Techniques: hash, tokenize, redact, FPE",
+      "UC column masks for dynamic masking",
+      "Audit who accesses unmasked bronze"
+    ],
+    "de": "SSN hashed deterministically in silver notebook; gold has no PII columns — only surrogate keys.",
+    "mistake": "Masking only in BI layer while silver still exposes raw PII to all engineers.",
+    "interviewTip": "Describe medallion layer where masking occurs and UC grant model.",
+    "syntax": "from pyspark.sql.functions import sha2, concat, lit\ndf = df.withColumn(\"ssn_masked\", sha2(concat(col(\"ssn\"), lit(\"salt\")), 256))"
+  },
+  "78": {
+    "answer": "Use deterministic masking (consistent hash or format-preserving encryption) so the same plaintext always maps to the same masked value. Joins on masked columns work across tables without revealing raw PII.",
+    "points": [
+      "Deterministic hash with salt for join keys",
+      "Format-preserving encryption (FPE) for pattern retention",
+      "Random masking breaks joins — avoid for keys",
+      "Same salt across tables in same env",
+      "Vault-managed secrets for salt/FPE keys"
+    ],
+    "de": "Both `customers` and `orders` mask `email` with `sha2(email||salt)` — join on `email_masked` works.",
+    "mistake": "Random UUID per row masking on join key — joins return zero matches.",
+    "interviewTip": "Explain deterministic vs random masking with join example.",
+    "syntax": "sha2(concat(col(\"email\"), lit(secret_salt)), 256)  # same email → same hash"
+  },
+  "79": {
+    "answer": "Fixed-width mainframe files need copybook-aware parsers (e.g., Cobrix library) or manual substring extraction after reading as text. Generic CSV/JSON readers fail — no delimiters. Handle EBCDIC encoding conversion if needed.",
+    "points": [
+      "Cobrix spark-cobol for COPYBOOK-defined layouts",
+      "Read as text, substring per field positions",
+      "EBCDIC → ASCII encoding conversion",
+      "Define explicit schema matching copybook",
+      "Land as Delta bronze after parsing"
+    ],
+    "de": "Legacy mainframe `.dat` with Cobrix copybook → parsed DataFrame → Delta bronze `legacy_claims`.",
+    "mistake": "Trying spark.read.csv on fixed-width file — columns misaligned.",
+    "interviewTip": "Mention Cobrix by name; show you know copybook concept.",
+    "syntax": "# Cobrix example\ndf = spark.read.format(\"cobol\").option(\"copybook\", \"/path/CLAIM.cpy\").load(\"/path/data.dat\")"
+  },
+  "81": {
+    "answer": "Read Avro/ORC/Parquet with spark.read.format('avro'|'orc'|'parquet'), transform if needed, write as Delta with format('delta'). One-time migration pattern from legacy lake files to lakehouse tables.",
+    "points": [
+      "spark.read.format('parquet').load(path)",
+      "Same for avro and orc formats",
+      "Write Delta with save or saveAsTable",
+      "Register in UC for governance",
+      "OPTIMIZE after bulk migration"
+    ],
+    "de": "Legacy Hive ORC warehouse export → read ORC → write `catalog.silver.legacy_sales` Delta → deprecate ORC path.",
+    "mistake": "Migrating file-by-file without OPTIMIZE — thousands of small Delta files.",
+    "interviewTip": "Mention post-migration OPTIMIZE + register in UC.",
+    "syntax": "df = spark.read.format(\"parquet\").load(\"/path/to/files\")\ndf.write.format(\"delta\").mode(\"overwrite\").saveAsTable(\"catalog.silver.migrated\")"
+  },
+  "82": {
+    "answer": "Call another notebook with dbutils.notebook.run(path, timeout_seconds, arguments). Returns exit value string. Used for modular pipelines — parent orchestrates child notebooks with parameters. Databricks Workflows is preferred for production orchestration.",
+    "points": [
+      "dbutils.notebook.run for synchronous call",
+      "Pass arguments as dict → widgets in child",
+      "timeout_seconds prevents hung runs",
+      "Returns last cell output string",
+      "Workflows/tasks preferred over notebook chaining in prod"
+    ],
+    "de": "Master notebook calls `ingest_bronze`, `transform_silver`, `publish_gold` sequentially with `run_date` param.",
+    "mistake": "Deep notebook chains without error handling — one failure cascades opaquely.",
+    "interviewTip": "Mention Workflows as prod pattern; notebook.run for dev/modularity.",
+    "syntax": "result = dbutils.notebook.run(\n  \"/Repos/prod/etl/silver_transform\",\n  timeout_seconds=3600,\n  arguments={\"run_date\": \"2024-06-01\"}\n)"
+  },
+  "87": {
+    "answer": "Size clusters based on data volume, partition count, memory per task, and SLA. Rule of thumb: ensure enough total memory for working set + shuffle; workers = target parallelism / cores per node. For 1-2 TB, start with 4-8 memory-optimized workers and autoscale.",
+    "points": [
+      "Estimate: data size / partition size ≈ task count",
+      "~3-4 GB RAM per executor core for safety",
+      "Autoscale min/max for variable workloads",
+      "Shuffle-heavy joins need more memory per node",
+      "Benchmark and tune — no universal formula"
+    ],
+    "de": "1 TB daily batch: 8× E8s workers, 32 GB RAM each, autoscale 4-12 — completes in 25 min SLA.",
+    "mistake": "Sizing only on data volume ignoring shuffle, skew, and UDF memory.",
+    "interviewTip": "Give a reasoned estimate with assumptions stated openly.",
+    "syntax": "# Rough: 1 TB / 128 MB per partition ≈ 8000 tasks\n# Cluster: 8 workers × 4 cores = 32 parallel tasks"
+  },
+  "88": {
+    "answer": "Databricks platform components: Workspace (notebooks, repos), Compute (clusters/serverless), Workflows/Jobs, Delta Lake, Unity Catalog, MLflow, DBFS, and Databricks Runtime (Apache Spark + Photon + libraries).",
+    "points": [
+      "Workspace — dev environment",
+      "Compute — clusters and SQL warehouses",
+      "Workflows — job orchestration",
+      "Delta Lake — storage layer",
+      "Unity Catalog — governance",
+      "MLflow — ML experiment tracking"
+    ],
+    "de": "End-to-end: ADF triggers Workflow → job cluster runs notebook → writes Delta in UC → MLflow logs model metrics.",
+    "mistake": "Listing only Spark — missing UC, Workflows, and Delta as distinct components.",
+    "interviewTip": "Group into dev (workspace), run (compute/workflows), govern (UC), store (Delta).",
+    "syntax": "# Platform layers: Workspace + Compute + Catalog + Delta storage"
+  },
+  "89": {
+    "answer": "A node is a single VM in the Databricks cluster — either the driver (coordinates job, holds SparkContext) or a worker (runs executors that execute tasks). Node SKU determines available CPU, memory, and disk.",
+    "points": [
+      "Driver node — 1 per cluster",
+      "Worker nodes — scale horizontally",
+      "Executor runs on worker JVM",
+      "Node type = Azure/AWS VM size",
+      "Driver failure kills the entire application"
+    ],
+    "de": "Job cluster with driver on Standard_DS3_v2 and 4 workers on Standard_E8s_v3 for memory-heavy shuffle.",
+    "mistake": "Same as Q59 — repeating without adding cluster-specific context.",
+    "interviewTip": "If asked again, emphasize driver failure impact and worker scaling.",
+    "syntax": "# 1 driver + N workers in cluster config"
+  },
+  "90": {
+    "answer": "No — a job cluster is tied to one job run and terminates when complete. It cannot be reassigned to another task. The next job run provisions a fresh job cluster (or attaches to a pool for faster startup).",
+    "points": [
+      "One job run = one job cluster lifecycle",
+      "Auto-terminates after job completion",
+      "Next run creates new cluster",
+      "Pools reduce startup time for new clusters",
+      "All-purpose clusters persist and can run multiple notebooks"
+    ],
+    "de": "ADF pipeline with 3 notebook activities on same job cluster key — cluster stays up for the workflow, then terminates.",
+    "mistake": "Expecting job cluster reuse across unrelated scheduled jobs without pool.",
+    "interviewTip": "Clarify job cluster vs all-purpose lifecycle difference.",
+    "syntax": "# Job cluster terminates: cluster lifecycle = job run duration"
+  },
+  "91": {
+    "answer": "ADF Databricks Notebook activity with all-purpose cluster attaches to existing shared cluster — warm start if running, but shared resources. Job cluster spins up dedicated ephemeral cluster per run — isolated, production-recommended, no idle dependency.",
+    "points": [
+      "All-purpose: existingClusterId in activity",
+      "Job cluster: newCluster spec in activity",
+      "Job cluster — no manual start, ADF provisions",
+      "All-purpose — may need running cluster",
+      "Production: job cluster for isolation and SLA"
+    ],
+    "de": "Prod ADF uses newCluster in notebook activity; dev uses existing all-purpose for speed.",
+    "mistake": "Prod on all-purpose — another user's heavy query starves ADF pipeline.",
+    "interviewTip": "Draw ADF → Databricks activity → cluster type decision tree.",
+    "table": [
+      [
+        "Aspect",
+        "All-Purpose",
+        "Job Cluster (ADF)"
+      ],
+      [
+        "Provisioning",
+        "Existing cluster ID",
+        "ADF creates per run"
+      ],
+      [
+        "Isolation",
+        "Shared with users",
+        "Dedicated"
+      ],
+      [
+        "Prod fit",
+        "Poor",
+        "Recommended"
+      ],
+      [
+        "Startup",
+        "Fast if warm",
+        "Cold start unless pool"
+      ]
+    ],
+    "syntax": "{\n  \"type\": \"DatabricksNotebook\",\n  \"typeProperties\": {\n    \"notebookPath\": \"/Repos/etl/silver\",\n    \"existingClusterId\": \"<all-purpose-id>\"\n  }\n}\n// vs newCluster for job cluster"
+  },
+  "92": {
+    "answer": "If all-purpose cluster is terminated, ADF can start it if configured, but startup adds latency (5-10+ min). Job clusters avoid this — ADF provisions fresh cluster per run. Production ADF pipelines should use job clusters, not depend on manually managed all-purpose state.",
+    "points": [
+      "Terminated all-purpose must restart before notebook runs",
+      "ADF may auto-start but with long delay",
+      "Job cluster: ADF handles lifecycle end-to-end",
+      "Pools mitigate job cluster cold start",
+      "Don't rely on always-on all-purpose in prod"
+    ],
+    "de": "Switched ADF from existingClusterId to newCluster + instance pool — eliminated 3 AM failures from terminated dev cluster.",
+    "mistake": "Assuming ADF magically keeps all-purpose running 24/7.",
+    "interviewTip": "Answer: ADF can start it but job cluster is the right design.",
+    "syntax": "# ADF notebook activity newCluster JSON block vs existingClusterId"
+  },
+  "93": {
+    "answer": "In %sh cells: cat outputs entire file contents; head shows first N lines (default 10). Use head for quick preview of large files without flooding notebook output.",
+    "points": [
+      "cat file.txt — full contents",
+      "head -n 20 file.txt — first 20 lines",
+      "Useful in %sh or %fs magic cells",
+      "tail shows last N lines",
+      "For ADLS files use dbutils.fs.head with byte limit"
+    ],
+    "de": "Preview landed CSV header with `dbutils.fs.head('abfss://.../file.csv', 500)` before defining schema.",
+    "mistake": "cat on multi-GB file — hangs notebook with massive output.",
+    "interviewTip": "Mention dbutils.fs.head for cloud files, shell head for local/driver files.",
+    "syntax": "%sh\nhead -n 5 /tmp/sample.csv\ncat /tmp/config.json\n\n# Cloud storage\ndbutils.fs.head(\"abfss://container@acct.dfs.core.windows.net/file.csv\", 1000)"
+  },
+  "94": {
+    "answer": "View/edit Python files in Workspace file browser (opens code editor) or Repos (Git-synced). For DBFS/cloud files, use dbutils.fs.cp or mount and edit via Repos. Workspace files support direct line editing and save.",
+    "points": [
+      "Workspace → file tree → click .py to edit",
+      "Repos sync with Git for version control",
+      "dbutils.fs for DBFS file read/write",
+      "%run to execute .py modules",
+      "Prefer Repos for production code governance"
+    ],
+    "de": "Shared `utils/transforms.py` in Repos — team edits via PR, notebook `%run ./utils/transforms`.",
+    "mistake": "Editing production logic only in notebook cells — no version control.",
+    "interviewTip": "Mention Repos + Git as best practice over workspace-only files.",
+    "syntax": "%run /Repos/prod/etl/utils/transforms\n# Or open file in workspace editor and edit directly"
+  },
+  "95": {
+    "answer": "Create files with dbutils.fs.put(path, content, overwrite=True). Read with dbutils.fs.head (partial) or spark/read for full content. Useful for config files and small test fixtures.",
+    "points": [
+      "dbutils.fs.put writes text content",
+      "overwrite=True replaces existing",
+      "dbutils.fs.head for preview with byte limit",
+      "dbutils.fs.ls to verify creation",
+      "Not for large data — use Copy activity/ADLS"
+    ],
+    "de": "Write pipeline config JSON to DBFS path; child notebook reads with `dbutils.fs.head` and json.loads.",
+    "mistake": "put() for large datasets — use proper data ingestion instead.",
+    "interviewTip": "Quick demo command — know put + head pair.",
+    "syntax": "dbutils.fs.put(\"/tmp/myfile.txt\", \"Hello DE\", overwrite=True)\nprint(dbutils.fs.head(\"/tmp/myfile.txt\"))"
+  },
+  "96": {
+    "answer": "Delete folder and all contents with dbutils.fs.rm(path, recurse=True). Without recurse=True, only empty directories can be removed. Equivalent to recursive delete on cloud storage paths.",
+    "points": [
+      "dbutils.fs.rm(path, recurse=True)",
+      "Deletes all files in folder",
+      "Works on DBFS and cloud paths",
+      "Irreversible — use with caution",
+      "UC external tables: DROP TABLE vs rm path"
+    ],
+    "de": "Clean staging folder after successful load: `dbutils.fs.rm('abfss://.../staging/run_id/', recurse=True)`.",
+    "mistake": "rm without recurse on folder with 100 files — fails; or rm Delta table path corrupting data.",
+    "interviewTip": "Distinguish fs.rm for paths vs DROP TABLE for managed tables.",
+    "syntax": "dbutils.fs.rm(\"/mnt/data/myfolder\", recurse=True)"
+  },
+  "107": {
+    "answer": "OLTP handles high-volume transactional operations (orders, payments) with normalized schemas optimized for fast inserts/updates. OLAP handles analytical queries (aggregations, trends) on denormalized/star schemas optimized for read-heavy scans. Lakehouse serves OLAP on data lake storage.",
+    "points": [
+      "OLTP — row-level CRUD, many short transactions",
+      "OLAP — bulk reads, aggregations, reporting",
+      "OLTP: 3NF normalized, indexes on keys",
+      "OLAP: star/snowflake, columnar storage",
+      "Databricks/Delta targets OLAP/analytics workloads"
+    ],
+    "de": "Source OLTP SQL Server → CDC → Delta silver/gold star schema for OLAP dashboards.",
+    "mistake": "Running heavy aggregations directly on OLTP production database.",
+    "interviewTip": "Give one-sentence each + how DE pipelines connect them.",
+    "table": [
+      [
+        "Aspect",
+        "OLTP",
+        "OLAP"
+      ],
+      [
+        "Purpose",
+        "Transactions",
+        "Analytics"
+      ],
+      [
+        "Schema",
+        "Normalized (3NF)",
+        "Star/snowflake"
+      ],
+      [
+        "Queries",
+        "Short, frequent writes",
+        "Heavy read scans"
+      ],
+      [
+        "DE role",
+        "Source (CDC)",
+        "Target (Delta gold)"
+      ]
+    ],
+    "syntax": "-- OLTP source (normalized)\nSELECT o.order_id, o.amount FROM dbo.orders o WHERE o.id = @id;\n\n-- OLAP target (star schema aggregation)\nSELECT d.region, SUM(f.amount) FROM gold.fact_sales f\nJOIN gold.dim_store d ON f.store_key = d.store_key\nGROUP BY d.region;"
+  },
+  "108": {
+    "answer": "Data modeling levels: Conceptual (business entities, ER diagrams), Logical (detailed attributes/relationships, technology-agnostic), Physical (actual tables, types, partitions in the database). Styles include 3NF relational and dimensional (star/snowflake).",
+    "points": [
+      "Conceptual — business view, no tech detail",
+      "Logical — attributes, keys, relationships",
+      "Physical — DDL, indexes, partitions",
+      "Dimensional — facts + dimensions for BI",
+      "3NF — normalized OLTP/enterprise models"
+    ],
+    "de": "Logical star schema design in ER tool → physical Delta gold tables with partition on date.",
+    "mistake": "Jumping to physical tables without agreeing on grain and keys at logical level.",
+    "interviewTip": "Name all three levels and one modeling style (dimensional).",
+    "syntax": "-- Physical model example\nCREATE TABLE gold.fact_sales (\n  order_id BIGINT, customer_key BIGINT, amount DECIMAL(18,2), order_date DATE\n) USING DELTA PARTITIONED BY (order_date);"
+  },
+  "109": {
+    "answer": "Warehouse table types: Fact tables (measurable events/metrics at a grain), Dimension tables (descriptive attributes for filtering/grouping), and Staging/temp tables (ETL intermediate). In Delta lakehouse: bronze≈staging, silver≈cleansed dimensions/facts, gold≈aggregated facts.",
+    "points": [
+      "Fact — numeric measures, grows continuously",
+      "Dimension — descriptive, slower changing",
+      "Staging — pre-validation ETL landing",
+      "Bridge tables for many-to-many",
+      "Medallion maps to these concepts"
+    ],
+    "de": "`gold.fact_orders` (measures) joins `gold.dim_customer` (attributes) — classic star schema on Delta.",
+    "mistake": "Putting descriptive attributes in fact table — wide facts, hard to maintain.",
+    "interviewTip": "Map fact/dim/staging to bronze/silver/gold.",
+    "table": [
+      [
+        "Type",
+        "Content",
+        "Lakehouse layer"
+      ],
+      [
+        "Fact",
+        "Measures, events",
+        "Gold (usually)"
+      ],
+      [
+        "Dimension",
+        "Descriptive attrs",
+        "Silver/Gold"
+      ],
+      [
+        "Staging",
+        "Raw ETL landing",
+        "Bronze"
+      ]
+    ],
+    "syntax": "-- Fact table\nCREATE TABLE gold.fact_orders (\n  order_key BIGINT, customer_key BIGINT, amount DECIMAL(18,2)\n) USING DELTA;\n\n-- Dimension table\nCREATE TABLE gold.dim_customer (\n  customer_key BIGINT, name STRING, region STRING\n) USING DELTA;"
+  },
+  "110": {
+    "answer": "Dimension tables hold descriptive context (who, what, where, when) — relatively small, slower changing. Fact tables hold numeric measures at a defined grain with foreign keys to dimensions — large, append-heavy. Join on surrogate keys.",
+    "points": [
+      "Dimension — attributes for slice/dice",
+      "Fact — measures + dimension FKs",
+      "Fact grain must be clearly defined",
+      "Dimension: SCD Type 1 or 2 for changes",
+      "Star schema: facts surrounded by dimensions"
+    ],
+    "de": "`fact_sales` grain = one row per order line; joins `dim_product`, `dim_date`, `dim_store`.",
+    "mistake": "Mixing measures and slowly-changing attributes in same table without SCD strategy.",
+    "interviewTip": "State grain of fact table — interviewers love this.",
+    "table": [
+      [
+        "Aspect",
+        "Dimension",
+        "Fact"
+      ],
+      [
+        "Content",
+        "Descriptive attributes",
+        "Numeric measures"
+      ],
+      [
+        "Size",
+        "Smaller",
+        "Larger, growing"
+      ],
+      [
+        "Change rate",
+        "Slow (SCD)",
+        "Append-heavy"
+      ],
+      [
+        "Example",
+        "dim_customer",
+        "fact_orders"
+      ]
+    ],
+    "syntax": "SELECT d.customer_name, SUM(f.amount) AS total\nFROM gold.fact_sales f\nJOIN gold.dim_customer d ON f.customer_key = d.customer_key\nGROUP BY d.customer_name;"
+  },
+  "111": {
+    "answer": "Relationship cardinality in data modeling: One-to-one (rare, often merged), One-to-many (most common — dim to fact), Many-to-many (needs bridge table). Distinct from column cardinality (distinct value count).",
+    "points": [
+      "1:1 — one row maps to exactly one row",
+      "1:N — one dimension row, many fact rows",
+      "M:N — bridge/junction table required",
+      "FK on many-side of 1:N",
+      "Bridge table for M:N in star schema"
+    ],
+    "de": "Customer-to-orders is 1:N; student-to-courses M:N via `bridge_enrollment` table.",
+    "mistake": "Many-to-many without bridge — duplicate fact rows or fan-out.",
+    "interviewTip": "Distinguish relationship cardinality from column cardinality (Q52).",
+    "table": [
+      [
+        "Type",
+        "Example",
+        "Implementation"
+      ],
+      [
+        "1:1",
+        "Employee-Desk",
+        "Merge or FK either side"
+      ],
+      [
+        "1:N",
+        "Customer-Orders",
+        "FK on orders"
+      ],
+      [
+        "M:N",
+        "Students-Courses",
+        "Bridge table"
+      ]
+    ],
+    "syntax": "-- 1:N: FK on many side\nCREATE TABLE fact_orders (order_id BIGINT, customer_id BIGINT, amount DOUBLE);\n\n-- M:N: bridge table\nCREATE TABLE bridge_student_course (student_id BIGINT, course_id BIGINT);"
+  },
+  "112": {
+    "answer": "Forward engineering generates physical DDL/database from a logical data model (model → database). Reverse engineering creates a model diagram from an existing database (database → model). Used in ER tools like ERwin, dbt, or Databricks schema tools.",
+    "points": [
+      "Forward: logical model → CREATE TABLE DDL",
+      "Reverse: existing DB → ER diagram",
+      "Forward for greenfield design",
+      "Reverse for documenting legacy systems",
+      "dbt can forward-engineer from YAML schema"
+    ],
+    "de": "Reverse-engineered legacy SQL Server into ER diagram; forward-engineered new Delta gold schema from revised logical model.",
+    "mistake": "Reverse engineering without validating grain and keys — reproduces legacy flaws.",
+    "interviewTip": "One line each direction with tool example.",
+    "syntax": "-- Forward engineering output\nCREATE TABLE dim_customer (customer_key BIGINT, name STRING) USING DELTA;"
+  },
+  "113": {
+    "answer": "D stands for Durability — once a transaction commits, its changes persist permanently even if the system crashes immediately after. Delta achieves durability by writing commit records and data files to durable cloud storage (ADLS/S3) before acknowledging success.",
+    "points": [
+      "Durability = committed data survives failures",
+      "Delta writes to cloud storage before commit ack",
+      "WAL/transaction log persisted to ADLS",
+      "Complements Atomicity, Consistency, Isolation",
+      "Cloud storage redundancy provides durability"
+    ],
+    "de": "MERGE commits only after _delta_log JSON is written to ADLS — crash after commit still has data.",
+    "mistake": "Only explaining A-C-I and forgetting Durability.",
+    "interviewTip": "Complete the ACID acronym — common follow-up after Q20.",
+    "syntax": "-- Commit recorded in _delta_log → durable on ADLS/S3"
+  },
+  "114": {
+    "answer": "Delta tables use Snappy compression by default for underlying Parquet files. Snappy balances speed and compression ratio — fast decompress for analytics scans. Can configure parquet compression codec via table properties if needed.",
+    "points": [
+      "Default: Snappy codec on Parquet files",
+      "Fast compression/decompression for scans",
+      "Configurable via parquet compression settings",
+      "ZSTD available for better ratio, slightly slower",
+      "Compression is per Parquet file, not log"
+    ],
+    "de": "Petabyte Delta tables stay on Snappy default — good balance for daily BI scan workloads.",
+    "mistake": "Claiming Delta has no compression — it's Parquet underneath.",
+    "interviewTip": "Snappy + why: speed over max compression for analytics.",
+    "syntax": "ALTER TABLE my_table SET TBLPROPERTIES ('parquet.compression'='zstd');"
+  },
+  "115": {
+    "answer": "Reduce small files with OPTIMIZE (compaction), coalesce/repartition before write, avoid over-partitioning, and run VACUUM after compaction. Auto Optimize and Auto Compaction help streaming tables automatically.",
+    "points": [
+      "OPTIMIZE — merge small files into larger ones",
+      "coalesce(N) before write for fewer files",
+      "Avoid excessive partitions",
+      "Auto Optimize for streaming Delta",
+      "VACUUM after compaction for storage reclaim"
+    ],
+    "de": "After 5000 micro-batch appends, single-file-per-batch problem fixed by nightly OPTIMIZE.",
+    "mistake": "coalesce(1) on huge dataset — single massive file, kills parallelism.",
+    "interviewTip": "OPTIMIZE is the primary answer; mention coalesce context for writes.",
+    "syntax": "OPTIMIZE catalog.schema.my_table;\n-- Or before write:\ndf.coalesce(10).write.format(\"delta\").mode(\"append\").save(path)"
+  },
+  "116": {
+    "answer": "DROP TABLE removes table metadata; for managed tables also deletes data. For external tables, DROP removes metadata only — files remain. Use dbutils.fs.rm(path, recurse=True) to delete raw storage paths. Never rm a Delta table path without DROP first.",
+    "points": [
+      "DROP TABLE — correct way to remove Delta table",
+      "Managed: DROP deletes data + metadata",
+      "External: DROP metadata only; rm files separately",
+      "fs.rm on Delta path corrupts table",
+      "UC: need DROP privilege on table"
+    ],
+    "de": "Decommission bronze: DROP TABLE for managed; external needs DROP + fs.rm on ADLS path.",
+    "mistake": "dbutils.fs.rm on Delta folder — orphans _delta_log, breaks table.",
+    "interviewTip": "DROP vs rm decision tree — classic gotcha.",
+    "table": [
+      [
+        "Action",
+        "Managed table",
+        "External table"
+      ],
+      [
+        "DROP TABLE",
+        "Deletes data + metadata",
+        "Metadata only"
+      ],
+      [
+        "fs.rm path",
+        "Don't use instead of DROP",
+        "Deletes files after DROP"
+      ]
+    ],
+    "syntax": "DROP TABLE catalog.schema.my_managed_table;\n\nDROP TABLE catalog.schema.my_external_table;\ndbutils.fs.rm(\"abfss://container@acct.dfs.core.windows.net/path/\", recurse=True);"
+  },
+  "117": {
+    "answer": "Personal Access Token (PAT) authenticates API/CLI/CI/CD and external tools (ADF linked service, Power BI) to Databricks without interactive login. Create in User Settings → Developer → Access Tokens. Store in Key Vault; rotate regularly.",
+    "points": [
+      "PAT for API, CLI, ADF, BI tool auth",
+      "Generate in workspace User Settings",
+      "Set expiration period",
+      "Store in Azure Key Vault — not in code",
+      "Service principals preferred for prod automation"
+    ],
+    "de": "ADF Databricks linked service uses PAT from Key Vault; rotated every 90 days via pipeline.",
+    "mistake": "PAT in Git repo or shared Slack — security incident.",
+    "interviewTip": "Mention service principal as prod best practice over personal PAT.",
+    "syntax": "# Use token in API call\ncurl -H \"Authorization: Bearer <databricks-token>\" https://<workspace>/api/2.0/clusters/list"
+  },
+  "118": {
+    "answer": "Global temp views work on serverless for the duration of a session but are unreliable across recycled serverless sessions. Prefer UC temp views or persistent tables for cross-query sharing. Global temp is cluster/session-scoped, not durable.",
+    "points": [
+      "Global temp tied to session lifecycle",
+      "Serverless recycles compute — views may vanish",
+      "Use UC schema temp tables for reliability",
+      "createOrReplaceTempView is session-scoped",
+      "Production: avoid global temp — use UC tables"
+    ],
+    "de": "Replaced global_temp staging with `CREATE TEMP VIEW` in same SQL warehouse session, or UC staging table.",
+    "mistake": "Assuming global temp persists across serverless SQL sessions.",
+    "interviewTip": "Answer: works within session, not recommended for prod on serverless.",
+    "syntax": "CREATE OR REPLACE GLOBAL TEMP VIEW staging AS SELECT * FROM source;\n-- Prefer: CREATE TABLE catalog.scratch.staging USING DELTA AS SELECT ..."
+  },
+  "119": {
+    "answer": "Yes — Delta tables join like any Spark DataFrame or SQL table. Use DataFrame join API or SQL JOIN syntax. Delta ACID ensures consistent snapshot for both sides at query time.",
+    "points": [
+      "SQL: JOIN catalog.schema.table1 t1 ON ...",
+      "DataFrame: df1.join(df2, on='key')",
+      "Both sides read consistent snapshot",
+      "Broadcast small dimension for performance",
+      "Z-order join keys for large fact-to-fact joins"
+    ],
+    "de": "`fact_orders` JOIN `dim_customer` ON customer_key — standard star schema join on Delta.",
+    "mistake": "Reading one table as Parquet and other as Delta — inconsistent snapshots.",
+    "interviewTip": "Trivial yes with syntax — add broadcast hint for perf.",
+    "syntax": "SELECT * FROM catalog.gold.fact_orders f\nJOIN catalog.gold.dim_customer d ON f.customer_key = d.customer_key;\n\n# DataFrame\nresult = df1.join(df2, df1.id == df2.id, \"inner\")"
+  },
+  "120": {
+    "answer": "Write DataFrame to SQL table via JDBC DataFrameWriter with format('jdbc'), specifying url, dbtable, credentials, and mode. For Synapse use dedicated connector. Alternatively use ODBC/SQL warehouse external connection.",
+    "points": [
+      "df.write.format('jdbc').option('dbtable', ...)",
+      "mode append or overwrite",
+      "Batch size and isolation level options",
+      "Synapse: dedicated connector for bulk",
+      "Prefer keeping gold in Delta; JDBC for legacy BI"
+    ],
+    "de": "Gold summary pushed to Azure SQL reporting DB via JDBC append for legacy SSRS reports.",
+    "mistake": "JDBC overwrite truncating production reporting table without backup.",
+    "interviewTip": "Show JDBC write; mention Delta is preferred sink in lakehouse.",
+    "syntax": "df.write.format(\"jdbc\")\n  .option(\"url\", \"jdbc:sqlserver://server:1433;database=db\")\n  .option(\"dbtable\", \"dbo.report_summary\")\n  .option(\"user\", user).option(\"password\", pwd)\n  .mode(\"append\").save()"
+  },
+  "121": {
+    "answer": "Update specific rows with DataFrame withColumn + when/otherwise, or Delta MERGE for table-level updates. For single-row correction in interview: filter emp_id and replace salary value. Production uses MERGE from CDC source.",
+    "points": [
+      "withColumn + when(col('emp_id')==101, 7500).otherwise(col('salary'))",
+      "Delta MERGE for table updates",
+      "UPDATE SQL on Delta tables supported",
+      "MERGE preferred for idempotent CDC",
+      "Avoid collect-modify-write pattern at scale"
+    ],
+    "de": "One-off fix: MERGE or UPDATE; ongoing salary changes via CDC MERGE on `emp_id`.",
+    "mistake": "Collecting entire DataFrame to driver, modifying in Python, writing back.",
+    "interviewTip": "Give withColumn answer, then mention MERGE for production.",
+    "syntax": "from pyspark.sql.functions import when, col\ndf = df.withColumn(\"salary\", when(col(\"emp_id\") == 101, 7500).otherwise(col(\"salary\")))\n\n# Production Delta:\nUPDATE employees SET salary = 7500 WHERE emp_id = 101;"
+  }
+}

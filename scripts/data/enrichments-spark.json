@@ -1,0 +1,539 @@
+{
+  "15": {
+    "answer": "In PySpark, null salary rows are removed with a lazy filter on the column predicate or with DataFrameNaFunctions.drop on a subset. filter(df.salary.isNotNull()) keeps rows where the executor evaluates a non-null check per partition without a shuffle. df.na.drop(subset=['salary']) drops any row with null in that column and is equivalent for single-column null removal. Both are transformations, so nothing runs until an action like count() or write(). In production silver layers, filter nulls on business keys early to avoid bad joins downstream.",
+    "points": [
+      "isNotNull() is a column expression evaluated partition-local — no shuffle required",
+      "na.drop(subset=[...]) can drop rows if ANY listed column is null",
+      "Filtering before joins reduces shuffle volume on wide transformations",
+      "NULL != NULL in Spark SQL — use isNull()/isNotNull(), not == None",
+      "Combine with data-quality metrics: log null rate before dropping"
+    ],
+    "de": "Bronze HR ingest: filter salary.isNotNull() before joining to dim_employee; quarantine rows with null salary to a DQ Delta table instead of silently dropping in prod.",
+    "mistake": "Using df.filter(df.salary != None) or == null — Python None does not translate to SQL NULL semantics in Spark.",
+    "interviewTip": "Mention lazy evaluation: the filter builds a logical plan node; cite when you'd quarantine vs drop for auditability.",
+    "syntax": "df_clean = df.filter(df.salary.isNotNull())\n# or\ndf_clean = df.na.drop(subset=[\"salary\"])"
+  },
+  "16": {
+    "answer": "SparkSession is the unified entry point to Spark SQL, DataFrame, and streaming APIs in Spark 2.x+. You build it with SparkSession.builder.appName(...).config(...).getOrCreate(), which also provides sparkContext under the hood. On Databricks notebooks, a session named spark is pre-created by the runtime — you do not need to call builder.getOrCreate() unless running packaged jobs or unit tests locally. In ADF-triggered Databricks jobs, the cluster JVM starts one session per driver; reuse it across notebook cells and avoid creating multiple sessions.",
+    "points": [
+      "SparkSession replaces separate SQLContext/HiveContext in modern Spark",
+      "getOrCreate() returns existing session in the same JVM if one exists",
+      "Driver holds the session; executors never create their own SparkSession",
+      "Databricks runtime injects spark with cluster configs (shuffle partitions, AQE, etc.)",
+      "For local dev/tests: builder.master('local[*]') or connect to remote cluster"
+    ],
+    "de": "Packaged PySpark wheel on Databricks job cluster: accept SparkSession as parameter in transform functions instead of calling builder inside every module — one session per job run.",
+    "mistake": "Calling SparkSession.builder.getOrCreate() repeatedly in every function on Databricks, or creating a new session per notebook cell in local IDE tests.",
+    "interviewTip": "Contrast driver-side session (planning) with executors (task execution); note Databricks auto-provisions spark.",
+    "syntax": "from pyspark.sql import SparkSession\n\nspark = SparkSession.builder \\\n    .appName(\"de-pipeline\") \\\n    .config(\"spark.sql.shuffle.partitions\", \"200\") \\\n    .getOrCreate()"
+  },
+  "17": {
+    "answer": "This scenario chains read, column pruning, filter, type cast, derived column, and sort in one fluent DataFrame pipeline. Each method returns a new lazy DataFrame; Catalyst can fuse narrow transformations (select, filter, withColumn) into fewer stages before orderBy triggers a shuffle. Using when/col for salary_range avoids UDFs and keeps whole-stage codegen. Casting employee_id to string preserves leading zeros for downstream keys. orderBy('salary') sorts globally and requires exchanging rows across partitions.",
+    "points": [
+      "Method chaining builds a single logical plan — prefer over temp variables for readability",
+      "select early to prune columns before shuffle-heavy orderBy",
+      "when().otherwise() is vectorized — faster than Python UDF for bucketing",
+      "inferSchema=True on CSV is fine in interviews; use explicit schema in prod",
+      "orderBy is a wide transformation — mention shuffle cost on large data"
+    ],
+    "de": "One-shot bronze-to-silver notebook: read vendor CSV from abfss, keep contract columns, filter active employees, bucket salary for HR analytics mart, write Delta partitionBy(department).",
+    "mistake": "Writing six separate jobs with intermediate Parquet writes instead of one optimized DAG; or using collect() to inspect mid-pipeline.",
+    "interviewTip": "Walk through the plan left-to-right and name which steps are narrow vs wide (orderBy = shuffle).",
+    "syntax": "from pyspark.sql.functions import col, when\n\nresult = (\n    spark.read.option(\"header\", True).option(\"inferSchema\", True).csv(\"/path/officedata.csv\")\n    .select(\"employee_id\", \"name\", \"department\", \"salary\", \"join_date\")\n    .filter(\"salary > 3000\")\n    .withColumn(\"employee_id\", col(\"employee_id\").cast(\"string\"))\n    .withColumn(\"salary_range\",\n        when(col(\"salary\") >= 9000, \"High\")\n        .when((col(\"salary\") >= 5000) & (col(\"salary\") < 9000), \"Medium\")\n        .otherwise(\"Low\"))\n    .orderBy(\"salary\")\n)"
+  },
+  "18": {
+    "answer": "Apache Spark follows a driver-executor cluster model coordinated by a cluster manager. The driver JVM runs your main() or notebook driver, builds the DAG from lazy transformations, splits work into stages at shuffle boundaries, and schedules tasks. The cluster manager (YARN, Kubernetes, Mesos, or Databricks) allocates CPU/memory containers on worker nodes. Executors on workers run tasks, hold in-memory/disk cache, and shuffle data over the network. Fault tolerance comes from lineage: RDDs/DataFrames recompute lost partitions from ancestors.",
+    "points": [
+      "Driver: SparkContext/SparkSession, DAGScheduler, TaskScheduler, Catalyst optimizer",
+      "Cluster Manager: negotiates resources — not the same as Spark's scheduling logic",
+      "Executor: JVM process with memory pools (execution, storage, overhead)",
+      "Shuffle files written by map tasks, read by reduce tasks across executors",
+      "On Databricks: driver on driver node, executors on worker nodes in the cluster"
+    ],
+    "de": "Debug a 4-hour job: Spark UI on driver shows DAG — one stage with 1 task flags skew; executor logs show GC pressure on one worker handling hot partition.",
+    "mistake": "Saying 'Spark distributes the DataFrame' without distinguishing driver planning from executor task execution.",
+    "interviewTip": "Draw three boxes: Driver → Cluster Manager → Executors; trace one filter+groupBy job through DAG and shuffle.",
+    "diagram": "Client (notebook/job)\n    |\n    v\n[DRIVER] -- builds DAG, schedules tasks\n    |\n    v\n[Cluster Manager] -- YARN / K8s / Databricks\n    |\n    +---> [Executor 1] tasks + cache + shuffle write\n    +---> [Executor 2] tasks + cache + shuffle read\n    +---> [Executor N] ...",
+    "table": [
+      ["Component", "Role", "Failure impact"],
+      ["Driver", "Plan DAG, collect small results", "Job fails entirely"],
+      ["Cluster Manager", "Allocate containers", "No new executors"],
+      ["Executor", "Run tasks, cache blocks", "Lost partition recomputed from lineage"]
+    ]
+  },
+  "21": {
+    "answer": "Spark defers execution of transformations until an action forces materialization. When you call filter or select, Spark records operations in a logical plan (unresolved → analyzed → optimized) rather than scanning data immediately. Catalyst applies predicate pushdown, column pruning, and constant folding before Tungsten generates physical plans. Only actions — count(), collect(), write(), show() — submit jobs to the DAGScheduler. Lazy evaluation enables whole-pipeline optimization and avoids redundant I/O when you branch from the same DataFrame.",
+    "points": [
+      "Transformations are lazy; actions trigger job submission",
+      "Logical plan optimized once per action (with caching exceptions)",
+      "Multiple branches from same DF without cache may re-read source",
+      "explain() / explain(True) shows optimized physical plan before running",
+      "Structured Streaming also builds incremental plans on micro-batches"
+    ],
+    "de": "Silver pipeline reads bronze once, applies filter+join+agg; only write.format('delta').save() triggers the full scan — use explain() in dev to verify partition pruning on dt.",
+    "mistake": "Assuming df.filter(...).show() ran only the filter — show() is an action that executes the entire lineage up to that point.",
+    "interviewTip": "Give one transformation chain and name the first action; mention Catalyst optimization as the 'why' behind lazy eval.",
+    "syntax": "df2 = df.filter(\"amount > 0\").select(\"id\", \"amount\")  # lazy\nn = df2.count()  # action — job runs now"
+  },
+  "22": {
+    "answer": "Transformations define how to compute a new RDD/DataFrame from an existing one and are always lazy. Narrow transformations (map, filter, select) map partitions independently; wide ones (groupByKey, join, repartition) shuffle. Actions return a value to the driver or write to storage and trigger execution. Examples: transformations include withColumn, join; actions include count, take, foreach, save. Understanding the split helps you avoid accidental driver OOM from actions like collect() on large results.",
+    "points": [
+      "Transformations return DataFrame/RDD; actions return side effects or driver values",
+      "Each action may recompute lineage unless cache/persist is used",
+      "write() is an action — triggers potentially many stages for partitioned output",
+      "take(n) and head() are actions but only pull n rows to driver",
+      "foreach() and foreachPartition() are actions for side-effect writes per row/partition"
+    ],
+    "de": "Iterative QA: cache dimension after first join (transformation + persist), then run count() and write() (two actions) without re-reading ADLS bronze.",
+    "mistake": "Listing only map/filter as transformations and forgetting join, union, distinct are also lazy transformations.",
+    "interviewTip": "Pair each example: select=transformation, count=action; note wide transformations create shuffle stages.",
+    "table": [
+      ["Type", "Examples", "Triggers job?"],
+      ["Transformation", "select, filter, join, groupBy", "No"],
+      ["Action", "count, collect, show, write, take", "Yes"]
+    ],
+    "syntax": "# Transformations (lazy)\ndf2 = df.filter(\"x > 1\").groupBy(\"k\").count()\n\n# Actions (trigger execution)\ndf2.show()\ndf2.write.parquet(\"/out\")"
+  },
+  "25": {
+    "answer": "OOM in Spark usually hits the driver (collect, broadcast too large) or executors (skewed partitions, huge groupBy, insufficient memory per task). Start in Spark UI: identify the stage with failed tasks or spilling. Mitigations include increasing spark.executor.memory and memoryOverhead, reducing partition size via repartition or spark.sql.files.maxPartitionBytes, broadcasting only genuinely small tables, and salting skewed join keys. Avoid collect() on large DataFrames; use take() or write to storage instead. Enable AQE skew join handling and verify spill metrics — heavy spill means memory pressure.",
+    "points": [
+      "Distinguish driver OOM (collect/broadcast) vs executor OOM (shuffle/agg)",
+      "spark.memory.fraction controls execution vs storage memory in executor",
+      "Skew: one partition holds most keys — fix with salting or isolate hot key",
+      "Increase shuffle partitions only helps if partitions are too large, not if skewed",
+      "Databricks: check driver vs worker node SKU; job clusters sized per workload"
+    ],
+    "de": "400M-row join OOM: Spark UI shows task 187/200 taking 90% runtime — salted user_id, enabled AQE skew join, increased executor memoryOverhead to 20%.",
+    "mistake": "Only bumping executor count without fixing skew — more executors won't help one giant partition.",
+    "interviewTip": "Structure answer: diagnose in UI → driver vs executor → config → code (broadcast/salt/repartition) → validate.",
+    "syntax": "spark.conf.set(\"spark.sql.adaptive.enabled\", \"true\")\nspark.conf.set(\"spark.sql.adaptive.skewJoin.enabled\", \"true\")\n\ndf = df.repartition(400, \"join_key\")  # if partitions too fat"
+  },
+  "26": {
+    "answer": "Broadcast hash join copies the entire small relation to every executor so the large table can probe locally without shuffling both sides. Spark auto-broadcasts when the estimated size is below spark.sql.autoBroadcastJoinThreshold (default 10MB). You can force it with broadcast(df) hint or spark.sql.adaptive.autoBroadcastJoinThreshold with AQE. The small table lives in executor memory — broadcasting a table that's too large causes driver or executor OOM. Map-side join avoids shuffle on the fact table, critical for star-schema enrichment.",
+    "points": [
+      "Only the small table is broadcast; large table stays partitioned",
+      "Threshold is per-table size estimate from stats or runtime AQE",
+      "broadcast() hint in PySpark: from pyspark.sql.functions import broadcast",
+      "If both tables are huge, neither broadcast nor naive join works — bucket or pre-aggregate",
+      "Spark UI shows 'BroadcastExchange' in physical plan"
+    ],
+    "de": "Join 2B-row fct_clicks to 5K-row dim_country — broadcast dim; runtime drops from 45 min shuffle join to 8 min.",
+    "mistake": "Broadcasting a 'small' dimension that grew to 500MB after a bad filter — always check table size in plan.",
+    "interviewTip": "State size threshold, show broadcast() syntax, and warn about OOM if small table isn't actually small.",
+    "syntax": "from pyspark.sql.functions import broadcast\n\nresult = large_df.join(broadcast(small_df), \"country_id\")"
+  },
+  "27": {
+    "answer": "Narrow transformations propagate each input partition to at most one output partition without a shuffle — examples include map, filter, select, and mapPartitions. Spark can pipeline narrow ops in a single stage (one-to-one or many-to-one within partition). Wide transformations require exchanging data across the network because a partition's output depends on multiple input partitions — groupBy, join, distinct, repartition, orderBy. Shuffle is the expensive boundary: disk spill, network I/O, and straggler tasks. Catalyst may still reorder filters before wide ops via predicate pushdown.",
+    "points": [
+      "Narrow = no shuffle; wide = shuffle exchange (Exchange operator in plan)",
+      "Stage boundaries occur at shuffle dependencies in the DAG",
+      "filter before join to reduce shuffle bytes",
+      "mapPartitions runs function per partition — still narrow",
+      "AQE can coalesce partitions after shuffle but doesn't eliminate shuffle"
+    ],
+    "de": "Pipeline design: push filter(dt='2024-01-01') before join on order_id — cuts shuffle from 2TB to 20GB daily slice.",
+    "mistake": "Calling groupBy narrow because 'it feels like filtering groups' — groupBy always shuffles.",
+    "interviewTip": "Use one narrow example (filter) and one wide (join); say 'shuffle exchange' not just 'slow'.",
+    "table": [
+      ["Category", "Examples", "Shuffle?"],
+      ["Narrow", "filter, select, withColumn, map", "No"],
+      ["Wide", "groupBy, join, distinct, orderBy, repartition", "Yes"]
+    ]
+  },
+  "28": {
+    "answer": "repartition(n) performs a full hash shuffle and can increase or decrease partition count, aiming for roughly even distribution. coalesce(n) only reduces partitions by merging adjacent partitions without a full shuffle — faster but often uneven. Shuffling happens in repartition's Exchange stage; coalesce may use narrow dependencies when reducing to fewer partitions on the same executors. Use repartition before heavy groupBy or when increasing parallelism; use coalesce before write when you want fewer output files without paying full shuffle cost.",
+    "points": [
+      "repartition(n, col) hashes on column for even skew-prone keys",
+      "coalesce cannot increase partition count — use repartition instead",
+      "Post-write small files: coalesce(1) is anti-pattern at scale — target right file count",
+      "spark.sql.shuffle.partitions defaults to 200 — tune per workload",
+      "AQE may coalesce shuffle partitions automatically at runtime"
+    ],
+    "de": "Before writing daily Delta: repartition(64, 'region') for balanced processing; coalesce(16) only at final export to 16 CSV files for downstream SFTP.",
+    "mistake": "Using coalesce(4) when you need even distribution after 10 skewed partitions — sizes stay imbalanced.",
+    "interviewTip": "Answer both parts: coalesce avoids full shuffle; repartition pays shuffle for even splits.",
+    "table": [
+      ["API", "Partition count", "Shuffle", "Even distribution"],
+      ["repartition(n)", "Up or down", "Full", "Usually yes"],
+      ["coalesce(n)", "Down only", "Minimal", "Not guaranteed"]
+    ],
+    "syntax": "df_even = df.repartition(200, \"customer_id\")\ndf_fewer_files = df.coalesce(8)"
+  },
+  "29": {
+    "answer": "Even distribution requires redistributing rows across partitions via hash partitioning, which means a full shuffle. repartition(n) round-robins or hash-partitions into n buckets so each task gets similar row counts. repartition(n, 'column') uses hash(column) % n for key-based balance — useful before joins on that key. coalesce merges partitions locally and cannot spread a hot partition's data across the cluster. For skewed keys, salting is needed — plain repartition won't fix one dominant key value.",
+    "points": [
+      "repartition() triggers Exchange in physical plan",
+      "Hash repartition on join key aligns with downstream join partitioning",
+      "Check Spark UI task duration histogram for balance after repartition",
+      "spark.sql.shuffle.partitions affects default groupBy/join partition count",
+      "Salting addresses skew; repartition addresses count and coarse balance"
+    ],
+    "de": "Pre-shuffle 1M partitions from bad ingest: repartition(500, 'order_id') before groupBy customer — tasks finish within 2x of median.",
+    "mistake": "Expecting coalesce to spread a 10GB single partition across four executors.",
+    "interviewTip": "Say 'full shuffle' and mention repartition(n, key) for hash-based even splits.",
+    "syntax": "df_balanced = df.repartition(100, \"user_id\")"
+  },
+  "30": {
+    "answer": "cache() and persist() store computed partitions in executor memory and optionally disk so subsequent actions skip recomputing lineage. cache() is persist(StorageLevel.MEMORY_AND_DISK) — spills to disk if RAM is full. persist() lets you choose MEMORY_ONLY, DISK_ONLY, MEMORY_AND_DISK_SER (serialized, less RAM), etc. Cached data is tracked by the BlockManager; unpersist() frees it. Cache when the same DataFrame is used in multiple actions (ML iterations, multiple aggregations). Don't cache every intermediate step — memory eviction hurts performance.",
+    "points": [
+      "First action materializes cache; later actions read from storage level",
+      "Serialized levels trade CPU for memory (MEMORY_AND_DISK_SER)",
+      "Spark UI Storage tab shows cached RDD/DataFrame size and fraction in memory",
+      "CACHE TABLE in SQL caches lazily on first query",
+      "Not caching after filter still recomputes from source on each action"
+    ],
+    "de": "Dashboard notebook: cache filtered last-90-days orders once, then run three separate agg actions for KPI tiles without re-scanning Delta.",
+    "mistake": "Caching upstream of a filter that changes — stale cache; or never unpersist() in long-lived notebook clusters.",
+    "interviewTip": "Contrast cache() default level vs persist(StorageLevel...); mention when NOT to cache (one-shot ETL).",
+    "syntax": "from pyspark import StorageLevel\n\ndf.cache()  # MEMORY_AND_DISK\ndf.persist(StorageLevel.MEMORY_AND_DISK_SER)\ndf.unpersist()"
+  },
+  "31": {
+    "answer": "Salary bucketing uses withColumn and chained when expressions from pyspark.sql.functions — fully Catalyst-optimizable without UDFs. Each when checks a boolean column expression; otherwise is the default branch. Boundaries (9000, 5000) should match business rules and be documented as constants. For null salaries, when returns null unless you add a separate branch. This pattern is equivalent to SQL CASE WHEN and executes vectorized on executors.",
+    "points": [
+      "Import when, col from pyspark.sql.functions",
+      "Chained when reads top-to-bottom — order matters",
+      "Use lit() for literal values on typed columns",
+      "Prefer explicit boundaries in config table for maintainability",
+      "Alternative: ntile(3) over Window.orderBy('salary') for percentile buckets"
+    ],
+    "de": "Gold employee mart: salary_category drives BI color rules; thresholds loaded from a small broadcast config DF instead of hard-coded literals.",
+    "mistake": "Using Python if/else UDF row-by-row instead of when — breaks codegen and runs 10-100x slower.",
+    "interviewTip": "Write the when chain cleanly; mention null handling and config-driven thresholds for prod.",
+    "syntax": "from pyspark.sql.functions import when, col\n\ndf = df.withColumn(\"salary_category\",\n    when(col(\"salary\") >= 9000, \"High\")\n    .when((col(\"salary\") >= 5000) & (col(\"salary\") < 9000), \"Medium\")\n    .otherwise(\"Low\"))"
+  },
+  "32": {
+    "answer": "Writing JSON uses the DataFrameWriter with format('json') and a save mode. Each row becomes one JSON line (JSONL) by default unless multiLine option is set for pretty arrays. mode('overwrite') replaces the path; append adds files. Spark creates part-*.json files per task partition — repartition before write controls file count. JSON is schemaless text; for analytics prefer Parquet or Delta. compression defaults to none; set compression codec via option if needed.",
+    "points": [
+      "One output file per partition unless coalesce/repartition adjusted",
+      "mode: overwrite, append, ignore, errorifexists",
+      "JSON infers string types for nested structs from struct columns",
+      "For API handoff: coalesce(1) only on small exports — not TB scale",
+      "Delta or Parquet preferred for lakehouse silver/gold layers"
+    ],
+    "de": "Export sample 10K rows to JSON for partner API staging in abfss://staging/out/ — repartition(1) after limit for single file delivery.",
+    "mistake": "Expecting one single JSON file without coalesce/repartition — get hundreds of part files by default.",
+    "interviewTip": "Mention part files per partition and when you'd choose Parquet over JSON for prod lakes.",
+    "syntax": "df.write.format(\"json\").mode(\"overwrite\").save(\"/path/output_json\")\n# or\ndf.write.json(\"/path/output_json\", mode=\"overwrite\")"
+  },
+  "45": {
+    "answer": "Date difference in hours uses unix_timestamp to convert date/timestamp columns to seconds since epoch, subtract, and divide by 3600. Both columns must be date or timestamp type — cast strings first with to_timestamp. For timezone-aware SLA math, use to_utc_timestamp or store UTC in silver. datediff counts days only; for hours unix_timestamp subtraction is precise. null in either column yields null diff_hours.",
+    "points": [
+      "unix_timestamp returns seconds; divide by 3600 for hours",
+      "Use to_timestamp for string dates: to_timestamp(col('d'), 'yyyy-MM-dd')",
+      "timestampsdiff(HOUR, start, end) in Spark 3.x+ is cleaner alternative",
+      "Beware DST if using local timezone — prefer UTC in pipelines",
+      "Column types visible in df.printSchema() before arithmetic"
+    ],
+    "de": "Support ticket SLA: diff_hours between opened_at and resolved_at; flag breaches where diff_hours > 24 for ops dashboard.",
+    "mistake": "Subtracting date strings without cast — implicit cast fails or returns null silently.",
+    "interviewTip": "Offer unix_timestamp method and mention timestampdiff as Spark 3 alternative.",
+    "syntax": "from pyspark.sql.functions import col, unix_timestamp\n\ndf = df.withColumn(\"diff_hours\",\n    (unix_timestamp(col(\"end_date\")) - unix_timestamp(col(\"start_date\"))) / 3600)"
+  },
+  "47": {
+    "answer": "Salting fixes skew when a few key values dominate join or groupBy partitions, causing straggler tasks and OOM. Append a random salt column (0 to N-1) to the skewed key on both sides, join on (key, salt), then aggregate away the salt. Hot keys become N smaller groups spread across executors. AQE skew join can auto-split heavy partitions at runtime, but explicit salting is the classic interview pattern. Choose salt cardinality to balance parallelism vs post-join aggregation cost.",
+    "points": [
+      "Skew symptom: one task in stage takes 10x longer in Spark UI",
+      "Salt range N trades more partitions for better balance",
+      "Both join sides must apply compatible salt logic",
+      "Combine with broadcast if one side is small — salt is for large-large skew",
+      "spark.sql.adaptive.skewJoin.enabled handles some cases automatically"
+    ],
+    "de": "Join orders to user_id where user_id=0 (guest) is 40% of rows: salt guest rows with rand(0,9), duplicate dim rows per salt bucket, join, drop salt.",
+    "mistake": "Only repartitioning without salting when one key owns 50% of data — still one fat partition.",
+    "interviewTip": "Describe straggler in UI, then salt steps: add column → expand/build salted lookup → join → dedupe/agg.",
+    "diagram": "Hot key ABC (80% rows)\n  -> ABC_0, ABC_1, ... ABC_9  (salt 0-9)\nEach bucket joins in parallel on different executors"
+  },
+  "53": {
+    "answer": "Output file count equals the number of write tasks, which matches DataFrame partition count at write time. A single-partition DataFrame produces one part file (per writer format). Call repartition(4) before write to force four shuffle partitions and roughly four output files. coalesce(4) also yields four files without full shuffle but may be uneven. For Parquet/Delta, right-size partitions for downstream readers — not too many small files.",
+    "points": [
+      "Write parallelism = number of partitions at write action",
+      "repartition(4) before write is standard interview answer",
+      "Delta OPTIMIZE and file compaction fix small-file problem later",
+      "maxRecordsPerFile option caps rows per file without exact partition count",
+      "Spark 3: option('maxRecordsPerFile', n) for JSON/CSV exports"
+    ],
+    "de": "Land four Parquet files per hour for parallel Synapse COPY — repartition(4) on hourly batch before write to abfss bronze.",
+    "mistake": "Using coalesce(4) after filter that left one fat partition — still one huge file.",
+    "interviewTip": "Link partitions to output files; mention repartition vs coalesce tradeoff.",
+    "syntax": "df.repartition(4).write.format(\"parquet\").mode(\"overwrite\").save(\"/path/output\")"
+  },
+  "54": {
+    "answer": "From 10 partitions down to 4 equal-sized partitions requires redistributing data evenly, which means repartition(4). coalesce(4) merges partition 0+1, 2+3, etc. without a full shuffle — fast but preserves skew if partition 0 was huge. Interview rule: need equal sizes → repartition; need fewer files and accept imbalance → coalesce. Verify in Spark UI that four tasks have similar input sizes after repartition.",
+    "points": [
+      "10 → 4 equal: repartition(4) only correct answer",
+      "coalesce is narrow dependency merge — no hash redistribution",
+      "Equal matters for downstream parallel reads",
+      "File count after write follows partition count",
+      "AQE post-shuffle coalesce is runtime optimization, not same as coalesce()"
+    ],
+    "de": "Normalize partition count before join to 400M-row fact: repartition(200) so each task ~2M rows; coalesce would leave original skew.",
+    "mistake": "Answering coalesce because partition count decreases — ignores even distribution requirement.",
+    "interviewTip": "Restate question: 'equal' triggers repartition; explain why coalesce fails equality.",
+    "syntax": "df_equal = df.repartition(4)  # not df.coalesce(4)"
+  },
+  "63": {
+    "answer": "In the DataFrame API, sort() and orderBy() are aliases — identical implementation and global sort requiring shuffle unless paired with limit on optimized plans. Both accept column names or col expressions and default ascending. sortWithinPartitions() is different: sorts inside each partition only, no global order, narrow transformation. For top-N per group use window functions with row_number, not global orderBy on full table.",
+    "points": [
+      "orderBy == sort for DataFrames",
+      "Global sort = wide transformation (RangePartitioner)",
+      "sortWithinPartitions for narrow per-partition sort before write",
+      "orderBy(col('x').desc()) for descending",
+      "limit(n) after orderBy may use TopK optimization without full sort"
+    ],
+    "de": "Export top 100 customers by revenue: orderBy(desc('revenue')).limit(100) — Catalyst may avoid sorting entire 500M rows.",
+    "mistake": "Missing sortWithinPartitions distinction — interviewer often wants that nuance.",
+    "interviewTip": "Say they're aliases, then pivot to sortWithinPartitions vs global orderBy.",
+    "table": [
+      ["API", "Scope", "Shuffle"],
+      ["orderBy / sort", "Global", "Yes"],
+      ["sortWithinPartitions", "Per partition", "No"]
+    ]
+  },
+  "67": {
+    "answer": "RDD (Resilient Distributed Dataset) is Spark's low-level distributed collection of JVM objects partitioned across the cluster with lineage-based fault tolerance. DataFrames add a schema (StructType), Catalyst optimizer, and Tungsten execution — you express logic as SQL-like ops and get automatic predicate pushdown. RDDs use map/filter with opaque Python/Java objects; DataFrames know column types and can codegen. Use RDDs rarely (unstructured bytes, custom partitioning); DataFrames/Datasets are default for ETL.",
+    "points": [
+      "RDD: opaque rows, manual optimization, lambda functions",
+      "DataFrame: named columns, logical plan, Parquet pushdown",
+      "Dataset[T] typed API on JVM — PySpark uses DataFrame (untyped Dataset[Row])",
+      "RDD lineage graph enables recomputation on failure",
+      "spark.createDataFrame(rdd, schema) bridges RDD to DataFrame"
+    ],
+    "de": "Legacy ingest used RDD textFile + regex parse; migrated to DataFrame read.json with schema registry — 3x faster via column pruning.",
+    "mistake": "Saying DataFrames aren't distributed — they are; the difference is schema and optimizer.",
+    "interviewTip": "Compare on schema, optimizer, and API ergonomics; mention when RDD still appears (streaming internals, MLlib legacy).",
+    "table": [
+      ["Aspect", "RDD", "DataFrame"],
+      ["Schema", "None", "StructType"],
+      ["Optimizer", "Manual", "Catalyst + Tungsten"],
+      ["API", "map, filter lambdas", "select, filter, SQL"]
+    ]
+  },
+  "80": {
+    "answer": "Cached DataFrames are released with unpersist() on that DataFrame reference, or unpersist(blocking=True) to wait until blocks are freed. Spark also evicts cache under memory pressure via LRU. In notebooks, cached data can pin gigabytes on shared clusters — always unpersist when done. storage_level is visible in persist(); unpersist without argument drops all blocks for that RDD lineage id.",
+    "points": [
+      "df.unpersist() frees executor memory and disk cache blocks",
+      "blocking=True ensures cleanup before next line runs",
+      "spark.catalog.clearCache() drops all cached tables in session",
+      "Long-running Databricks all-purpose clusters suffer from orphan caches",
+      "Cache hit ratio visible in Spark UI Storage tab"
+    ],
+    "de": "After exploratory joins on 50GB DF, unpersist() before leaving notebook — prevented OOM on colleague's session sharing cluster.",
+    "mistake": "Only deleting Python variable df without unpersist — JVM still holds cached blocks.",
+    "interviewTip": "Mention shared cluster etiquette on Databricks; pair cache() with unpersist() in try/finally pattern.",
+    "syntax": "df.cache()\n# ... multiple actions ...\ndf.unpersist()"
+  },
+  "83": {
+    "answer": "show() is open-source Spark: collects up to n rows (default 20) to the driver and prints ASCII table — on 1M rows, still only 20 rows unless you pass show(1000). display() is Databricks-only: renders interactive HTML table with pagination, default 1000 rows per page in notebook UI — still driver-collected for that page, not the full million. Neither action scans only n rows on all backends; they trigger full lineage unless limit() is pushed. For 1M count use count(), not show.",
+    "points": [
+      "show(n) default n=20, truncate long strings unless truncate=False",
+      "display() adds sorting, filtering UI in Databricks notebooks",
+      "Both are actions — can be expensive if upstream isn't limited",
+      "df.limit(1000).show() limits before collect when optimized",
+      "1M records: count() returns 1000000; show() still shows n rows"
+    ],
+    "de": "QA on production-sized table: never show() without limit in notebook — use display(sql('SELECT * FROM gold.orders LIMIT 1000')) for stakeholder preview.",
+    "mistake": "Claiming show() displays all 1 million rows — it caps at n unless interviewer means count().",
+    "interviewTip": "Clarify the question: row count vs displayed rows; contrast OSS show vs Databricks display.",
+    "table": [
+      ["Method", "Environment", "Default rows shown"],
+      ["show()", "Any Spark", "20"],
+      ["display()", "Databricks", "1000 per page"]
+    ]
+  },
+  "84": {
+    "answer": "Pipe-delimited files use spark.read.csv with option('delimiter', '|') and usually header=True for column names. Spark treats it as text source with split logic — schema inference or explicit StructType recommended in production. Multi-character delimiters need different options or pre-processing. For wide vendor files, combine with select on load or mergeSchema for evolving feeds.",
+    "points": [
+      "delimiter option accepts single character; for | use '|'",
+      "escape and quote options handle embedded pipes in fields",
+      "Explicit schema avoids two-pass inferSchema cost",
+      "charset option for non-UTF8 legacy files",
+      "path glob: csv('/path/*.csv') for multiple pipe files"
+    ],
+    "de": "HR vendor pipe file landing in ADLS bronze: read with delimiter |, schema from contract YAML, reject rows failing validate on load.",
+    "mistake": "Forgetting header=True — first data row becomes column names wrong.",
+    "interviewTip": "Mention schema enforcement and quote/escape for real-world messy pipe files.",
+    "syntax": "df = spark.read.option(\"header\", True).option(\"delimiter\", \"|\").csv(\"/path/to/file.csv\")"
+  },
+  "85": {
+    "answer": "Spark reads all columns from CSV by default — column pruning at read time requires schema with only needed fields passed to .schema(struct) so parser skips others. Pattern: define StructType with 10 fields, read with that schema, or read then select(df.columns[:10]) which still parses all 200 on first read. For true I/O savings use spark.read.schema(partial_schema).csv(...). pandas read_csv usecols equivalent is schema projection in Spark.",
+    "points": [
+      "select(columns[:10]) after read still scans all columns from file",
+      "Partial schema on read is the performant approach",
+      "columns[:10] depends on file column order — fragile if vendor reorders",
+      "Name-based select after read OK for small files / interviews",
+      "Parquet/Delta natively prune columns at storage layer"
+    ],
+    "de": "Vendor sends 200-col weekly dump; only 12 in contract — register schema in Unity Catalog and read with subset schema to cut bronze ingest IO 80%.",
+    "mistake": "Believing select after read avoids reading 190 columns from CSV — it doesn't.",
+    "interviewTip": "Distinguish interview shortcut (select first 10) from prod answer (explicit schema projection).",
+    "syntax": "from pyspark.sql.types import StructType, StructField, StringType\n\nschema = StructType([StructField(c, StringType()) for c in first_10_names])\ndf = spark.read.schema(schema).option(\"header\", True).csv(\"/path/to/file.csv\")"
+  },
+  "86": {
+    "answer": "Filter is lazy; write.format('delta').save() is the action materializing filtered rows into Delta Lake. Delta stores Parquet data files plus transaction log (_delta_log) for ACID commits. mode('overwrite') replaces table path; use replaceWhere for partition overwrite. One million rows filters partition-locally without shuffle. Register table in metastore with saveAsTable or CREATE TABLE ... LOCATION for SQL access.",
+    "points": [
+      "filter('salary > 5000') pushes predicate when possible",
+      "Delta write adds commit JSON to _delta_log",
+      "path /mnt/... or abfss:// for ADLS Gen2",
+      "partitionBy on write for large filtered sets",
+      "MERGE preferred when incrementally updating existing Delta table"
+    ],
+    "de": "Silver high_earners Delta table: nightly filter salary > 5000 from bronze employees, overwrite partition dt=run_date, register in Unity Catalog.",
+    "mistake": "Writing Parquet path without format('delta') when interviewer asked for Delta table — missing ACID and time travel.",
+    "interviewTip": "Chain filter + Delta write; mention UC registration and partition strategy.",
+    "syntax": "filtered_df = df.filter(\"salary > 5000\")\nfiltered_df.write.format(\"delta\").mode(\"overwrite\").save(\"/mnt/data/filtered_delta_table\")"
+  },
+  "97": {
+    "answer": "Spark reads multiple CSVs in one DataFrame via path glob or directory path — spark.read.csv('/folder/*.csv') or '/folder/' loads all matching files with union internally. All files must share compatible schema; mergeSchema=true allows schema evolution with unionByName from each file. Spark distributes files across partitions for parallel read. For thousands of files, watch small-file problem and consider Auto Loader for incremental ingestion.",
+    "points": [
+      "Glob pattern or directory path for batch read",
+      "header=True applies to each file — all must have header row",
+      "badRecordsPath quarantines malformed rows",
+      "recursiveFileLookup for nested folder structures",
+      "200 files OK; 200K files need partitioning strategy or Auto Loader"
+    ],
+    "de": "Bronze landing with 200 daily CSV shards: spark.read.csv('abfss://bronze/sales/dt=2024-01-01/*.csv') → single DF → Delta append.",
+    "mistake": "Listing 200 paths manually in union instead of glob — unmaintainable.",
+    "interviewTip": "Give glob syntax; mention schema consistency and mergeSchema for prod.",
+    "syntax": "df = spark.read.option(\"header\", True).csv(\"/mnt/data/folder_with_200_files/*.csv\")"
+  },
+  "98": {
+    "answer": "Deduplication by latest timestamp uses a window function: partitionBy(id), orderBy(timestamp desc), row_number() = 1. Window spec defines per-key ordering without collapsing the whole dataset like groupBy.max would (which loses other columns unless aggregated). Drop rn column after filter. ties on timestamp need secondary sort key. This pattern is standard for CDC bronze → silver survivorship.",
+    "points": [
+      "Window.partitionBy business key, orderBy event time desc",
+      "row_number() assigns 1 to latest row per id",
+      "filter(rn == 1) keeps survivor; drop helper column",
+      "Alternative: groupBy(id).agg(max(struct(timestamp, *))) Spark 3",
+      "Handles duplicates across batch reprocessing idempotently"
+    ],
+    "de": "Kafka bronze events duplicated on replay: row_number over (user_id ORDER BY event_ts DESC) = 1 before MERGE into silver.users.",
+    "mistake": "Using dropDuplicates(['id']) without ordering — keeps arbitrary row, not latest.",
+    "interviewTip": "State grain (one row per id), tie-breaker column, and why window beats naive distinct.",
+    "syntax": "from pyspark.sql import Window\nfrom pyspark.sql.functions import row_number, col\n\nw = Window.partitionBy(\"id\").orderBy(col(\"timestamp\").desc())\ndeduped = (df.withColumn(\"rn\", row_number().over(w))\n           .filter(col(\"rn\") == 1)\n           .drop(\"rn\"))"
+  },
+  "99": {
+    "answer": "Drop all-null columns by checking each column for at least one non-null row. Interview pattern loops columns with filter(isNotNull).count() > 0 — expensive on wide tables because each column triggers an action. Better prod approach: one agg with sum(col(c).isNotNull().cast('int')) for all columns, or read schema and apply known allowlist. For 200 columns in interview, loop is acceptable; in prod use metadata-driven column lists.",
+    "points": [
+      "All-null column: max(c) is null and count(c) == 0 equivalent",
+      "Per-column count() in loop = N actions — slow at scale",
+      "select([c for c in df.columns if df.agg(...).first()[c] > 0]) pattern",
+      "Vendor schema drift: compare to expected schema registry",
+      "dropna(how='all') drops rows not columns — different operation"
+    ],
+    "de": "Wide insurance CSV: after ingest, drop 47 trailing empty vendor columns via single aggregate pass, log dropped names to audit table.",
+    "mistake": "Using dropna() expecting column removal — it removes rows with nulls.",
+    "interviewTip": "Give loop solution for interview; mention single-pass agg optimization for prod.",
+    "syntax": "from pyspark.sql.functions import col\n\nnon_null_cols = [c for c in df.columns if df.filter(col(c).isNotNull()).limit(1).count() > 0]\ncleaned_df = df.select(non_null_cols)"
+  },
+  "100": {
+    "answer": "Combine male_df and female_df vertically with unionByName — aligns columns by name not position, safer than union when schemas match. Then filter salary > 5000 as lazy transformation. unionByName(allowMissingColumns=True) handles minor schema drift. Distinct schemas require select to align columns before union. filter after union scans combined dataset once in optimized plan.",
+    "points": [
+      "unionByName preferred over union when column order differs",
+      "Schemas must have compatible types for same column names",
+      "Filter after union applies to both sources in one job",
+      "union does not deduplicate — use distinct if overlap exists",
+      "For many splits: reduce with unionByName or read from partitioned table"
+    ],
+    "de": "Regional shards male/female split files from legacy system: unionByName → filter active salary → single silver Delta partitionBy(region).",
+    "mistake": "Using union() when column orders differ — silently misaligns data.",
+    "interviewTip": "Say unionByName explicitly; note filter placement and schema alignment.",
+    "syntax": "combined_df = male_df.unionByName(female_df).filter(\"salary > 5000\")"
+  },
+  "101": {
+    "answer": "Single-value updates in immutable DataFrames use withColumn and conditional when — not SQL UPDATE. when(col('employee_id') == 1007, 10007).otherwise(col('employee_id')) replaces matching rows. For many updates use join to mapping table or Delta MERGE. Cast types if column is string vs int. Spark does not mutate rows in place; each withColumn returns new DataFrame.",
+    "points": [
+      "DataFrames are immutable — withColumn creates new logical plan",
+      "when for scalar conditional update on one or few keys",
+      "Bulk updates: join update_df on key and coalesce new/old columns",
+      "Delta MERGE WHEN MATCHED UPDATE for table-level upserts",
+      "employee_id type must match literal (1007 int vs '1007' string)"
+    ],
+    "de": "Correct bad source key 1007 → 10007 before silver MERGE: withColumn when, validate count where id=1007 is zero post-fix.",
+    "mistake": "Trying df.employee_id = 10007 pandas-style mutation — doesn't work in PySpark.",
+    "interviewTip": "Show when/otherwise; escalate to MERGE if interviewer asks about million-row updates.",
+    "syntax": "from pyspark.sql.functions import when, col\n\ndf = df.withColumn(\"employee_id\",\n    when(col(\"employee_id\") == 1007, 10007).otherwise(col(\"employee_id\")))"
+  },
+  "102": {
+    "answer": "Drop rows with filter on negated condition — filter(col('id') != 1001) keeps all rows except id 1001. Use isin for multiple ids: ~col('id').isin([1001, 1002]). filter is lazy and partition-local. For Delta tables prefer DELETE WHERE in SQL or MERGE for large targeted deletes. != treats null ids oddly — null != 1001 is null, row dropped from result.",
+    "points": [
+      "filter (~condition) removes matching rows",
+      "isin list for batch id exclusion",
+      "drop() removes columns, not rows — common confusion",
+      "Delta delete: spark.sql('DELETE FROM t WHERE id = 1001')",
+      "Null id rows survive != 1001 filter — mention if relevant"
+    ],
+    "de": "Remove test account id=1001 from customer export before sharing Parquet with partner — filter + write audit log of excluded count.",
+    "mistake": "Using drop('id') thinking it drops the row — drop removes a column.",
+    "interviewTip": "Clarify filter vs drop; mention Delta DELETE for persistent table ops.",
+    "syntax": "from pyspark.sql.functions import col\n\ndf = df.filter(col(\"id\") != 1001)"
+  },
+  "103": {
+    "answer": "Divide salary into three buckets with ntile(3) over Window.orderBy('salary') — assigns tertile ranks 1-3 evenly by row count, not fixed dollar thresholds. For percentile boundaries use percent_rank or approxQuantile. ntile requires window with orderBy; ties handled by sort order within partition. Alternative: when() with business thresholds for fixed High/Med/Low bands.",
+    "points": [
+      "ntile(n) distributes rows as evenly as possible into n buckets",
+      "Window.orderBy('salary') defines ranking order",
+      "approxQuantile('salary', [0.33, 0.66], 0.01) for threshold values",
+      "percentile_approx for single percentile in agg context",
+      "Ties: add secondary sort key to orderBy for deterministic buckets"
+    ],
+    "de": "Compensation analytics: ntile(3) over company-wide salary for tertile labels — refresh monthly on silver.employees.",
+    "mistake": "Confusing ntile (equal row counts) with fixed salary brackets (use when).",
+    "interviewTip": "Ask clarifier: equal-count tertiles vs fixed thresholds; show ntile for percentile-style.",
+    "syntax": "from pyspark.sql.functions import ntile\nfrom pyspark.sql import Window\n\ndf = df.withColumn(\"salary_bucket\", ntile(3).over(Window.orderBy(\"salary\")))"
+  },
+  "104": {
+    "answer": "count() is an action returning total row count as a long integer to the driver — triggers full DAG execution scanning all partitions. Each partition computes local count; driver sums partial counts. Expensive on huge tables but exact. For approximate counts use approx_count_distinct on a column or sample. After filter, count() reflects filtered rows only. Cache before multiple counts if recomputation is costly.",
+    "points": [
+      "count() scans all data — O(n) full table",
+      "Partial counts aggregated on driver — small driver payload",
+      "df.rdd.countApprox(timeout, confidence) for estimate",
+      "Spark SQL: SELECT COUNT(*) FROM table via spark.sql",
+      "Metrics validation: compare source vs bronze count()"
+    ],
+    "de": "Post-ingest reconciliation: bronze_df.count() must match SQL Server export count ±0; alert ADF on mismatch.",
+    "mistake": "Using len(df.collect()) or df.show() to count rows — wrong and catastrophic at scale.",
+    "interviewTip": "Stress count() is an action with full scan cost; mention reconciliation use case.",
+    "syntax": "total = df.count()"
+  },
+  "105": {
+    "answer": "Create empty DataFrame with same schema using spark.createDataFrame([], df.schema) — preserves StructType for downstream union or write to empty Delta partition. Alternative: df.limit(0) keeps lineage to source; createDataFrame([], schema) is truly empty without reading parent. Useful for schema-only exports, placeholder outputs when filter returns nothing, or typed empty RDD conversion.",
+    "points": [
+      "df.schema is StructType — reuse for empty shell",
+      "createDataFrame([], schema) no dependency on parent data",
+      "limit(0) still references parent logical plan",
+      "Empty DF writes empty Delta table with correct columns",
+      "union with empty same-schema DF is no-op on row count"
+    ],
+    "de": "Orchestration expects output dataset every run; when filter matches zero rows, write empty_df with contract schema so ADF copy doesn't fail.",
+    "mistake": "df.filter('1=0') without caching — still may scan source depending on optimization.",
+    "interviewTip": "Prefer createDataFrame([], df.schema) over hacks; mention schema contract for downstream.",
+    "syntax": "empty_df = spark.createDataFrame([], df.schema)"
+  },
+  "106": {
+    "answer": "dropDuplicates(['department']) keeps one arbitrary row per distinct department value — first encountered in scan order unless using window to pick latest. For controlled survivorship combine with orderBy in window + row_number. dropDuplicates() without subset dedupes entire row. Shuffle required to find duplicates across partitions.",
+    "points": [
+      "subset parameter lists columns defining duplicate key",
+      "Non-deterministic which row kept without ordering",
+      "Use window row_number for latest per department",
+      "distinct() equivalent to dropDuplicates() on all columns",
+      "Wide transformation — shuffle across cluster"
+    ],
+    "de": "One row per department for org chart export: dropDuplicates(['department']) after filter is_current=true, or window by updated_at desc.",
+    "mistake": "Expecting oldest row kept — Spark doesn't guarantee without explicit ordering.",
+    "interviewTip": "Mention non-determinism; offer window dedup if interviewer wants 'keep latest'.",
+    "syntax": "df_deduped = df.dropDuplicates([\"department\"])"
+  },
+  "122": {
+    "answer": "Encapsulate DataFrame creation in a Python function accepting SparkSession as first argument — builds local list or reads path, returns spark.createDataFrame(data, columns). Functions keep notebooks testable and reusable across ADF/Databricks jobs. Schema can be StructType for type safety. Avoid creating SparkSession inside the function; inject session from caller for single driver context.",
+    "points": [
+      "spark.createDataFrame(data, schema) from list of tuples or Row",
+      "Pass spark explicitly — dependency injection pattern",
+      "columns list or StructType for schema",
+      "Return DataFrame for chaining in ETL modules",
+      "Unit test with local SparkSession builder master local[*]"
+    ],
+    "de": "Shared wheel package: create_employee_df(spark) used by bronze notebooks and pytest with local session — same schema in dev and prod.",
+    "mistake": "Creating new SparkSession inside helper function — breaks on Databricks and wastes resources.",
+    "interviewTip": "Write clean function signature; explain why spark is passed in, not constructed inside.",
+    "syntax": "def create_employee_df(spark):\n    data = [(1, \"Alice\", 5000), (2, \"Bob\", 6000)]\n    columns = [\"id\", \"name\", \"salary\"]\n    return spark.createDataFrame(data, columns)\n\ndf = create_employee_df(spark)"
+  }
+}

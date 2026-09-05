@@ -1,0 +1,1248 @@
+{
+  "1": {
+    "answer": "A primary key is a column or composite column set that uniquely identifies every row in a relational table. It enforces entity integrity by guaranteeing no duplicate keys and no NULL values in the key columns. In SQL Server and Synapse dedicated pools, the PK also creates a unique clustered or non-clustered index depending on design. In data engineering, the primary key is the anchor for joins, CDC deduplication, and MERGE upsert logic in silver and gold layers.",
+    "points": [
+      "Uniqueness + NOT NULL are mandatory PK properties",
+      "Only one primary key per table (can be composite)",
+      "Often doubles as the clustered index in OLTP designs",
+      "Natural vs surrogate: business key may change; surrogate PK stays stable",
+      "In lakehouse MERGE, match on business/natural key even if surrogate exists"
+    ],
+    "de": "In silver.orders, order_id is the PK — CDC replays with duplicate order_id are rejected before gold revenue rollups run in Synapse.",
+    "mistake": "Confusing primary key with any indexed column, or allowing NULLs in a 'mostly unique' column used as PK.",
+    "interviewTip": "Define PK → state uniqueness/NOT NULL → give one fact-table example → mention how it supports MERGE/CDC."
+  },
+  "2": {
+    "answer": "Both primary keys and unique keys enforce uniqueness of values in the constrained column(s). The primary key is the table's main row identifier: it cannot contain NULLs, and SQL Server allows only one primary key per table. A unique key also prevents duplicates but typically permits one NULL (SQL Server allows one NULL in a unique index; behavior varies slightly by engine). A table can have multiple unique constraints — useful for alternate business keys like email or external system IDs.",
+    "points": [
+      "PK: NOT NULL + one per table; UNIQUE: nullable (usually one NULL) + many allowed",
+      "Both create unique indexes under the hood in SQL Server",
+      "Use UNIQUE for alternate keys without making them the clustered PK",
+      "In dimensions, PK is often surrogate; UNIQUE on natural key (e.g., customer_code)",
+      "Duplicate prevention in bronze loads can rely on UNIQUE before silver promotion"
+    ],
+    "de": "dim_customer has surrogate customer_sk as PK and UNIQUE on source_customer_id from Salesforce — CDC MERGE matches on source_customer_id, not the surrogate.",
+    "mistake": "Saying unique keys allow multiple NULLs in all databases — clarify engine-specific behavior.",
+    "interviewTip": "Contrast role (main identifier vs alternate key), NULL rules, and count allowed per table.",
+    "table": [
+      [
+        "Aspect",
+        "Primary Key",
+        "Unique Key"
+      ],
+      [
+        "NULL allowed",
+        "No",
+        "Yes (typically one NULL in SQL Server)"
+      ],
+      [
+        "Count per table",
+        "One",
+        "Multiple"
+      ],
+      [
+        "Purpose",
+        "Main row identifier",
+        "Alternate business uniqueness"
+      ],
+      [
+        "DE usage",
+        "Surrogate in dimensions",
+        "Natural/source system keys"
+      ]
+    ]
+  },
+  "3": {
+    "answer": "UNION and UNION ALL combine the result sets of two or more SELECT statements vertically, requiring identical column count, order, and compatible types. UNION performs an implicit DISTINCT — duplicate rows across the combined set are removed, which requires a sort or hash deduplication step and adds cost. UNION ALL simply concatenates all rows from each branch without deduplication, making it significantly faster when you know duplicates are impossible or acceptable.",
+    "points": [
+      "Both require matching column count, order, and compatible types",
+      "UNION = UNION ALL + deduplication overhead",
+      "Prefer UNION ALL for stacking daily partitions or multi-source bronze feeds",
+      "Column names come from the first SELECT in the chain",
+      "Implicit type conversion can hide bugs — align types explicitly"
+    ],
+    "de": "Stack bronze sales from region A/B/C with UNION ALL into silver.stg_sales — no dedup needed because source_id is globally unique per region extract.",
+    "mistake": "Defaulting to UNION when UNION ALL suffices, paying unnecessary sort/hash cost on millions of rows.",
+    "interviewTip": "State vertical stacking, schema rules, then performance tradeoff — always ask if duplicates are possible.",
+    "table": [
+      [
+        "Aspect",
+        "UNION",
+        "UNION ALL"
+      ],
+      [
+        "Duplicates",
+        "Removed",
+        "Kept"
+      ],
+      [
+        "Performance",
+        "Slower (dedup)",
+        "Faster (append only)"
+      ],
+      [
+        "Use when",
+        "Need distinct combined set",
+        "Partitions/sources are disjoint"
+      ]
+    ]
+  },
+  "4": {
+    "answer": "A foreign key constraint links a child table column to a parent table's primary or unique key, enforcing referential integrity at the database level. Inserts or updates in the child table are rejected if the referenced parent value does not exist, and deletes/updates on the parent can be blocked or cascaded depending on ON DELETE/UPDATE rules. In transactional OLTP systems, FKs prevent orphan records. In modern lakehouse pipelines, FKs are often enforced via data quality checks and silver-layer validation rather than physical constraints on Delta/Parquet.",
+    "points": [
+      "Child FK column values must exist in parent PK/UNIQUE column",
+      "ON DELETE CASCADE vs RESTRICT affects parent delete behavior",
+      "Many lakehouse tables skip physical FKs for flexibility and load speed",
+      "DE teams implement referential checks in SQL DQ jobs or Great Expectations",
+      "Orphan detection: LEFT JOIN parent WHERE parent.key IS NULL"
+    ],
+    "de": "After loading bronze.orders, a Synapse stored proc flags rows where customer_id not in dim_customer — quarantine before gold publish instead of relying on FK at bronze.",
+    "mistake": "Assuming FK constraints exist in Delta Lake tables — they do not; integrity is application/DQ enforced.",
+    "interviewTip": "Define referential integrity → give parent/child example → contrast OLTP FK vs lakehouse DQ pattern."
+  },
+  "5": {
+    "answer": "WHERE and HAVING both filter data, but at different stages of query execution. WHERE filters individual rows before any GROUP BY aggregation occurs — it cannot reference aggregate functions like SUM() or COUNT(). HAVING filters groups after aggregation, and it can reference aggregate expressions and grouped columns. This logical order matters: WHERE reduces rows early (better performance), HAVING trims groups after expensive aggregation.",
+    "points": [
+      "WHERE: row-level, pre-aggregation; HAVING: group-level, post-aggregation",
+      "WHERE cannot use SUM(), COUNT(), AVG() in standard SQL",
+      "Filter business keys in WHERE before GROUP BY for performance",
+      "HAVING COUNT(*) > 5 finds customers with more than 5 orders",
+      "Execution order: WHERE before GROUP BY before HAVING"
+    ],
+    "de": "Gold customer metrics: WHERE order_date >= @watermark filters rows first; HAVING SUM(amount) > 10000 keeps only high-value customer groups.",
+    "mistake": "Putting aggregate conditions in WHERE (invalid) or filtering low-cardinality keys in HAVING instead of WHERE.",
+    "interviewTip": "Draw the pipeline: rows → WHERE → GROUP BY → HAVING → SELECT; give one metric example.",
+    "table": [
+      [
+        "Aspect",
+        "WHERE",
+        "HAVING"
+      ],
+      [
+        "Filters",
+        "Individual rows",
+        "Grouped results"
+      ],
+      [
+        "Timing",
+        "Before GROUP BY",
+        "After GROUP BY"
+      ],
+      [
+        "Aggregates",
+        "Not allowed",
+        "Allowed"
+      ],
+      [
+        "Example",
+        "status = 'Active'",
+        "COUNT(*) > 5"
+      ]
+    ]
+  },
+  "6": {
+    "answer": "A Common Table Expression (CTE) is a named temporary result set defined with WITH cte_name AS (SELECT ...) that exists only for the duration of a single query. CTEs improve readability by breaking complex logic into named steps and can reference themselves recursively for hierarchical data like org charts or bill-of-materials. They are not persisted — unlike temp tables — and the optimizer typically inlines them, though recursion has depth limits.",
+    "points": [
+      "Syntax: WITH cte AS (...) SELECT ... FROM cte",
+      "Improves readability for multi-step transforms in one statement",
+      "Recursive CTE: anchor member + recursive member + UNION ALL",
+      "Can chain multiple CTEs: WITH a AS (...), b AS (...) SELECT ...",
+      "Common pattern: ROW_NUMBER dedup CTE then DELETE/SELECT WHERE rn > 1"
+    ],
+    "de": "Databricks SQL silver job: WITH deduped AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY ingest_ts DESC) rn FROM bronze.events) SELECT * FROM deduped WHERE rn = 1;",
+    "mistake": "Treating CTEs as materialized temp tables — they are logical, not always physically stored.",
+    "interviewTip": "Define scope (single query), show chained CTE for dedup, mention recursive use case briefly.",
+    "syntax": "WITH recent_orders AS (\n  SELECT customer_id, MAX(order_date) AS last_order\n  FROM Orders\n  GROUP BY customer_id\n)\nSELECT c.customer_name, r.last_order\nFROM Customers c\nJOIN recent_orders r ON c.customer_id = r.customer_id;"
+  },
+  "7": {
+    "answer": "A view is a stored SELECT statement that presents data as a virtual table without physically storing the result set (unless materialized). Each query against the view re-executes the underlying SQL against base tables, so it always reflects current data. Views simplify access control, hide complex joins from consumers, and provide a stable interface when underlying schema evolves. Indexed/materialized views cache results for performance at the cost of refresh complexity.",
+    "points": [
+      "Virtual table — logic stored, data read from base tables at query time",
+      "CREATE VIEW vw_name AS SELECT ...",
+      "Security: grant SELECT on view without exposing base tables",
+      "Materialized/indexed views precompute results (SQL Server indexed views)",
+      "In Synapse serverless, views over OPENROWSET expose lake files as SQL tables"
+    ],
+    "de": "Create vw_usa_customers AS SELECT * FROM dim_customer WHERE country = 'USA' — BI team queries view; underlying Delta table path can change without breaking reports.",
+    "mistake": "Assuming views store data like tables — non-materialized views re-run the full query every time.",
+    "interviewTip": "Virtual vs materialized → security/abstraction benefit → one gold-layer consumer example.",
+    "syntax": "CREATE VIEW vw_USA_Customers AS\nSELECT customer_id, customer_name, city\nFROM Customer\nWHERE country = 'USA';"
+  },
+  "8": {
+    "answer": "A stored procedure is a precompiled, named batch of T-SQL stored in the database and invoked with EXEC or EXECUTE. Procedures accept input/output parameters, contain control flow (IF/WHILE), and encapsulate reusable business logic close to the data. In data engineering, they orchestrate ETL steps in Synapse/SQL Server: watermark updates, MERGE operations, partition swaps, and post-load validation. They reduce network round-trips compared to sending ad-hoc SQL from ADF or application code.",
+    "points": [
+      "CREATE PROCEDURE ... AS BEGIN ... END",
+      "Parameters: @param_name datatype, optional OUTPUT",
+      "Precompiled plan can improve repeat execution performance",
+      "Used in Synapse pipelines via Stored Procedure activity in ADF",
+      "Keep idempotent: safe to rerun on pipeline retry"
+    ],
+    "de": "Synapse proc usp_merge_silver_orders runs nightly from ADF — reads @batch_id param, MERGEs bronze staging into silver, updates etl.watermark.",
+    "mistake": "Writing procedures without transaction boundaries or error handling for production pipeline reruns.",
+    "interviewTip": "Define encapsulation → parameters → one ADF/Synapse orchestration example → mention idempotency."
+  },
+  "9": {
+    "answer": "A parameterized stored procedure accepts input values at execution time, making the same logic reusable across different filter criteria without dynamic SQL injection risk. In SQL Server, parameters are declared with @name datatype in the CREATE PROCEDURE header and referenced in the body. ADF passes pipeline parameters into stored procedure activities for incremental loads, partition processing, and environment-specific behavior.",
+    "points": [
+      "Parameter declared in proc header: @DeptName VARCHAR(50)",
+      "Called with EXEC GetEmployeesByDept @DeptName = 'Engineering'",
+      "Avoids SQL injection vs string-concatenated dynamic SQL",
+      "ADF Stored Procedure activity maps pipeline parameters to proc params",
+      "Default values: @StartDate DATE = '2020-01-01'"
+    ],
+    "de": "ADF passes @LoadDate from trigger schedule into usp_load_daily_sales — same proc handles backfill when @LoadDate is overridden manually.",
+    "mistake": "Using string concatenation inside dynamic SQL instead of proper parameters — security and plan-cache issues.",
+    "interviewTip": "Show CREATE with @param, explain EXEC call, tie to ADF parameter mapping.",
+    "syntax": "CREATE PROCEDURE GetEmployeesByDept\n    @DeptName VARCHAR(50)\nAS\nBEGIN\n    SELECT employee_id, name, salary\n    FROM Employees\n    WHERE Department = @DeptName;\nEND;\n\n-- EXEC GetEmployeesByDept @DeptName = 'Engineering';"
+  },
+  "10": {
+    "answer": "A stored procedure without parameters runs the same logic every time it is invoked — useful for standardized batch jobs like full dimension refreshes, nightly reconciliation, or publishing gold aggregates. The procedure body still benefits from encapsulation, permissions control, and a cached execution plan. In pipeline design, parameterless procs often serve as fixed orchestration entry points while parameterized procs handle incremental or scoped loads.",
+    "points": [
+      "No parameters in CREATE PROCEDURE header",
+      "EXEC GetAllEmployees; runs identical logic each call",
+      "Good for fixed batch steps: truncate staging, reload, swap partition",
+      "Grant EXECUTE to pipeline service principal only — least privilege",
+      "Combine with TRY/CATCH and TRANSACTION for safe reruns"
+    ],
+    "de": "Nightly Synapse job EXEC usp_refresh_gold_kpis — no params needed; proc internally reads watermark table for incremental scope.",
+    "mistake": "Creating parameterless procs that hard-code dates or paths instead of reading config/watermark tables.",
+    "interviewTip": "Contrast with parameterized version — when fixed batch vs flexible filter applies.",
+    "syntax": "CREATE PROCEDURE GetAllEmployees\nAS\nBEGIN\n    SELECT employee_id, name, department, salary\n    FROM Employees;\nEND;\n\n-- EXEC GetAllEmployees;"
+  },
+  "11": {
+    "answer": "SQL Server and Synapse support several index types optimized for different access patterns. Clustered indexes define physical row order (one per table). Non-clustered indexes are separate B-tree structures with pointers to data rows. Unique indexes enforce uniqueness; composite indexes span multiple columns. Specialized types include filtered indexes (partial), full-text indexes (text search), and columnstore indexes (analytics/aggregation on large fact tables).",
+    "points": [
+      "Clustered: physical sort, one per table — often on PK or date partition key",
+      "Non-clustered: many allowed, separate structure with row locator",
+      "Composite/multi-column: column order matters — leading column must be selective or filtered",
+      "Columnstore: batch mode, great for Synapse fact-table aggregations",
+      "Filtered index: WHERE clause on index definition for hot subset"
+    ],
+    "de": "Synapse fact_sales: CLUSTERED COLUMNSTORE INDEX for nightly SUM(revenue) by region; non-clustered on order_date for point lookups in debugging.",
+    "mistake": "Creating many non-clustered indexes on high-write staging tables — slows MERGE/INSERT throughput.",
+    "interviewTip": "List 3-4 types with one-line purpose each; connect columnstore to analytics warehouse workload."
+  },
+  "12": {
+    "answer": "A clustered index determines the physical storage order of table rows — the leaf level of the index IS the data. SQL Server allows only one clustered index per table because rows can be sorted one way. A non-clustered index is a separate structure storing index key values plus a row pointer (RID or clustered key lookup), allowing many per table. Clustered suits range scans on the sort key; non-clustered suits additional lookup paths.",
+    "points": [
+      "Clustered: data pages sorted by index key — one per table",
+      "Non-clustered: separate B-tree + pointer to data row",
+      "Heap table = no clustered index; non-clustered uses RID lookup",
+      "Covering non-clustered index includes all queried columns — avoids key lookup",
+      "Synapse: HEAP + CLUSTERED COLUMNSTORE is common for fact tables"
+    ],
+    "de": "dim_date clustered on date_key for range scans; non-clustered on fiscal_period for alternate filter path in Power BI direct query.",
+    "mistake": "Creating multiple clustered indexes — only one allowed; second would require dropping first.",
+    "interviewTip": "Physical order vs separate structure → one per table rule → lookup vs range scan use case.",
+    "table": [
+      [
+        "Aspect",
+        "Clustered Index",
+        "Non-Clustered Index"
+      ],
+      [
+        "Storage",
+        "Data rows sorted in index order",
+        "Separate structure with pointers"
+      ],
+      [
+        "Count per table",
+        "One",
+        "Many"
+      ],
+      [
+        "Leaf level",
+        "Is the data",
+        "Keys + row locator"
+      ],
+      [
+        "Best for",
+        "Range scans on sort key",
+        "Additional search paths"
+      ]
+    ]
+  },
+  "13": {
+    "answer": "Slow query troubleshooting starts with capturing the actual execution plan and comparing estimated vs actual row counts. Look for table/index scans instead of seeks, missing index suggestions, implicit conversions that prevent index use, stale statistics causing bad cardinality estimates, and parameter sniffing where one cached plan fits some parameter values poorly. In Synapse, also check distribution skew, excessive data movement (DMS), and tempdb spills.",
+    "points": [
+      "Enable actual execution plan (SSMS) or EXPLAIN in Databricks SQL",
+      "Table scan on large fact table = likely missing or unused index",
+      "Compare estimated vs actual rows — large gap signals bad stats",
+      "Check for functions on indexed columns: WHERE YEAR(dt)=2022 blocks index",
+      "Synapse: DMVs for queued queries, resource classes, distribution stats"
+    ],
+    "de": "Gold mart query regressed after load doubling: actual plan showed nested loop on 50M rows — added composite index on (order_date, customer_id), updated stats, runtime dropped 40 min to 3 min.",
+    "mistake": "Adding indexes blindly without reading the plan — can worsen write performance without helping the bottleneck.",
+    "interviewTip": "Structured flow: measure → plan → scans vs seeks → stats/conversions → fix → validate."
+  },
+  "14": {
+    "answer": "Query optimization combines schema design, indexing, and SQL rewrite. Filter early with selective WHERE predicates on indexed columns, select only needed columns instead of SELECT *, and ensure statistics are current. Avoid wrapping indexed columns in functions, prefer set-based joins over correlated subqueries, and use appropriate join types. Review the execution plan for expensive operators (sorts, hash spills) and consider partitioning, columnstore, or pre-aggregation for warehouse workloads.",
+    "points": [
+      "SELECT only required columns — reduces I/O and memory grants",
+      "SARGable predicates: order_date >= '2022-01-01' not YEAR(order_date)=2022",
+      "Update statistics after large loads: UPDATE STATISTICS table",
+      "Replace correlated subquery with JOIN where possible",
+      "Synapse: align distribution key with common JOIN/GROUP BY columns"
+    ],
+    "de": "Rewrite BI query from SELECT * with scalar UDF per row to set-based JOIN with covering index — cut Synapse DWU hours 60%.",
+    "mistake": "Optimizing SQL in dev with 1K rows — plan changes completely at production scale; always test at realistic volume.",
+    "interviewTip": "Index + filter early + avoid SELECT * + plan review — give before/after example with metric."
+  },
+  "15": {
+    "answer": "SQL logical processing order differs from written syntax order — understanding this explains why WHERE cannot use aliases from SELECT and why HAVING comes after GROUP BY. The engine processes FROM/JOIN first to assemble rows, applies WHERE filtering, groups with GROUP BY, filters groups with HAVING, projects SELECT columns, removes duplicates with DISTINCT, sorts with ORDER BY, and finally applies LIMIT/OFFSET. This order drives both correctness and performance tuning.",
+    "points": [
+      "Logical order: FROM → JOIN → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT",
+      "SELECT aliases not visible in WHERE of same query level",
+      "DISTINCT after SELECT projection",
+      "ORDER BY can use SELECT aliases (processed after SELECT)",
+      "Explains why aggregate filters belong in HAVING not WHERE"
+    ],
+    "de": "Debugging gold SQL: analyst puts metric alias in WHERE — explain logical order, move predicate to HAVING or subquery.",
+    "mistake": "Memorizing written order (SELECT first) instead of logical execution order — leads to invalid SQL attempts.",
+    "interviewTip": "Recite the sequence once, then give two traps: alias in WHERE, aggregate in WHERE."
+  },
+  "16": {
+    "answer": "Finding employees earning above the average salary requires comparing each row's salary to an aggregate computed over the entire table (or relevant partition). A subquery in the WHERE clause computes AVG(salary) once and filters rows where salary exceeds that scalar result. Alternatively, a window function AVG(salary) OVER() adds the average as a column for comparison without a subquery. Both approaches are set-based and preferred over cursor loops in ETL.",
+    "points": [
+      "Scalar subquery: WHERE salary > (SELECT AVG(salary) FROM Employees)",
+      "Subquery must return single value — aggregate without GROUP BY",
+      "Window alternative: WHERE salary > AVG(salary) OVER() in outer query",
+      "Partition AVG by department if comparing within dept: OVER(PARTITION BY dept)",
+      "Set-based filter scales in warehouse SQL vs row-by-row procedural code"
+    ],
+    "de": "Flag high-earner outliers in HR silver: employees with salary > 2x AVG(salary) OVER(PARTITION BY department) go to DQ review table.",
+    "mistake": "Using HAVING without GROUP BY incorrectly, or comparing to AVG in WHERE without subquery/window.",
+    "interviewTip": "State the pattern (row vs aggregate comparison), write subquery form, mention window alternative.",
+    "syntax": "SELECT employee_id, name, salary\nFROM Employees\nWHERE salary > (SELECT AVG(salary) FROM Employees);"
+  },
+  "17": {
+    "answer": "The Nth highest salary is a classic window-function or subquery problem. The subquery approach finds MAX(salary) where salary is less than the overall MAX to get 2nd highest — extensible but awkward for N>2. The window approach uses DENSE_RANK() or ROW_NUMBER() OVER (ORDER BY salary DESC) and filters rank = N, which scales cleanly to any N and handles ties differently depending on rank function choice.",
+    "points": [
+      "Subquery: MAX where salary < (SELECT MAX...) gives 2nd highest only",
+      "DENSE_RANK handles ties — both 9000 get rank 2, next is rank 3",
+      "ROW_NUMBER breaks ties arbitrarily — unique ranks even with ties",
+      "OFFSET/FETCH: ORDER BY salary DESC OFFSET 1 ROW FETCH NEXT 1 ROW ONLY",
+      "In DE: top-N per group uses PARTITION BY department"
+    ],
+    "de": "Compensation analytics: DENSE_RANK() OVER (ORDER BY total_comp DESC) = 2 for second-highest paid employee in gold.hr_summary.",
+    "mistake": "Using ROW_NUMBER when ties should share rank — use DENSE_RANK or RANK instead.",
+    "interviewTip": "Offer two solutions (subquery + window), explain tie behavior, state which rank function you'd pick.",
+    "syntax": "-- Subquery approach\nSELECT MAX(salary) AS second_highest\nFROM Employees\nWHERE salary < (SELECT MAX(salary) FROM Employees);\n\n-- Window approach (handles any N)\nSELECT salary\nFROM (\n  SELECT salary, DENSE_RANK() OVER (ORDER BY salary DESC) AS rnk\n  FROM Employees\n) t\nWHERE rnk = 2;"
+  },
+  "18": {
+    "answer": "Finding the 2nd highest salary per department requires partitioning the ranking window by department while ordering by salary within each partition. DENSE_RANK() OVER (PARTITION BY department ORDER BY salary DESC) assigns ranks within each dept independently; filtering rnk = 2 returns the second-highest earner per group. This pattern is fundamental for top-N-per-group problems in data engineering — latest event per user, second-most-recent order, etc.",
+    "points": [
+      "PARTITION BY department resets rank per group",
+      "ORDER BY salary DESC within partition",
+      "Filter outer query: WHERE rnk = 2",
+      "ROW_NUMBER if you need exactly one row per dept even with salary ties",
+      "Same pattern for dedup: PARTITION BY key ORDER BY timestamp DESC, keep rn=1"
+    ],
+    "de": "Sales leaderboard: 2nd top rep per region using DENSE_RANK() OVER (PARTITION BY region ORDER BY revenue DESC) — published to gold.sales_rankings.",
+    "mistake": "Forgetting PARTITION BY — ranks globally instead of per department.",
+    "interviewTip": "Say 'partition by group, order by metric, filter rank=N' — connect to dedup pattern.",
+    "syntax": "SELECT department, employee_id, salary\nFROM (\n  SELECT department, employee_id, salary,\n         DENSE_RANK() OVER (PARTITION BY department ORDER BY salary DESC) AS rnk\n  FROM Employees\n) t\nWHERE rnk = 2;"
+  },
+  "19": {
+    "answer": "DELETE, TRUNCATE, and DROP serve different purposes with different logging, speed, and recoverability. DELETE removes rows optionally filtered by WHERE, logs each row deletion, fires triggers, and can be rolled back in a transaction. TRUNCATE removes all rows quickly with minimal logging, resets identity seeds, and cannot filter by WHERE. DROP removes the entire table object including structure, indexes, and constraints — the most destructive operation.",
+    "points": [
+      "DELETE: row-level, WHERE allowed, fully logged, triggers fire, rollback OK",
+      "TRUNCATE: all rows, minimal log, resets IDENTITY, no WHERE, no row triggers",
+      "DROP: removes table object entirely — structure gone",
+      "Staging refresh: TRUNCATE + INSERT faster than DELETE for full reload",
+      "Production fixes: DELETE with WHERE or backup first — never casual TRUNCATE"
+    ],
+    "de": "Bronze staging truncate-and-load nightly: TRUNCATE TABLE stg_orders; INSERT from external table. Accidental prod DELETE caught by transaction rollback after row-count alert.",
+    "mistake": "Using TRUNCATE when you need conditional row removal — TRUNCATE has no WHERE clause.",
+    "interviewTip": "Three-way comparison: scope (rows vs all rows vs object), logging, rollback, triggers.",
+    "table": [
+      [
+        "Aspect",
+        "DELETE",
+        "TRUNCATE",
+        "DROP"
+      ],
+      [
+        "Scope",
+        "Specific rows (WHERE)",
+        "All rows",
+        "Entire table object"
+      ],
+      [
+        "WHERE clause",
+        "Yes",
+        "No",
+        "N/A"
+      ],
+      [
+        "Rollback",
+        "Yes (in transaction)",
+        "Limited/varies",
+        "No after commit"
+      ],
+      [
+        "Speed",
+        "Slower (row log)",
+        "Fast (deallocates pages)",
+        "Instant metadata drop"
+      ],
+      [
+        "IDENTITY reset",
+        "No",
+        "Yes",
+        "N/A"
+      ]
+    ]
+  },
+  "20": {
+    "answer": "Aggregate functions like SUM, AVG, and COUNT collapse multiple rows into a single value per group when used with GROUP BY — the result set shrinks. Window functions with OVER() compute aggregates across a window of rows but return a value on every row without collapsing the result set. This lets you compare each row to a group total (e.g., each order's amount vs customer lifetime total) in one query pass.",
+    "points": [
+      "Aggregate + GROUP BY: one output row per group",
+      "Window aggregate: SUM(amount) OVER (PARTITION BY customer_id) on every row",
+      "Window preserves row detail; GROUP BY loses individual rows",
+      "Running totals: SUM(amount) OVER (ORDER BY order_date ROWS UNBOUNDED PRECEDING)",
+      "Choose based on output grain needed by downstream gold table"
+    ],
+    "de": "Each order row gets pct_of_customer_total = order_amount / SUM(order_amount) OVER (PARTITION BY customer_id) in silver for analytics without losing order grain.",
+    "mistake": "Using GROUP BY when you need per-row comparison to group aggregate — use window instead.",
+    "interviewTip": "Draw two result shapes: collapsed groups vs same row count with extra column.",
+    "table": [
+      [
+        "Aspect",
+        "Aggregate + GROUP BY",
+        "Window + OVER()"
+      ],
+      [
+        "Output rows",
+        "One per group",
+        "Same as input rows"
+      ],
+      [
+        "Row detail",
+        "Lost",
+        "Preserved"
+      ],
+      [
+        "Example",
+        "Total sales per region",
+        "Each sale + region total column"
+      ]
+    ]
+  },
+  "21": {
+    "answer": "When you add an OVER clause to an aggregate function, it transforms from a grouping aggregate into a window aggregate. Instead of collapsing rows via GROUP BY, the function computes the aggregate over the specified partition/window and repeats that value on every row in the partition. For example, SUM(salary) OVER (PARTITION BY department) adds each department's total salary to every employee row in that department.",
+    "points": [
+      "SUM(col) OVER (PARTITION BY x ORDER BY y) — no GROUP BY needed",
+      "Partition defines the window scope; ORDER BY enables running aggregates",
+      "Frame clause ROWS BETWEEN controls which rows in partition are included",
+      "Combines detail and summary in one pass — avoids self-join to group totals",
+      "Execution: window operator after joins/filters in plan"
+    ],
+    "de": "Add running_revenue = SUM(order_amount) OVER (PARTITION BY customer_id ORDER BY order_date) in streaming silver SQL for customer journey metrics.",
+    "mistake": "Mixing GROUP BY and window on same columns incorrectly — understand they operate at different grains.",
+    "interviewTip": "Show one example: AVG(score) OVER (PARTITION BY class) on each student row.",
+    "syntax": "SELECT employee_id, department, salary,\n       AVG(salary) OVER (PARTITION BY department) AS dept_avg_salary\nFROM Employees;"
+  },
+  "22": {
+    "answer": "LAG and LEAD are window functions that access a row at a fixed offset before or after the current row within an ordered partition, without a self-join. LAG(column, n) looks n rows back; LEAD(column, n) looks n rows ahead. Default offset is 1. They are essential for period-over-period analysis, session gap detection, and comparing consecutive events in event streams loaded to bronze/silver.",
+    "points": [
+      "LAG(col, n, default) — previous row value; LEAD — next row value",
+      "ORDER BY in OVER defines 'previous' and 'next'",
+      "PARTITION BY resets sequence per group (per customer, per device)",
+      "Gap detection: DATEDIFF(day, LAG(order_date), order_date) > 30",
+      "Avoid self-join on row_number ± 1 — LAG/LEAD is cleaner and often faster"
+    ],
+    "de": "CDC event stream: LAG(status) OVER (PARTITION BY account_id ORDER BY event_ts) flags status flips for fraud detection in Databricks SQL.",
+    "mistake": "Forgetting ORDER BY in OVER — offset direction becomes undefined.",
+    "interviewTip": "Define offset direction, show ORDER BY + PARTITION BY, give period-over-period example.",
+    "syntax": "SELECT order_id, customer_id, order_date,\n       LAG(order_date) OVER (PARTITION BY customer_id ORDER BY order_date) AS prev_order_date,\n       LEAD(order_date) OVER (PARTITION BY customer_id ORDER BY order_date) AS next_order_date\nFROM Orders;"
+  },
+  "23": {
+    "answer": "GROUP BY collapses rows sharing the same values in specified column(s) into groups, enabling aggregate functions (SUM, COUNT, AVG, MIN, MAX) to compute one result per group. All non-aggregated columns in SELECT must appear in GROUP BY (or be functionally dependent in engines that allow it). In data engineering, GROUP BY defines the grain of gold aggregate tables — daily sales by region, orders per customer, error counts per pipeline run.",
+    "points": [
+      "Every non-aggregate SELECT column must be in GROUP BY",
+      "Defines output grain: GROUP BY region, order_date → one row per region-day",
+      "COUNT(*), COUNT(col), COUNT(DISTINCT col) behave differently with NULLs",
+      "ROLLUP/CUBE/GROUPING SETS for subtotals in reporting queries",
+      "Pre-aggregate in gold to avoid repeated heavy GROUP BY in BI tools"
+    ],
+    "de": "Gold fct_daily_sales: GROUP BY sale_date, region_id, product_category with SUM(revenue), COUNT(DISTINCT order_id) — BI queries simple SELECT from gold.",
+    "mistake": "Selecting columns not in GROUP BY (invalid in strict SQL) — classic interview trap.",
+    "interviewTip": "Define grain explicitly: 'I need one row per X, so GROUP BY X'."
+  },
+  "24": {
+    "answer": "HAVING filters groups after GROUP BY based on conditions involving aggregate functions or grouped columns. Unlike WHERE, which operates on individual rows before aggregation, HAVING can reference SUM(), COUNT(), AVG() and similar expressions. Use HAVING for predicates like 'customers with more than 5 orders' or 'departments where average salary exceeds company average'. For performance, still push row-level filters to WHERE first.",
+    "points": [
+      "Applied after GROUP BY, before SELECT projection in logical order",
+      "Can filter on COUNT(*), SUM(amount), AVG(score), etc.",
+      "Cannot replace WHERE for row-level filters — use both together",
+      "Example: HAVING COUNT(*) > 5 AND SUM(amount) > 10000",
+      "Some engines allow HAVING on GROUP BY columns without aggregate"
+    ],
+    "de": "Find churn-risk customers: GROUP BY customer_id HAVING MAX(order_date) < DATEADD(month, -6, GETDATE()) AND COUNT(*) >= 3.",
+    "mistake": "Using WHERE COUNT(*) > 5 — invalid because COUNT not available pre-aggregation.",
+    "interviewTip": "Pair with WHERE example: WHERE status='Active' reduces rows; HAVING COUNT(*)>5 filters groups."
+  },
+  "25": {
+    "answer": "SQL joins combine rows from two or more tables based on related columns. INNER JOIN returns only matching rows from both sides. LEFT JOIN keeps all left rows plus matches (NULLs for non-matches). RIGHT JOIN mirrors LEFT. FULL OUTER JOIN keeps all rows from both sides. CROSS JOIN produces Cartesian product. SELF JOIN is a table joined to itself with aliases for hierarchical or sequential comparisons.",
+    "points": [
+      "INNER: intersection of keys — most common for fact-dimension enrichment",
+      "LEFT: preserve driving table — orphan detection with WHERE right.key IS NULL",
+      "FULL OUTER: merge with NULLs on both sides — reconciliation jobs",
+      "CROSS JOIN: every combination — rare, usually accidental without ON",
+      "Synapse: join on distribution key avoids data movement shuffle"
+    ],
+    "de": "Enrich fct_orders with dim_customer via INNER JOIN on customer_id; LEFT JOIN variant finds orphan orders missing dimension match for DQ quarantine.",
+    "mistake": "Using INNER JOIN when you need all driving-table rows — loses non-matching records silently.",
+    "interviewTip": "Name join type → who is preserved → one fact-dim example → mention NULL behavior."
+  },
+  "26": {
+    "answer": "A self join joins a table to itself using different aliases, treating one alias as the 'left' entity and another as the 'right'. It compares or relates rows within the same table — classic use cases include employee-to-manager hierarchy (employee.manager_id = mgr.employee_id), finding consecutive events, and duplicate pair detection. The logic is identical to a regular join; only the source table appears twice.",
+    "points": [
+      "Same physical table, two aliases: Employees e JOIN Employees m",
+      "Manager hierarchy: e.manager_id = m.employee_id",
+      "Consecutive rows: t1.id + 1 = t2.id with date match",
+      "Must use meaningful aliases — e and m, curr and prev",
+      "Performance: index on join columns; self joins can be expensive at scale"
+    ],
+    "de": "Org hierarchy in gold.dim_employee: self join on manager_id = employee_id to compute management_chain for HR reporting.",
+    "mistake": "Forgetting aliases — 'ambiguous column name' error; or missing tie-breaker in duplicate self-joins.",
+    "interviewTip": "Draw one table twice with aliases; walk through manager example step by step.",
+    "syntax": "SELECT e.employee_id, e.name AS employee,\n       m.name AS manager\nFROM Employees e\nLEFT JOIN Employees m ON e.manager_id = m.employee_id;"
+  },
+  "27": {
+    "answer": "UNION and JOIN operate on completely different axes. UNION stacks result sets vertically — rows from query A appended below rows from query B — requiring identical column structure. JOIN combines tables horizontally — adding columns from a second table based on a key match. UNION merges similar-shaped datasets (e.g., regional extracts); JOIN enriches rows with related attributes (fact + dimension).",
+    "points": [
+      "UNION: vertical stack, same columns, increases row count",
+      "JOIN: horizontal combine, related keys, increases column count",
+      "UNION needs compatible schemas; JOIN needs relationship/key",
+      "UNION ALL for stacking partitions; JOIN for star schema enrichment",
+      "Cannot JOIN two unrelated result sets without a key — use UNION to combine"
+    ],
+    "de": "UNION ALL three regional bronze extracts into silver.stg_sales; then JOIN dim_product on product_id to add category columns.",
+    "mistake": "Trying to UNION tables with different column counts or using JOIN when stacking same-shape feeds.",
+    "interviewTip": "Use hand gesture: vertical stack vs horizontal widen — one example each.",
+    "table": [
+      [
+        "Aspect",
+        "UNION",
+        "JOIN"
+      ],
+      [
+        "Direction",
+        "Vertical (stack rows)",
+        "Horizontal (add columns)"
+      ],
+      [
+        "Requirement",
+        "Same column count/types",
+        "Related key column"
+      ],
+      [
+        "Row count",
+        "Sum of inputs (minus dedup)",
+        "Based on join type"
+      ],
+      [
+        "DE use",
+        "Combine regional/partition extracts",
+        "Fact-dimension enrichment"
+      ]
+    ]
+  },
+  "28": {
+    "answer": "Duplicate detection groups by the business key columns and uses HAVING COUNT(*) > 1 to find key combinations appearing more than once. This identifies duplicate groups, not individual duplicate rows — to list all rows in duplicate groups, join back or use window functions. In data engineering, run this check on bronze/silver after each load; quarantine duplicates before MERGE to gold.",
+    "points": [
+      "GROUP BY business keys + HAVING COUNT(*) > 1",
+      "Returns key values that are duplicated, not every duplicate row",
+      "To list all dup rows: join subquery back to source on keys",
+      "ROW_NUMBER dedup: keep rn=1, delete or filter rn>1",
+      "Log duplicate count in pipeline metadata for SLA monitoring"
+    ],
+    "de": "Post-load DQ on bronze.customers: GROUP BY email HAVING COUNT(*)>1 — alert if count > 0 before silver MERGE on email.",
+    "mistake": "Using SELECT DISTINCT to find duplicates — DISTINCT hides the problem instead of counting occurrences.",
+    "interviewTip": "Explain GROUP BY + HAVING pattern, then mention ROW_NUMBER for remediation.",
+    "syntax": "SELECT email, customer_name, COUNT(*) AS dup_count\nFROM Customers\nGROUP BY email, customer_name\nHAVING COUNT(*) > 1;"
+  },
+  "29": {
+    "answer": "Adding a primary key to an existing table uses ALTER TABLE with ADD CONSTRAINT. The column(s) must already contain unique, non-null values — otherwise the constraint creation fails. SQL Server creates a unique index backing the PK. On large warehouse tables, validate uniqueness first with a GROUP BY/HAVING check, and consider doing this during a maintenance window since index build can lock the table.",
+    "points": [
+      "ALTER TABLE ... ADD CONSTRAINT PK_name PRIMARY KEY (col)",
+      "All PK columns must be NOT NULL and unique before adding",
+      "Pre-check: SELECT col, COUNT(*) FROM t GROUP BY col HAVING COUNT(*)>1",
+      "Existing clustered index may need to be dropped/replaced",
+      "Lakehouse bronze often skips PK; enforce at silver promotion"
+    ],
+    "de": "After cleansing duplicate order_ids in silver staging, add PRIMARY KEY (order_id) before enabling MERGE to gold.fct_orders.",
+    "mistake": "Adding PK before deduplication — constraint creation fails on duplicate keys in production load.",
+    "interviewTip": "State ALTER syntax, pre-validation step, and when you'd add PK in medallion flow.",
+    "syntax": "ALTER TABLE Employees\nADD CONSTRAINT PK_Employees PRIMARY KEY (employee_id);"
+  },
+  "30": {
+    "answer": "Slowly Changing Dimension Type 1 overwrites the current attribute values in place — no history is preserved. Type 2 preserves history by closing the current row (setting end_date, is_current=0) and inserting a new row with updated attributes and a new surrogate key or version. In SQL Server/Synapse, Type 1 is a simple UPDATE join; Type 2 requires expire-then-insert or MERGE with conditional logic. Delta Lake MERGE is the modern lakehouse equivalent.",
+    "points": [
+      "Type 1: UPDATE target SET col = source.col — overwrites, no history",
+      "Type 2: expire old row + insert new current row with version dates",
+      "Type 2 needs surrogate key, effective_start, effective_end, is_current flag",
+      "MERGE INTO supports both patterns with WHEN MATCHED/NOT MATCHED",
+      "Choose Type 1 for typos; Type 2 for audit/compliance (address, tier changes)"
+    ],
+    "de": "Customer dimension in Synapse: Type 2 MERGE on natural key — address change closes old dim row, inserts new with customer_sk+1; email typo uses Type 1 UPDATE.",
+    "mistake": "Using Type 1 when compliance requires historical reporting — loses point-in-time accuracy.",
+    "interviewTip": "Contrast overwrite vs versioned row — walk through expire+insert steps for Type 2.",
+    "syntax": "-- Type 1: overwrite\nUPDATE t\nSET t.salary = s.salary, t.updated_at = GETDATE()\nFROM dim_employee t\nINNER JOIN stg_employee s ON t.employee_id = s.employee_id\nWHERE t.salary <> s.salary;\n\n-- Type 2: expire + insert\nUPDATE dim_employee\nSET end_date = GETDATE(), is_current = 0\nWHERE employee_id IN (SELECT employee_id FROM stg_employee s WHERE s.address <> dim_employee.address)\n  AND is_current = 1;\n\nINSERT INTO dim_employee (employee_id, address, start_date, end_date, is_current)\nSELECT s.employee_id, s.address, GETDATE(), NULL, 1\nFROM stg_employee s\nWHERE NOT EXISTS (\n  SELECT 1 FROM dim_employee d\n  WHERE d.employee_id = s.employee_id AND d.is_current = 1 AND d.address = s.address\n);"
+  },
+  "31": {
+    "answer": "A surrogate key is an artificial, system-generated identifier (typically an IDENTITY integer or UUID) assigned to each row independent of business data. Unlike natural keys (email, SKU, SSN), surrogate keys are stable, numeric, and never change when business attributes update. In data warehousing, surrogate keys are essential for SCD Type 2 dimensions where multiple versions of the same business entity need distinct keys while sharing the same natural key.",
+    "points": [
+      "Generated by system: IDENTITY, SEQUENCE, or UUID — no business meaning",
+      "Stable when natural key attributes change (SCD Type 2)",
+      "Smaller join keys than composite natural keys — better index performance",
+      "Fact tables reference dimension surrogate keys, not natural keys",
+      "Natural key still stored and often UNIQUE-constrained for lookup/MERGE"
+    ],
+    "de": "dim_customer: customer_sk (surrogate, PK) + source_customer_id (natural, UNIQUE). fct_orders joins on customer_sk; CDC MERGE matches on source_customer_id.",
+    "mistake": "Using natural key alone as PK in Type 2 dimensions — cannot have multiple rows for same entity history.",
+    "interviewTip": "Define surrogate vs natural → why Type 2 needs it → fact table join example."
+  },
+  "32": {
+    "answer": "Extracting the birth year from a date column uses date functions without modifying stored data. In SQL Server, YEAR(dob) returns the four-digit year; alternatively FORMAT(dob, 'yyyy') or DATEPART(year, dob) work. In SELECT queries, this creates a derived column for reporting. For frequently queried year values on large tables, consider a persisted computed column or include year in the gold table grain during ETL.",
+    "points": [
+      "YEAR(dob) — SQL Server; EXTRACT(YEAR FROM dob) — ANSI/Postgres/Databricks",
+      "Non-sargable: WHERE YEAR(dob)=1990 prevents index use on dob",
+      "Prefer: WHERE dob >= '1990-01-01' AND dob < '1991-01-01'",
+      "Persist computed column if year filter is hot path",
+      "Cast/format only at presentation layer when possible"
+    ],
+    "de": "Gold demographic segment: derive birth_year in silver ETL once rather than YEAR(dob) in every BI query against 100M-row table.",
+    "mistake": "Filtering with YEAR(dob)=1990 on indexed column — forces scan; use date range instead.",
+    "interviewTip": "Show YEAR() extraction, immediately mention sargability trap for filters.",
+    "syntax": "SELECT employee_id, name, DOB, YEAR(DOB) AS birth_year\nFROM Employees;"
+  },
+  "33": {
+    "answer": "Renaming a column permanently requires DDL depending on the platform. SQL Server uses sp_rename, which is a metadata-only change but can break dependencies (views, procs) if not updated. Standard SQL and Postgres use ALTER TABLE ... RENAME COLUMN. In production pipelines, prefer adding a new column and deprecating the old one to avoid breaking downstream views, ADF mappings, and BI reports during schema evolution.",
+    "points": [
+      "SQL Server: EXEC sp_rename 'Table.OldCol', 'NewCol', 'COLUMN'",
+      "ANSI/Postgres: ALTER TABLE t RENAME COLUMN old TO new",
+      "sp_rename does not automatically update dependent views/procs",
+      "Schema evolution in lakehouse: add column + COALESCE migration pattern",
+      "Document rename in migration script with rollback step"
+    ],
+    "de": "Renaming cust_nm to customer_name in Synapse gold: update view definitions same release; ADF Copy mappings versioned in Git.",
+    "mistake": "Renaming column without updating dependent views — silent failures or broken pipelines next run.",
+    "interviewTip": "Give platform-specific syntax, then warn about downstream dependency impact.",
+    "syntax": "-- SQL Server\nEXEC sp_rename 'Employees.old_name', 'new_name', 'COLUMN';\n\n-- ANSI / Postgres / Databricks SQL\nALTER TABLE Employees RENAME COLUMN old_name TO new_name;"
+  },
+  "34": {
+    "answer": "A view filtering customers by country creates a reusable, security-friendly interface over the base table. The view definition stores the SELECT with the WHERE predicate; consumers query the view name instead of repeating the filter. DBAs can grant SELECT on the view without exposing other countries' data. Underlying data remains in the base table; the view reflects current data on each query.",
+    "points": [
+      "CREATE VIEW vw AS SELECT ... WHERE country = 'USA'",
+      "No data duplication — filter applied at query time",
+      "Row-level security alternative in modern platforms",
+      "Dependent views need CREATE OR ALTER when base changes",
+      "Synapse serverless views can wrap OPENROWSET over Parquet paths"
+    ],
+    "de": "vw_usa_customers exposes only USA rows to regional BI workspace — base dim_customer holds global data with RLS backup.",
+    "mistake": "Expecting view to materialize/filter once — every query re-scans base table unless indexed/materialized.",
+    "interviewTip": "CREATE VIEW syntax → abstraction/security benefit → note non-materialized behavior.",
+    "syntax": "CREATE VIEW vw_USA_Customers AS\nSELECT customer_id, customer_name, city, state\nFROM Customer\nWHERE country = 'USA';"
+  },
+  "35": {
+    "answer": "Salary categorization uses a searched CASE expression to map numeric salary into labeled buckets (High/Medium/Low). CASE evaluates conditions top-to-bottom and returns the first match. This derived column can be computed at query time or persisted in a gold table during ETL. Thresholds should be configurable — hard-coding in many queries leads to inconsistent business rules across reports.",
+    "points": [
+      "Searched CASE: CASE WHEN salary >= X THEN 'High' ... END",
+      "Order conditions from most specific/highest threshold first",
+      "ELSE catches remaining rows — always include or accept NULL",
+      "Persist in gold for consistent BI semantics across teams",
+      "Simple CASE alternative: CASE dept WHEN 'HR' THEN ... END"
+    ],
+    "de": "Gold employee table includes salary_band column computed in silver ETL — HR and Finance dashboards use same thresholds from config table join.",
+    "mistake": "Overlapping or wrong condition order — rows match wrong band; missing ELSE leaves NULLs silently.",
+    "interviewTip": "Write CASE with three bands, mention centralizing thresholds in a config/reference table.",
+    "syntax": "SELECT employee_id, name, salary,\n  CASE\n    WHEN salary >= 9000 THEN 'High'\n    WHEN salary >= 5000 THEN 'Medium'\n    ELSE 'Low'\n  END AS salary_range\nFROM Employees;"
+  },
+  "36": {
+    "answer": "Multi-parameter stored procedures accept several input values, enabling flexible filtering without duplicating procedure logic. Each parameter is declared with name and datatype in the CREATE header and bound at execution with EXEC. ADF pipeline parameters map cleanly to procedure parameters for environment-specific loads. Always use parameterized calls — never concatenate user input into dynamic SQL.",
+    "points": [
+      "Multiple @params in CREATE PROCEDURE header",
+      "EXEC proc @Country='USA', @City='New York' — order can be named",
+      "Combine with optional defaults for partial filtering",
+      "ADF Stored Procedure activity maps @pipeline().parameters to proc params",
+      "Validate/sanitize params inside proc for defense in depth"
+    ],
+    "de": "Regional extract proc filters by @Country and @City from ADF ForEach over region list — same proc, parameterized reruns per geography.",
+    "mistake": "Building dynamic SQL via string concat from parameters — SQL injection and plan cache pollution.",
+    "interviewTip": "Show two-param CREATE, EXEC example, mention ADF mapping.",
+    "syntax": "CREATE PROCEDURE GetCustomersByCountryCity\n    @Country VARCHAR(50),\n    @City VARCHAR(50)\nAS\nBEGIN\n    SELECT customer_id, customer_name, city, country\n    FROM Customer\n    WHERE country = @Country AND city = @City;\nEND;\n\nEXEC GetCustomersByCountryCity @Country = 'USA', @City = 'New York';"
+  },
+  "37": {
+    "answer": "Deleting duplicates with a CTE uses ROW_NUMBER() partitioned by the duplicate key columns, ordered by a tie-breaker (e.g., lowest id keeps first). The CTE assigns rn=1 to the survivor row; DELETE WHERE rn > 1 removes extras. This is safer than DISTINCT because you control which duplicate survives. Wrap in a transaction and validate row counts before commit in production.",
+    "points": [
+      "CTE + ROW_NUMBER() OVER (PARTITION BY keys ORDER BY tiebreaker)",
+      "DELETE FROM cte WHERE rn > 1 — SQL Server allows delete via CTE",
+      "ORDER BY id ASC keeps oldest; DESC keeps newest ingest",
+      "Run SELECT count before DELETE; backup or snapshot first",
+      "In lakehouse prefer MERGE dedup over physical DELETE on Delta"
+    ],
+    "de": "One-time silver cleanup: CTE dedup on (customer_id, order_date) keeping latest ingest_ts before adding UNIQUE constraint.",
+    "mistake": "Deleting without tie-breaker ORDER BY — random survivor row kept.",
+    "interviewTip": "Explain PARTITION BY keys, ORDER BY tiebreaker, DELETE rn>1; mention transaction.",
+    "syntax": "WITH cte AS (\n  SELECT *, ROW_NUMBER() OVER (PARTITION BY email ORDER BY id) AS rn\n  FROM Employees\n)\nDELETE FROM cte WHERE rn > 1;"
+  },
+  "38": {
+    "answer": "UNION requires each participating SELECT to return the same number of columns in the same ordinal position, with compatible data types that SQL can implicitly or explicitly convert. Column names in the result come from the first SELECT. Mismatched schemas cause errors at compile time. In ETL, align schemas in staging with CAST/CONVERT before UNION ALL of heterogeneous regional feeds.",
+    "points": [
+      "Same column count in every SELECT branch",
+      "Same column order — position 1 maps to position 1",
+      "Compatible types: INT + BIGINT OK; VARCHAR + INT needs CAST",
+      "Result column names from first SELECT only",
+      "Use explicit CAST in each branch for consistent types"
+    ],
+    "de": "Union bronze extracts: region A has amount DECIMAL(10,2), region B has FLOAT — CAST both to DECIMAL(18,2) before UNION ALL.",
+    "mistake": "Assuming UNION aligns by column name — it aligns by position, not name.",
+    "interviewTip": "List three rules (count, order, types); warn about positional not name matching."
+  },
+  "39": {
+    "answer": "SQL constraints enforce data integrity rules at the database level. PRIMARY KEY and UNIQUE ensure uniqueness; FOREIGN KEY enforces referential integrity; NOT NULL prevents missing values; CHECK validates domain rules (e.g., salary > 0); DEFAULT supplies values when none provided. In medallion architectures, constraints are often strongest at silver/gold in the warehouse while bronze remains schema-on-read with DQ checks.",
+    "points": [
+      "PRIMARY KEY: unique + NOT NULL, one per table",
+      "FOREIGN KEY: child references parent",
+      "UNIQUE: alternate key uniqueness",
+      "NOT NULL: mandatory column values",
+      "CHECK: boolean expression validation; DEFAULT: fallback value"
+    ],
+    "de": "Silver table: CHECK (order_amount >= 0), NOT NULL on order_id, FK to dim_customer — bronze allows messy data, silver enforces rules.",
+    "mistake": "Over-constraining bronze landing tables — load failures on every bad source row; validate progressively.",
+    "interviewTip": "Name all six types with one-line purpose; contrast bronze flexibility vs silver enforcement."
+  },
+  "40": {
+    "answer": "Increasing column size (e.g., VARCHAR(20) to VARCHAR(50)) uses ALTER TABLE ALTER COLUMN in SQL Server. The operation modifies metadata and may require row-size validation if decreasing size. Increasing VARCHAR length is usually online and fast; decreasing can fail if existing data exceeds new length. On large Synapse tables, test in lower environment and check dependent objects.",
+    "points": [
+      "ALTER TABLE t ALTER COLUMN col VARCHAR(50)",
+      "Increasing size generally safe; decreasing may truncate/fail",
+      "NOT NULL/PK columns need full column spec in some engines",
+      "No automatic update to downstream ADF schema mappings",
+      "Document in migration script with pre-check MAX(LEN(col))"
+    ],
+    "de": "Source CRM expands name field — ALTER COLUMN customer_name VARCHAR(200) on silver before prod load; update ADF dataset schema in same release.",
+    "mistake": "Shrinking column without checking MAX(LEN()) — migration fails mid-deploy.",
+    "interviewTip": "Give ALTER syntax, direction matters (expand vs shrink), mention pipeline schema sync.",
+    "syntax": "ALTER TABLE Employees\nALTER COLUMN name VARCHAR(50) NOT NULL;"
+  },
+  "41": {
+    "answer": "Creating a clustered index physically orders table data by the indexed column(s). Syntax: CREATE CLUSTERED INDEX index_name ON table(column). If the table is a heap, the first clustered index converts it to clustered table structure. Choose the clustered key for common range scan patterns — often date in fact tables or surrogate PK in dimensions. Only one clustered index allowed per table.",
+    "points": [
+      "CREATE CLUSTERED INDEX IX_name ON table(col)",
+      "One per table — often PK or date partition column",
+      "Rebuild may be needed after large bulk load: ALTER INDEX REORGANIZE/REBUILD",
+      "Synapse fact tables often use CLUSTERED COLUMNSTORE instead of B-tree",
+      "Leading column of composite clustered key defines sort order"
+    ],
+    "de": "After initial load of 500M-row fact_events, create clustered index on (event_date, event_id) matching nightly DELETE+INSERT partition pattern.",
+    "mistake": "Creating clustered index on low-cardinality column alone — poor sort utility and hot-spot inserts.",
+    "interviewTip": "Syntax + one-per-table rule + choose key aligned to query pattern.",
+    "syntax": "CREATE CLUSTERED INDEX IX_Employees_ID\nON Employees(employee_id);"
+  },
+  "42": {
+    "answer": "Backup tables capture a point-in-time copy before destructive changes. SQL Server SELECT * INTO new_table FROM source quickly copies structure and data without pre-declaring columns. Postgres/MySQL use CREATE TABLE AS SELECT. For production fixes, also consider native BACKUP DATABASE or table-level export to ADLS. Always verify row counts match: source COUNT = backup COUNT.",
+    "points": [
+      "SELECT * INTO Employees_Backup FROM Employees — SQL Server",
+      "CREATE TABLE backup AS SELECT * FROM t — Postgres/others",
+      "Copies data + infers schema; no indexes/constraints copied",
+      "Compare COUNT(*) before and after backup creation",
+      "Prefer snapshot/backup over SELECT INTO for large prod tables in Synapse"
+    ],
+    "de": "Before one-time DELETE fix on gold.dim_product, SELECT * INTO dim_product_bak_20250905 FROM dim_product — rollback script ready if validation fails.",
+    "mistake": "Running fix without backup because 'it's just one UPDATE' — no rollback path when join affects more rows than expected.",
+    "interviewTip": "Lead with safety narrative, give SELECT INTO syntax, mention row-count validation.",
+    "syntax": "SELECT * INTO Employees_Backup FROM Employees;\n\n-- Verify\nSELECT COUNT(*) FROM Employees;\nSELECT COUNT(*) FROM Employees_Backup;"
+  },
+  "43": {
+    "answer": "UNION and UNION ALL support chaining any number of SELECT statements as long as each branch satisfies schema compatibility rules. Each UNION connects two operands; additional tables extend the chain: A UNION B UNION C. All branches except the last can omit ALL; mixing UNION (dedup) and UNION ALL in one chain requires careful ordering. For multi-source bronze ingestion, UNION ALL is preferred when sources are disjoint.",
+    "points": [
+      "A UNION ALL B UNION ALL C — valid for any N tables",
+      "Every branch must match column count, order, types",
+      "UNION deduplicates final combined set across all branches",
+      "Parentheses may be needed for precedence with mixed UNION/ALL",
+      "Column names from first SELECT in chain"
+    ],
+    "de": "Combine five SaaS vendor staging tables into silver.unified_events with UNION ALL — each vendor mapped to common column layout via CAST.",
+    "mistake": "Different column orders across branches — silent wrong data alignment in UNION.",
+    "interviewTip": "Confirm yes for N tables, restate schema rules, show three-table example.",
+    "syntax": "SELECT order_id, amount, 'RegionA' AS source FROM RegionA_Sales\nUNION ALL\nSELECT order_id, amount, 'RegionB' AS source FROM RegionB_Sales\nUNION ALL\nSELECT order_id, amount, 'RegionC' AS source FROM RegionC_Sales;"
+  },
+  "44": {
+    "answer": "Production data fixes demand a rollback strategy before any DML runs. Take a table-level backup with SELECT * INTO backup_table FROM target, or use native backup/snapshot tools. Document expected row impact, run in explicit transaction with pre/post row counts, and validate with SELECT before COMMIT. In cloud warehouses, consider time-travel (Delta) or database restore point if available.",
+    "points": [
+      "SELECT * INTO backup FROM table before UPDATE/DELETE",
+      "BEGIN TRAN → fix → validate → COMMIT or ROLLBACK",
+      "Log before/after COUNT(*) and sample changed rows",
+      "Delta Lake: RESTORE TABLE TO VERSION AS OF timestamp",
+      "Get approval/ticket for prod DML — change management"
+    ],
+    "de": "Boss asks for prod fix: snapshot dim_customer to ADLS Parquet backup, run fix in transaction, share validation query results before commit.",
+    "mistake": "Running UPDATE without WHERE clause test on SELECT first — mass accidental update.",
+    "interviewTip": "Safety-first narrative: backup → transaction → validate → commit; mention Delta time travel.",
+    "syntax": "SELECT * INTO Employees_Backup_20250905 FROM Employees;\n\nBEGIN TRANSACTION;\n  -- test scope first\n  SELECT * FROM Employees WHERE <fix_condition>;\n  -- apply fix\n  UPDATE Employees SET ... WHERE <fix_condition>;\n  -- validate counts\n  -- COMMIT; or ROLLBACK;"
+  },
+  "45": {
+    "answer": "A composite key combines two or more columns to uniquely identify a row when no single column is unique alone. Common in junction/bridge tables like order_details (order_id + product_id) or event logs (device_id + event_ts). Create with ALTER TABLE ADD CONSTRAINT PRIMARY KEY (col1, col2). Composite keys affect index design — leading column order impacts seek performance.",
+    "points": [
+      "Multi-column PRIMARY KEY or UNIQUE constraint",
+      "Typical for many-to-many detail/fact grain tables",
+      "All columns in composite PK must be NOT NULL",
+      "Index seeks use leading column first — order matters",
+      "Surrogate single-column PK + UNIQUE composite is alternative pattern"
+    ],
+    "de": "fct_order_line grain is (order_id, line_number) composite PK — gold aggregations at order level use GROUP BY order_id.",
+    "mistake": "Adding surrogate PK but losing composite business grain — duplicates possible at business key level.",
+    "interviewTip": "Explain when single column fails, show ALTER TABLE composite PK syntax.",
+    "syntax": "ALTER TABLE OrderDetails\nADD CONSTRAINT PK_OrderDetails PRIMARY KEY (order_id, product_id);"
+  },
+  "46": {
+    "answer": "A natural key is a business identifier derived from real-world data — email, SSN, product SKU, order number from source system. It has meaning to business users and often comes from upstream applications. Natural keys can change (email update, SKU remap) and may be composite or non-numeric. Data warehouses typically store natural keys alongside surrogate keys for lookup, MERGE matching, and audit.",
+    "points": [
+      "Business-meaningful: SKU, email, employee_number",
+      "Comes from source system — not generated by DWH",
+      "Can change over time — problem for PK in Type 2 SCD",
+      "Used for CDC MERGE match keys and source reconciliation",
+      "Often enforced with UNIQUE constraint, not always as PK"
+    ],
+    "de": "Salesforce Contact Id is natural key in bronze/silver; warehouse assigns contact_sk surrogate for fct_interactions joins and SCD Type 2 history.",
+    "mistake": "Using volatile natural key (email) as sole PK without surrogate — breaks when customer updates email.",
+    "interviewTip": "Define with business example, contrast surrogate, explain MERGE match on natural key."
+  },
+  "47": {
+    "answer": "Capitalizing the first letter of a name while lowercasing the rest uses string functions: UPPER(LEFT(name,1)) concatenated with LOWER(SUBSTRING(name,2,...)). SQL Server lacks a single INITCAP like Oracle; Databricks/Postgres may offer INITCAP(). For data cleansing in bronze-to-silver, apply once during transform rather than in every downstream query. Handle NULL and empty strings explicitly.",
+    "points": [
+      "UPPER(LEFT(name,1)) + LOWER(SUBSTRING(name,2,LEN(name)))",
+      "Handle NULL: CASE WHEN name IS NULL THEN NULL ELSE ... END",
+      "TRIM before casing — leading spaces break LEFT(name,1)",
+      "Databricks: initcap(name) one-shot alternative",
+      "Persist cleansed name in silver — don't repeat in every report"
+    ],
+    "de": "Bronze HR feed has lowercase names — standardize in silver ETL with CONCAT/UPPER/LOWER before loading gold dim_employee.",
+    "mistake": "Only UPPER(name) — entire string uppercase instead of proper case.",
+    "interviewTip": "Show CONCAT pattern, mention NULL/trim edge cases, persist in silver.",
+    "syntax": "SELECT CONCAT(UPPER(LEFT(name, 1)), LOWER(SUBSTRING(name, 2, LEN(name)))) AS proper_name\nFROM Employees\nWHERE name IS NOT NULL;"
+  },
+  "48": {
+    "answer": "Trimming leading and trailing whitespace uses TRIM() in SQL Server 2017+ and ANSI SQL. Older SQL Server: LTRIM(RTRIM(column)). Whitespace in keys causes join failures — 'ABC' vs 'ABC ' — common in CSV bronze loads. Clean in silver ETL and add DQ check for LEN(col) <> LEN(TRIM(col)) on critical keys.",
+    "points": [
+      "TRIM(col) — removes leading and trailing spaces",
+      "Legacy SQL Server: LTRIM(RTRIM(col))",
+      "TRIM affects join keys — silent non-match on padded values",
+      "Also watch non-breaking spaces and Unicode whitespace",
+      "Apply in bronze→silver cleanse step, not at query time"
+    ],
+    "de": "CRM export has padded customer_code — TRIM in silver MERGE ON clause prevents orphan fact rows in gold.",
+    "mistake": "Joining on untrimmed keys — undercount in reconciliation, 'missing' dimension matches.",
+    "interviewTip": "TRIM syntax, explain join failure scenario, mention legacy LTRIM/RTRIM.",
+    "syntax": "SELECT TRIM(name) AS trimmed_name FROM Employees;\n\n-- SQL Server pre-2017\nSELECT LTRIM(RTRIM(name)) AS trimmed_name FROM Employees;"
+  },
+  "49": {
+    "answer": "Extracting a fixed prefix like a 4-digit year from a code column uses LEFT(code, 4) when the year always occupies the first four characters. Alternatives: SUBSTRING(code, 1, 4) or REGEXP/SUBSTRING with patterns for variable formats. Cast result to INT if numeric comparisons needed. Document parsing rules when source format changes — version the extraction logic.",
+    "points": [
+      "LEFT(code_column, 4) when year is fixed prefix",
+      "SUBSTRING(code, 1, 4) equivalent",
+      "CAST(LEFT(code,4) AS INT) for numeric year filters",
+      "Regex/substring for non-fixed patterns: SUBSTRING with CHARINDEX",
+      "Validate: WHERE LEN(code) >= 4 AND LEFT(code,4) NOT LIKE '%[^0-9]%'"
+    ],
+    "de": "Invoice code '2023BH1042' → batch_year = LEFT(invoice_code, 4) in silver for partition pruning in gold aggregations by year.",
+    "mistake": "Using RIGHT instead of LEFT, or not validating length — short codes produce garbage year.",
+    "interviewTip": "Confirm fixed-width prefix assumption, show LEFT, mention validation.",
+    "syntax": "SELECT code_column,\n       LEFT(code_column, 4) AS year_extracted\nFROM Employees\nWHERE LEN(code_column) >= 4;"
+  },
+  "50": {
+    "answer": "Joining four tables chains JOIN clauses sequentially, each with an ON condition linking to the prior table. Order logically from fact through dimensions or along foreign key path — optimizer reordering may differ from written order. Ensure join keys are indexed/distributed appropriately. In Synapse, align distribution keys on join columns to minimize data movement.",
+    "points": [
+      "Chain: A JOIN B ON ... JOIN C ON ... JOIN D ON ...",
+      "Each ON links new table to already-joined set",
+      "Start from fact table, join dimensions — star schema pattern",
+      "INNER vs LEFT depends on whether unmatched rows needed",
+      "Synapse: HASH distribute on common join key across large tables"
+    ],
+    "de": "fct_orders JOIN dim_customer JOIN dim_product JOIN dim_date — four-table star join in Synapse gold view for BI consumption.",
+    "mistake": "Cartesian product from missing ON clause on one join — row explosion.",
+    "interviewTip": "Write chain left-to-right, name ON keys, mention fact-first star pattern.",
+    "syntax": "SELECT c.customer_name, p.product_name, o.order_amount, d.calendar_date\nFROM Orders o\nJOIN Customers c ON o.customer_id = c.customer_id\nJOIN OrderDetails od ON o.order_id = od.order_id\nJOIN Products p ON od.product_id = p.product_id;"
+  },
+  "51": {
+    "answer": "Renaming a table uses platform-specific DDL. SQL Server: EXEC sp_rename 'OldName', 'NewName'. Standard SQL/Postgres: ALTER TABLE OldName RENAME TO NewName. Renaming breaks hard-coded references in ADF datasets, stored procedures, views, and BI reports — update all dependents in the same release. Prefer views as stable interface when table names may change.",
+    "points": [
+      "SQL Server: EXEC sp_rename 'OldTable', 'NewTable'",
+      "Postgres: ALTER TABLE old RENAME TO new",
+      "Update views, procs, ADF linked services referencing old name",
+      "sp_rename does not auto-update dependent object definitions",
+      "Synapse: check external table and CETAS dependencies"
+    ],
+    "de": "Rename stg_sales_v1 to stg_sales after schema change — update ADF pipeline JSON and Synapse proc in same PR.",
+    "mistake": "Renaming table without grep-searching codebase for references — pipeline fails overnight.",
+    "interviewTip": "Platform syntax + dependency warning + view abstraction tip.",
+    "syntax": "-- SQL Server\nEXEC sp_rename 'OldTableName', 'NewTableName';\n\n-- Postgres / ANSI\nALTER TABLE OldTableName RENAME TO NewTableName;"
+  },
+  "52": {
+    "answer": "Composite (multi-column) indexes index several columns in defined order — the leading column is most important for seek operations. CREATE INDEX idx ON table(col1, col2) supports queries filtering on col1 or col1+col2; filtering only col2 may not use the index efficiently. Match index column order to common WHERE/JOIN predicate patterns in warehouse queries.",
+    "points": [
+      "CREATE INDEX IX ON table(dept, salary) — column order matters",
+      "Leading column must be in predicate for efficient seek",
+      "Covering index: INCLUDE columns for index-only scan",
+      "Too many indexes hurt INSERT/MERGE on staging tables",
+      "Synapse: index strategy differs — focus on distribution + CCI"
+    ],
+    "de": "Non-clustered index on (order_date, customer_id) for nightly reconciliation query filtering both columns — INCLUDE (order_amount) for covering scan.",
+    "mistake": "Reversing column order vs query filter — index on (customer_id, order_date) unused when only filtering order_date.",
+    "interviewTip": "Syntax + leading column rule + covering INCLUDE mention.",
+    "syntax": "CREATE NONCLUSTERED INDEX IX_Employees_Dept_Salary\nON Employees(department, salary)\nINCLUDE (employee_id, name);"
+  },
+  "53": {
+    "answer": "Displaying duplicate records means listing key combinations that appear more than once, typically via GROUP BY with HAVING COUNT(*) > 1. This shows which values are duplicated and how many times. To list all rows participating in duplicate groups (not just the keys), join the grouped result back to the source or use ROW_NUMBER() > 1 filter. Use for bronze DQ before silver promotion.",
+    "points": [
+      "GROUP BY keys HAVING COUNT(*) > 1 shows duplicate key groups",
+      "Add COUNT(*) column to show duplication factor",
+      "Full row listing: INNER JOIN grouped subquery back to table",
+      "ROW_NUMBER(): WHERE rn > 1 lists all non-survivor duplicate rows",
+      "Alert when duplicate group count > 0 in pipeline"
+    ],
+    "de": "Bronze ingest DQ: HAVING COUNT(*)>1 on transaction_id — block silver MERGE if any duplicates, route to quarantine Delta table.",
+    "mistake": "Confusing 'show duplicate keys' with 'show all duplicate rows' — different queries.",
+    "interviewTip": "Give GROUP BY/HAVING first, then explain join-back for full rows.",
+    "syntax": "SELECT email, COUNT(*) AS duplicate_count\nFROM Employees\nGROUP BY email\nHAVING COUNT(*) > 1;"
+  },
+  "54": {
+    "answer": "This scenario joins Orders to Customers for names and to Payments for success filter, then aggregates SUM(order_amount) per customer. The INNER JOIN to Payments restricts to successfully paid orders only — unpaid orders excluded entirely. GROUP BY customer_name collapses to one row per customer with total paid amount. Verify grain: if a customer has multiple orders, SUM aggregates correctly.",
+    "points": [
+      "Three-table join: Orders → Customers, Orders → Payments",
+      "WHERE payment_status = 'Success' filters paid orders only",
+      "GROUP BY customer_name with SUM(order_amount)",
+      "INNER JOIN Payments excludes orders without payment records",
+      "Check for duplicate payment rows inflating SUM — dedup if needed"
+    ],
+    "de": "Gold customer revenue mart: same pattern in Synapse proc — only 'Success' payments count toward customer_lifetime_value.",
+    "mistake": "Filtering payment_status in WHERE on LEFT JOIN to Orders — accidentally inner-join behavior.",
+    "interviewTip": "Name tables and join keys, explain INNER on Payments, end with GROUP BY grain.",
+    "syntax": "SELECT c.customer_name, SUM(o.order_amount) AS total_amount\nFROM Orders o\nJOIN Customers c ON o.customer_id = c.customer_id\nJOIN Payments p ON o.order_id = p.order_id\nWHERE p.payment_status = 'Success'\nGROUP BY c.customer_name;"
+  },
+  "55": {
+    "answer": "Customers who never placed an order are found with LEFT JOIN from Customers to Orders, filtering WHERE order_id IS NULL on the Orders side. This anti-join pattern preserves all customers and identifies those with no matching order. NOT EXISTS and NOT IN are equivalent alternatives; NOT EXISTS is generally preferred for NULL safety and often better optimized.",
+    "points": [
+      "LEFT JOIN Orders + WHERE o.order_id IS NULL",
+      "Alternative: NOT EXISTS (SELECT 1 FROM Orders o WHERE o.customer_id = c.customer_id)",
+      "Avoid NOT IN if Orders.customer_id nullable — NULL poisons NOT IN",
+      "Anti-join common for churn analysis and marketing segments",
+      "COUNT left side rows with null match for metric"
+    ],
+    "de": "Marketing segment 'never purchased': LEFT JOIN fct_orders, filter NULL — export to Campaign tool from gold view.",
+    "mistake": "Using INNER JOIN — excludes the very customers you want to find.",
+    "interviewTip": "Draw LEFT JOIN diagram, highlight NULL check on right side.",
+    "syntax": "SELECT c.customer_id, c.customer_name\nFROM Customers c\nLEFT JOIN Orders o ON c.customer_id = o.customer_id\nWHERE o.order_id IS NULL;"
+  },
+  "56": {
+    "answer": "This query combines LEFT JOINs to preserve all customers while counting orders and successful payments per customer. COUNT(o.order_id) counts orders (NULLs excluded automatically). Conditional aggregation SUM(CASE WHEN payment_status='Success' THEN 1 ELSE 0 END) counts successful payments without filtering out customers with zero successes. GROUP BY customer_name produces one summary row per customer.",
+    "points": [
+      "LEFT JOIN preserves customers with zero orders",
+      "COUNT(o.order_id) — NULL order ids not counted",
+      "Conditional SUM(CASE...) for successful payment count",
+      "Multiple LEFT JOINs can multiply rows if Payments has many per order — consider subquery dedup",
+      "Alternative: COUNT(DISTINCT CASE WHEN ... THEN p.payment_id END)"
+    ],
+    "de": "Customer 360 gold table: total_orders and successful_payments columns updated nightly — LEFT JOIN pattern keeps inactive customers visible.",
+    "mistake": "INNER JOIN to Orders — drops customers with no orders from result entirely.",
+    "interviewTip": "Explain why LEFT JOIN, show conditional aggregate, warn about join fan-out.",
+    "syntax": "SELECT c.customer_name,\n       COUNT(o.order_id) AS total_orders,\n       SUM(CASE WHEN p.payment_status = 'Success' THEN 1 ELSE 0 END) AS successful_payments\nFROM Customers c\nLEFT JOIN Orders o ON c.customer_id = o.customer_id\nLEFT JOIN Payments p ON o.order_id = p.order_id\nGROUP BY c.customer_name;"
+  },
+  "57": {
+    "answer": "Joining Orders to OrderDetails on order_id returns each order with its line-item quantities. INNER JOIN returns only orders that have detail rows; LEFT JOIN would include orders with no lines (NULL quantity). Grain of result is order_id + line level if multiple details per order — one row per order line, not per order unless aggregated.",
+    "points": [
+      "JOIN OrderDetails od ON o.order_id = od.order_id",
+      "Result grain: one row per order line item",
+      "SUM(od.quantity) GROUP BY o.order_id for order-level total qty",
+      "INNER JOIN excludes header-only orders without details",
+      "Index/distribute on order_id for join performance"
+    ],
+    "de": "Silver order enrichment: join header to lines before aggregating to gold fct_order with total_quantity = SUM(quantity).",
+    "mistake": "Assuming one row per order without GROUP BY when multiple OrderDetails exist — duplicated header columns.",
+    "interviewTip": "State join key, clarify line-level grain, mention aggregation for order totals.",
+    "syntax": "SELECT o.order_id, o.order_date, od.product_id, od.quantity\nFROM Orders o\nJOIN OrderDetails od ON o.order_id = od.order_id;"
+  },
+  "58": {
+    "answer": "Filtering orders by year from a date column can use YEAR(order_date) = 2022 for readability, but sargable range predicates perform better on indexed columns: order_date >= '2022-01-01' AND order_date < '2023-01-01'. In partitioned tables, align filter with partition key for partition elimination. Persist order_year in gold if year filtering is dominant access pattern.",
+    "points": [
+      "YEAR(order_date) = 2022 — readable but often non-sargable",
+      "Range filter: >= '2022-01-01' AND < '2023-01-01' — index friendly",
+      "Partition elimination when table partitioned on order_date",
+      "Databricks: year(order_date) = 2022 with partition column order_year",
+      "Timezone: convert to UTC before date extraction if sources mixed"
+    ],
+    "de": "Synapse fact_orders partitioned on order_date — range filter prunes partitions; YEAR() function forces full scan.",
+    "mistake": "YEAR(order_date)=2022 on billion-row fact — full scan; use range or partition column.",
+    "interviewTip": "Show YEAR syntax, immediately pivot to sargable range for performance.",
+    "syntax": "SELECT * FROM Orders\nWHERE order_date >= '2022-01-01'\n  AND order_date < '2023-01-01';"
+  },
+  "59": {
+    "answer": "Finding the previous order date per row uses LAG(order_date) OVER (ORDER BY order_date) or PARTITION BY customer_id for per-customer sequences. LAG looks one row back in the ordered window without self-join. Gap analysis: DATEDIFF between current and LAG date. Essential for sessionization and reorder pattern detection in event pipelines.",
+    "points": [
+      "LAG(order_date) OVER (ORDER BY order_date) — global sequence",
+      "PARTITION BY customer_id for per-customer previous order",
+      "Optional third arg: LAG(col, 1, default) for first row",
+      "LEAD for next order date — forward-looking analysis",
+      "Requires ORDER BY in OVER — defines chronological direction"
+    ],
+    "de": "Customer reorder SLA: DATEDIFF(day, LAG(order_date) OVER (PARTITION BY customer_id ORDER BY order_date), order_date) in gold analytics.",
+    "mistake": "Self-join on row_number ± 1 instead of LAG — more complex and error-prone with gaps.",
+    "interviewTip": "Name LAG, show PARTITION BY customer, give gap-detection use case.",
+    "syntax": "SELECT order_id, customer_id, order_date,\n       LAG(order_date) OVER (PARTITION BY customer_id ORDER BY order_date) AS previous_order_date\nFROM Orders;"
+  },
+  "60": {
+    "answer": "Customers with more than five orders require GROUP BY customer_id and HAVING COUNT(*) > 5. WHERE cannot filter on COUNT — aggregation must complete first. COUNT(*) counts all orders per group; COUNT(DISTINCT order_id) guards against duplicate rows in source. Result grain is one row per qualifying customer.",
+    "points": [
+      "GROUP BY customer_id HAVING COUNT(*) > 5",
+      "HAVING not WHERE for aggregate threshold",
+      "COUNT(DISTINCT order_id) if duplicates possible in source",
+      "Combine WHERE on order_date in same query to scope time window",
+      "Output: customer_id + order_count for downstream segment export"
+    ],
+    "de": "Loyalty tier promotion: customers with HAVING COUNT(*) > 5 orders in trailing 12 months — computed in gold SQL job.",
+    "mistake": "WHERE COUNT(*) > 5 — syntax error; classic WHERE vs HAVING trap.",
+    "interviewTip": "State grain (per customer), GROUP BY, HAVING threshold — quick clean answer.",
+    "syntax": "SELECT customer_id, COUNT(*) AS order_count\nFROM Orders\nGROUP BY customer_id\nHAVING COUNT(*) > 5;"
+  },
+  "61": {
+    "answer": "Join row counts depend on join type and NULL matching behavior. INNER JOIN returns only rows where join keys match — NULL does not match NULL or anything in standard SQL. LEFT JOIN keeps all left rows; unmatched right columns are NULL. RIGHT JOIN mirrors LEFT. FULL OUTER JOIN keeps all from both sides with NULLs where no match. With IDs 1,1,0,1 vs 1,1,NULL,0 — INNER matches on key=1 producing multiple pairings; 0 and NULL typically produce no inner matches.",
+    "points": [
+      "INNER: only matching non-NULL key pairs (usually)",
+      "NULL = NULL is UNKNOWN — not a match in INNER JOIN",
+      "LEFT: all left rows + matched right; NULL fill for non-match",
+      "FULL OUTER: union of left and right preservation",
+      "Cross join cardinality: matches multiply — 3 left 1s × 2 right 1s = 6 pairs for key 1"
+    ],
+    "de": "Reconciliation FULL OUTER JOIN between source and target counts — investigate NULL key rows separately in DQ, don't assume they match.",
+    "mistake": "Expecting NULL keys to join — they don't in INNER; causes undercount in reconciliation.",
+    "interviewTip": "Explain per join type who survives, emphasize NULL never matches in INNER.",
+    "table": [
+      [
+        "Join Type",
+        "Rows Returned",
+        "NULL key behavior"
+      ],
+      [
+        "INNER",
+        "Matching keys only",
+        "NULL never matches"
+      ],
+      [
+        "LEFT",
+        "All left + matches",
+        "Right NULL if no match"
+      ],
+      [
+        "RIGHT",
+        "All right + matches",
+        "Left NULL if no match"
+      ],
+      [
+        "FULL OUTER",
+        "All from both",
+        "NULL fill on non-match side"
+      ]
+    ]
+  },
+  "62": {
+    "answer": "ROW_NUMBER() assigns a unique sequential integer to each row within its partition, ordered by the OVER clause — ties receive different numbers arbitrarily (1,2,3,4,5,6 for six values including duplicate 102). RANK and DENSE_RANK would both give rank 2 to tied 102 values but differ on next rank. Use ROW_NUMBER when you need exactly one row per group (dedup); use RANK/DENSE_RANK when ties should share rank.",
+    "points": [
+      "ROW_NUMBER: unique 1..N even with duplicate values",
+      "Duplicate 102 gets different row numbers (e.g., 2 and 3)",
+      "RANK: 1,2,2,4 — skips after tie",
+      "DENSE_RANK: 1,2,2,3 — no skip",
+      "Dedup pattern: WHERE ROW_NUMBER()... = 1"
+    ],
+    "de": "Dedup bronze events: ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY ingest_ts DESC) = 1 — ties broken by timestamp, not shared.",
+    "mistake": "Using ROW_NUMBER for 'top salary with ties' — should use RANK or DENSE_RANK.",
+    "interviewTip": "Output 1-6 for six rows, contrast with RANK giving 1,2,2,4."
+  },
+  "63": {
+    "answer": "In standard SQL, JOIN without a qualifier defaults to INNER JOIN — only matching rows from both tables are returned. You must explicitly specify LEFT, RIGHT, or FULL OUTER when those semantics are needed. This default catches developers who omit JOIN type expecting all rows preserved. Always write INNER explicitly in production code for clarity.",
+    "points": [
+      "JOIN = INNER JOIN in ANSI SQL and SQL Server",
+      "Must specify LEFT/RIGHT/FULL for outer join semantics",
+      "Omitting OUTER keyword changes result dramatically",
+      "Cross join requires CROSS keyword or missing ON (accidental)",
+      "Code review: flag bare JOIN when LEFT was intended"
+    ],
+    "de": "Pipeline bug: developer wrote JOIN instead of LEFT JOIN to dimension — silently dropped orphan fact rows, revenue underreported 3%.",
+    "mistake": "Assuming JOIN keeps all left rows — that's LEFT JOIN; bare JOIN is INNER.",
+    "interviewTip": "State default clearly, give consequence example of wrong join type."
+  },
+  "64": {
+    "answer": "IN is syntactic sugar for multiple OR conditions on the same column: WHERE dept IN ('HR','IT') equals WHERE dept='HR' OR dept='IT'. IN is more readable and can optimize well with index seeks. OR is more flexible for combining conditions across different columns or complex expressions. Extended IN lists may hit parameter limits — consider temp table or join to lookup table.",
+    "points": [
+      "IN: same column, multiple discrete values",
+      "OR: any conditions, including cross-column logic",
+      "NOT IN: watch NULLs in list — yields UNKNOWN/empty",
+      "Large IN lists: join to temp table of keys instead",
+      "IN (subquery) for dynamic key sets from staging"
+    ],
+    "de": "Filter fact table to active regions: WHERE region_id IN (SELECT region_id FROM cfg_active_regions) — config-driven, no hard-coded OR chain.",
+    "mistake": "NOT IN with nullable subquery column — unexpected empty result; use NOT EXISTS.",
+    "interviewTip": "Show equivalence for same column, explain when OR required for multi-column.",
+    "table": [
+      [
+        "Aspect",
+        "IN",
+        "OR"
+      ],
+      [
+        "Scope",
+        "Same column values",
+        "Any conditions"
+      ],
+      [
+        "Readability",
+        "Cleaner for value lists",
+        "Flexible, verbose lists"
+      ],
+      [
+        "Example",
+        "dept IN ('HR','IT')",
+        "dept='HR' OR dept='IT'"
+      ],
+      [
+        "Cross-column",
+        "No",
+        "Yes"
+      ]
+    ]
+  },
+  "65": {
+    "answer": "DELETE supports rollback when executed inside an explicit transaction that has not yet committed — ROLLBACK restores deleted rows (with full logging). TRUNCATE and DROP are DDL-like operations: TRUNCATE deallocates pages with minimal logging; DROP removes the object. SQL Server allows rolling back TRUNCATE/DROP only if still inside an uncommitted transaction. Once committed, recovery requires backup restore, not ROLLBACK.",
+    "points": [
+      "DELETE: DML, row-level log, rollback in open transaction",
+      "TRUNCATE: fast deallocate, minimal log, limited rollback",
+      "DROP: removes object metadata — catastrophic if committed",
+      "Always BEGIN TRAN + COUNT check before prod DELETE",
+      "Delta time travel / DB restore for post-commit recovery"
+    ],
+    "de": "Accidental TRUNCATE staging in transaction — ROLLBACK succeeds if not committed; committed TRUNCATE needs restore from snapshot.",
+    "mistake": "Assuming TRUNCATE is always rollback-safe after commit — it is not recoverable without backup.",
+    "interviewTip": "Rank by recoverability: DELETE best, TRUNCATE conditional, DROP worst; mention transaction wrapper.",
+    "table": [
+      [
+        "Operation",
+        "Rollback (in transaction)",
+        "After commit recovery"
+      ],
+      [
+        "DELETE",
+        "Yes",
+        "Backup/log restore"
+      ],
+      [
+        "TRUNCATE",
+        "Sometimes (before commit)",
+        "Backup only"
+      ],
+      [
+        "DROP",
+        "Sometimes (before commit)",
+        "Backup/redeploy schema"
+      ]
+    ]
+  },
+  "66": {
+    "answer": "WHERE operates on individual rows before GROUP BY aggregation — aggregate functions like SUM() or COUNT() are not yet computed, so WHERE cannot filter on them. Use HAVING for post-aggregation filters on group results. You can filter raw columns in WHERE before grouping (e.g., WHERE status='Active' before COUNT), but not WHERE COUNT(*) > 5 — that belongs in HAVING.",
+    "points": [
+      "WHERE: pre-aggregation row filter — no SUM/COUNT/AVG",
+      "HAVING: post-aggregation group filter — aggregates allowed",
+      "Valid: WHERE order_date > '2024-01-01' GROUP BY customer HAVING COUNT(*)>5",
+      "Invalid: WHERE COUNT(*) > 5",
+      "Subquery workaround: filter aggregated result in outer query WHERE"
+    ],
+    "de": "Gold job filters active orders in WHERE, then HAVING SUM(amount)>1000 for high-value customers — two-stage filter pattern.",
+    "mistake": "WHERE SUM(amount) > 1000 with GROUP BY — invalid; must be HAVING.",
+    "interviewTip": "Binary answer: No for WHERE on aggregates — redirect to HAVING with example."
+  },
+  "67": {
+    "answer": "RANK() and DENSE_RANK() both assign ranking based on ORDER BY with ties receiving the same rank. After a tie, RANK() skips subsequent numbers (1,2,2,4 — rank 3 skipped). DENSE_RANK() does not skip (1,2,2,3). ROW_NUMBER() never ties. Choose RANK for competition-style ranking with gaps; DENSE_RANK for consecutive rank levels; ROW_NUMBER for dedup.",
+    "points": [
+      "Tie handling: same rank for equal ORDER BY values",
+      "RANK: gaps after tie (Olympic ranking style)",
+      "DENSE_RANK: no gaps (1,2,2,3)",
+      "ROW_NUMBER: unique ranks even with ties",
+      "PARTITION BY for rank within groups"
+    ],
+    "de": "Sales top-3 per region: DENSE_RANK() OVER (PARTITION BY region ORDER BY revenue DESC) <= 3 includes all tied for 3rd place.",
+    "mistake": "Using RANK when business wants consecutive top-N without gaps — should use DENSE_RANK.",
+    "interviewTip": "Show tie example 1,2,2 — RANK gives 4 next, DENSE_RANK gives 3.",
+    "table": [
+      [
+        "Function",
+        "Tie behavior",
+        "After tie (next rank)"
+      ],
+      [
+        "RANK()",
+        "Same rank",
+        "Skips (1,2,2,4)"
+      ],
+      [
+        "DENSE_RANK()",
+        "Same rank",
+        "No skip (1,2,2,3)"
+      ],
+      [
+        "ROW_NUMBER()",
+        "Unique always",
+        "N/A"
+      ]
+    ]
+  },
+  "68": {
+    "answer": "Temporary tables hold intermediate results for complex multi-step processing within a session or procedure scope. SQL Server: #LocalTemp (session-scoped), ##GlobalTemp (cross-session). CREATE TABLE #t or SELECT INTO #t. They support indexes and statistics — useful for large staging in procs. Automatically dropped when scope ends. Alternative: CTE for simpler single-statement logic; temp tables for multi-step ETL in T-SQL.",
+    "points": [
+      "#TempTable — session scope; ##Global — all sessions",
+      "CREATE TABLE #stg (...); INSERT...; used in multi-step proc",
+      "Can index temp tables — helps large staging joins",
+      "Auto-dropped when session/proc ends",
+      "Synapse: temp tables supported with limitations; prefer permanent staging in ETL"
+    ],
+    "de": "Synapse proc: INSERT INTO #stg FROM bronze external table → dedup in #stg → MERGE to silver — temp table holds batch scope.",
+    "mistake": "Using global temp ## without cleanup — blocks and confusion in shared dev servers.",
+    "interviewTip": "Contrast #temp vs CTE (persist across statements vs single query), mention scope."
+  },
+  "69": {
+    "answer": "In MPP systems like Azure Synapse Analytics dedicated SQL pool, table distribution controls how rows spread across compute nodes, directly impacting join performance and data movement. ROUND_ROBIN distributes rows evenly without key logic — simple but joins require shuffle. HASH distributes by hash of a column, co-locating matching keys on same node for efficient joins. REPLICATED copies a small table to every node, eliminating shuffle when joining to large fact tables.",
+    "points": [
+      "ROUND_ROBIN: even spread, no key — good staging, bad for large joins",
+      "HASH(column): same key same node — choose frequent JOIN/GROUP BY column",
+      "REPLICATED: full copy on each node — small dimensions only (<2GB guideline)",
+      "Wrong distribution key → massive Data Movement (DMS) in plans",
+      "CTAS to recreate table with correct distribution when fixing skew"
+    ],
+    "de": "Redesign fct_sales HASH(order_id) joining dim_customer REPLICATED — eliminated 80% DMS in Synapse plan, query 12x faster.",
+    "mistake": "HASH on low-cardinality column (e.g., gender) — severe skew, one node does most work.",
+    "interviewTip": "Name three types, one-line purpose each, tie HASH/REPLICATE to join optimization.",
+    "table": [
+      [
+        "Distribution",
+        "How rows spread",
+        "Best for"
+      ],
+      [
+        "ROUND_ROBIN",
+        "Even/random across nodes",
+        "Staging, no clear join key"
+      ],
+      [
+        "HASH",
+        "By hash of chosen column",
+        "Large fact tables, join key"
+      ],
+      [
+        "REPLICATED",
+        "Full copy on every node",
+        "Small dimension tables"
+      ]
+    ]
+  }
+}

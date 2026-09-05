@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DE Prep Hub
+
+A personal Data Engineering preparation website built with Next.js. Organize your study notes as markdown files, track progress locally, and search across all topics.
+
+## Features
+
+- **Markdown notes** — Edit content in `content/` as `.md` files
+- **8 study topics** — SQL, Python, Spark, Databricks, Airflow, Cloud, System Design, Interview Prep
+- **Learning roadmap** — Structured path page at `/roadmap`
+- **Dark / light mode** — Theme toggle with system preference support
+- **Search** — Press `Cmd+K` (Mac) or `Ctrl+K` (Windows/Linux) to search all topics
+- **Progress tracking** — Mark topics complete; progress saved in browser localStorage
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Adding Notes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Topic notes
 
-## Learn More
+Edit any file in `content/topics/`:
 
-To learn more about Next.js, take a look at the following resources:
+```
+content/topics/sql.md
+content/topics/python.md
+content/topics/spark.md
+content/topics/databricks.md
+...
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Each file uses frontmatter:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```md
+---
+title: SQL & Databases
+description: SQL fundamentals, queries, and database concepts
+order: 1
+---
 
-## Deploy on Vercel
+Your notes go here. Supports **markdown**, code blocks, tables, and more.
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Roadmap
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Edit `content/roadmap.md` with the same frontmatter format (without `order`).
+
+After saving, refresh the page to see your changes.
+
+## Project Structure
+
+```
+src/
+  app/              # Next.js pages
+  components/       # UI components
+  lib/              # Content loader, search, progress helpers
+content/
+  roadmap.md
+  topics/           # One markdown file per topic
+```
+
+## Deploy to Vercel
+
+1. Push the project to GitHub
+2. Import the repo at [vercel.com](https://vercel.com)
+3. Deploy — Vercel auto-detects Next.js
+
+No environment variables required for v1.
+
+## Tech Stack
+
+- Next.js 16 (App Router)
+- React 19
+- Tailwind CSS 4
+- shadcn/ui
+- gray-matter + react-markdown
+- Fuse.js (search)
+- next-themes (dark mode)

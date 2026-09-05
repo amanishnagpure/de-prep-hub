@@ -1,0 +1,1202 @@
+[
+  {
+    "id": 1,
+    "tier": "basic",
+    "title": "Select all columns from employees",
+    "body": "Return every column from the `employees` table.",
+    "solution": "SELECT *\nFROM employees;",
+    "anchor": "q-1"
+  },
+  {
+    "id": 2,
+    "tier": "basic",
+    "title": "Select specific columns",
+    "body": "Return `name` and `salary` from `employees`.",
+    "solution": "SELECT name, salary\nFROM employees;",
+    "anchor": "q-2"
+  },
+  {
+    "id": 3,
+    "tier": "basic",
+    "title": "Filter by salary",
+    "body": "Employees with salary greater than 5000.",
+    "solution": "SELECT *\nFROM employees\nWHERE salary > 5000;",
+    "anchor": "q-3"
+  },
+  {
+    "id": 4,
+    "tier": "basic",
+    "title": "Filter by department",
+    "body": "Employees in the IT department.",
+    "solution": "SELECT *\nFROM employees\nWHERE department = 'IT';",
+    "anchor": "q-4"
+  },
+  {
+    "id": 5,
+    "tier": "basic",
+    "title": "AND condition",
+    "body": "IT employees earning more than 6000.",
+    "solution": "SELECT *\nFROM employees\nWHERE department = 'IT'\n  AND salary > 6000;",
+    "anchor": "q-5"
+  },
+  {
+    "id": 6,
+    "tier": "basic",
+    "title": "OR condition",
+    "body": "Employees in IT or HR.",
+    "solution": "SELECT *\nFROM employees\nWHERE department IN ('IT', 'HR');",
+    "anchor": "q-6"
+  },
+  {
+    "id": 7,
+    "tier": "basic",
+    "title": "BETWEEN",
+    "body": "Salaries between 5000 and 8000 inclusive.",
+    "solution": "SELECT *\nFROM employees\nWHERE salary BETWEEN 5000 AND 8000;",
+    "anchor": "q-7"
+  },
+  {
+    "id": 8,
+    "tier": "basic",
+    "title": "IN operator",
+    "body": "Departments IT, HR, or Finance.",
+    "solution": "SELECT *\nFROM employees\nWHERE department IN ('IT', 'HR', 'Finance');",
+    "anchor": "q-8"
+  },
+  {
+    "id": 9,
+    "tier": "basic",
+    "title": "LIKE starts with",
+    "body": "Names starting with 'A'.",
+    "solution": "SELECT *\nFROM employees\nWHERE name LIKE 'A%';",
+    "anchor": "q-9"
+  },
+  {
+    "id": 10,
+    "tier": "basic",
+    "title": "LIKE contains",
+    "body": "Names containing 'an' (case depends on collation).",
+    "solution": "SELECT *\nFROM employees\nWHERE name LIKE '%an%';",
+    "anchor": "q-10"
+  },
+  {
+    "id": 11,
+    "tier": "basic",
+    "title": "IS NULL",
+    "body": "Employees with no manager.",
+    "solution": "SELECT *\nFROM employees\nWHERE manager_id IS NULL;",
+    "anchor": "q-11"
+  },
+  {
+    "id": 12,
+    "tier": "basic",
+    "title": "IS NOT NULL",
+    "body": "Employees who have a manager.",
+    "solution": "SELECT *\nFROM employees\nWHERE manager_id IS NOT NULL;",
+    "anchor": "q-12"
+  },
+  {
+    "id": 13,
+    "tier": "basic",
+    "title": "ORDER BY ascending",
+    "body": "Employees sorted by salary ascending.",
+    "solution": "SELECT *\nFROM employees\nORDER BY salary ASC;",
+    "anchor": "q-13"
+  },
+  {
+    "id": 14,
+    "tier": "basic",
+    "title": "ORDER BY descending",
+    "body": "Top salaries first.",
+    "solution": "SELECT *\nFROM employees\nORDER BY salary DESC;",
+    "anchor": "q-14"
+  },
+  {
+    "id": 15,
+    "tier": "basic",
+    "title": "TOP N rows",
+    "body": "Top 5 highest-paid employees (SQL Server).",
+    "solution": "SELECT TOP 5 *\nFROM employees\nORDER BY salary DESC;",
+    "anchor": "q-15"
+  },
+  {
+    "id": 16,
+    "tier": "basic",
+    "title": "Column alias",
+    "body": "Show name and salary as `employee_salary`.",
+    "solution": "SELECT name, salary AS employee_salary\nFROM employees;",
+    "anchor": "q-16"
+  },
+  {
+    "id": 17,
+    "tier": "basic",
+    "title": "DISTINCT departments",
+    "body": "List unique departments.",
+    "solution": "SELECT DISTINCT department\nFROM employees;",
+    "anchor": "q-17"
+  },
+  {
+    "id": 18,
+    "tier": "basic",
+    "title": "COUNT all rows",
+    "body": "Total number of employees.",
+    "solution": "SELECT COUNT(*) AS total_employees\nFROM employees;",
+    "anchor": "q-18"
+  },
+  {
+    "id": 19,
+    "tier": "basic",
+    "title": "COUNT non-null",
+    "body": "Count employees with a phone number.",
+    "solution": "SELECT COUNT(phone) AS employees_with_phone\nFROM employees;",
+    "anchor": "q-19"
+  },
+  {
+    "id": 20,
+    "tier": "basic",
+    "title": "SUM salary",
+    "body": "Total payroll.",
+    "solution": "SELECT SUM(salary) AS total_payroll\nFROM employees;",
+    "anchor": "q-20"
+  },
+  {
+    "id": 21,
+    "tier": "basic",
+    "title": "AVG salary",
+    "body": "Average salary.",
+    "solution": "SELECT AVG(salary) AS avg_salary\nFROM employees;",
+    "anchor": "q-21"
+  },
+  {
+    "id": 22,
+    "tier": "basic",
+    "title": "MIN and MAX salary",
+    "body": "Lowest and highest salary.",
+    "solution": "SELECT MIN(salary) AS min_sal, MAX(salary) AS max_sal\nFROM employees;",
+    "anchor": "q-22"
+  },
+  {
+    "id": 23,
+    "tier": "basic",
+    "title": "GROUP BY department",
+    "body": "Employee count per department.",
+    "solution": "SELECT department, COUNT(*) AS cnt\nFROM employees\nGROUP BY department;",
+    "anchor": "q-23"
+  },
+  {
+    "id": 24,
+    "tier": "basic",
+    "title": "GROUP BY with AVG",
+    "body": "Average salary per department.",
+    "solution": "SELECT department, AVG(salary) AS avg_salary\nFROM employees\nGROUP BY department;",
+    "anchor": "q-24"
+  },
+  {
+    "id": 25,
+    "tier": "basic",
+    "title": "HAVING filter",
+    "body": "Departments with more than 5 employees.",
+    "solution": "SELECT department, COUNT(*) AS cnt\nFROM employees\nGROUP BY department\nHAVING COUNT(*) > 5;",
+    "anchor": "q-25"
+  },
+  {
+    "id": 26,
+    "tier": "basic",
+    "title": "WHERE + GROUP BY + HAVING",
+    "body": "Departments where avg salary > 7000 (only include salaries >= 5000 in rows before group).",
+    "solution": "SELECT department, AVG(salary) AS avg_salary\nFROM employees\nWHERE salary >= 5000\nGROUP BY department\nHAVING AVG(salary) > 7000;",
+    "anchor": "q-26"
+  },
+  {
+    "id": 27,
+    "tier": "basic",
+    "title": "CASE salary band",
+    "body": "Label salaries High/Medium/Low.",
+    "solution": "SELECT name, salary,\n  CASE\n    WHEN salary >= 8000 THEN 'High'\n    WHEN salary >= 5000 THEN 'Medium'\n    ELSE 'Low'\n  END AS band\nFROM employees;",
+    "anchor": "q-27"
+  },
+  {
+    "id": 28,
+    "tier": "basic",
+    "title": "COALESCE phone",
+    "body": "Show phone or 'Not Available'.",
+    "solution": "SELECT name, COALESCE(phone, 'Not Available') AS phone\nFROM employees;",
+    "anchor": "q-28"
+  },
+  {
+    "id": 29,
+    "tier": "basic",
+    "title": "Arithmetic column",
+    "body": "Annual salary (salary * 12).",
+    "solution": "SELECT name, salary, salary * 12 AS annual_salary\nFROM employees;",
+    "anchor": "q-29"
+  },
+  {
+    "id": 30,
+    "tier": "basic",
+    "title": "INNER JOIN",
+    "body": "Employee names with department names.\n\n`employees(emp_id, name, dept_id)` + `departments(dept_id, dept_name)`",
+    "solution": "SELECT e.name, d.dept_name\nFROM employees e\nINNER JOIN departments d ON e.dept_id = d.dept_id;",
+    "anchor": "q-30"
+  },
+  {
+    "id": 31,
+    "tier": "basic",
+    "title": "LEFT JOIN",
+    "body": "All employees and dept name (NULL if missing).",
+    "solution": "SELECT e.name, d.dept_name\nFROM employees e\nLEFT JOIN departments d ON e.dept_id = d.dept_id;",
+    "anchor": "q-31"
+  },
+  {
+    "id": 32,
+    "tier": "basic",
+    "title": "Filter joined table",
+    "body": "Orders with customer name where amount > 1000.\n\n`orders(order_id, customer_id, amount)` + `customers(customer_id, name)`",
+    "solution": "SELECT o.order_id, c.name, o.amount\nFROM orders o\nINNER JOIN customers c ON o.customer_id = c.customer_id\nWHERE o.amount > 1000;",
+    "anchor": "q-32"
+  },
+  {
+    "id": 33,
+    "tier": "basic",
+    "title": "Multiple JOINs",
+    "body": "Order id, customer name, product name.",
+    "solution": "SELECT o.order_id, c.name AS customer, p.product_name\nFROM orders o\nJOIN customers c ON o.customer_id = c.customer_id\nJOIN order_items oi ON o.order_id = oi.order_id\nJOIN products p ON oi.product_id = p.product_id;",
+    "anchor": "q-33"
+  },
+  {
+    "id": 34,
+    "tier": "basic",
+    "title": "GROUP BY after JOIN",
+    "body": "Total order amount per customer.",
+    "solution": "SELECT c.customer_id, c.name, SUM(o.amount) AS total_spent\nFROM customers c\nJOIN orders o ON c.customer_id = o.customer_id\nGROUP BY c.customer_id, c.name;",
+    "anchor": "q-34"
+  },
+  {
+    "id": 35,
+    "tier": "basic",
+    "title": "COUNT orders per customer",
+    "body": "How many orders each customer placed.",
+    "solution": "SELECT customer_id, COUNT(*) AS order_count\nFROM orders\nGROUP BY customer_id;",
+    "anchor": "q-35"
+  },
+  {
+    "id": 36,
+    "tier": "basic",
+    "title": "DELETE syntax (concept)",
+    "body": "Delete employees in a closed department named 'Temp'. **Do not run on prod.**",
+    "solution": "DELETE FROM employees\nWHERE department = 'Temp';",
+    "anchor": "q-36"
+  },
+  {
+    "id": 37,
+    "tier": "basic",
+    "title": "UPDATE syntax (concept)",
+    "body": "Give 10% raise to IT department.",
+    "solution": "UPDATE employees\nSET salary = salary * 1.10\nWHERE department = 'IT';",
+    "anchor": "q-37"
+  },
+  {
+    "id": 38,
+    "tier": "basic",
+    "title": "INSERT single row",
+    "body": "Insert one employee row.",
+    "solution": "INSERT INTO employees (emp_id, name, department, salary)\nVALUES (101, 'Rahul', 'IT', 6000);",
+    "anchor": "q-38"
+  },
+  {
+    "id": 39,
+    "tier": "basic",
+    "title": "INSERT multiple rows",
+    "body": "Insert two employees in one statement.",
+    "solution": "INSERT INTO employees (emp_id, name, department, salary)\nVALUES\n  (102, 'Amit', 'HR', 5000),\n  (103, 'Priya', 'IT', 8000);",
+    "anchor": "q-39"
+  },
+  {
+    "id": 40,
+    "tier": "basic",
+    "title": "Subquery scalar",
+    "body": "Employees earning above company average.",
+    "solution": "SELECT *\nFROM employees\nWHERE salary > (SELECT AVG(salary) FROM employees);",
+    "anchor": "q-40"
+  },
+  {
+    "id": 41,
+    "tier": "basic",
+    "title": "Subquery IN",
+    "body": "Employees in departments with avg salary > 7000.",
+    "solution": "SELECT *\nFROM employees\nWHERE department IN (\n  SELECT department\n  FROM employees\n  GROUP BY department\n  HAVING AVG(salary) > 7000\n);",
+    "anchor": "q-41"
+  },
+  {
+    "id": 42,
+    "tier": "basic",
+    "title": "EXISTS",
+    "body": "Customers who have at least one order.",
+    "solution": "SELECT c.*\nFROM customers c\nWHERE EXISTS (\n  SELECT 1 FROM orders o WHERE o.customer_id = c.customer_id\n);",
+    "anchor": "q-42"
+  },
+  {
+    "id": 43,
+    "tier": "basic",
+    "title": "NOT EXISTS",
+    "body": "Customers with no orders.",
+    "solution": "SELECT c.*\nFROM customers c\nWHERE NOT EXISTS (\n  SELECT 1 FROM orders o WHERE o.customer_id = c.customer_id\n);",
+    "anchor": "q-43"
+  },
+  {
+    "id": 44,
+    "tier": "basic",
+    "title": "UNION",
+    "body": "All cities from customers and suppliers (deduped).",
+    "solution": "SELECT city FROM customers\nUNION\nSELECT city FROM suppliers;",
+    "anchor": "q-44"
+  },
+  {
+    "id": 45,
+    "tier": "basic",
+    "title": "UNION ALL",
+    "body": "All cities keeping duplicates.",
+    "solution": "SELECT city FROM customers\nUNION ALL\nSELECT city FROM suppliers;",
+    "anchor": "q-45"
+  },
+  {
+    "id": 46,
+    "tier": "basic",
+    "title": "Simple CTE",
+    "body": "Employees with salary > 5000 using a CTE.",
+    "solution": "WITH high AS (\n  SELECT * FROM employees WHERE salary > 5000\n)\nSELECT * FROM high;",
+    "anchor": "q-46"
+  },
+  {
+    "id": 47,
+    "tier": "basic",
+    "title": "Percentage of total",
+    "body": "Each department's share of total salary (basic subquery).",
+    "solution": "SELECT department,\n  SUM(salary) AS dept_total,\n  SUM(salary) * 100.0 / (SELECT SUM(salary) FROM employees) AS pct\nFROM employees\nGROUP BY department;",
+    "anchor": "q-47"
+  },
+  {
+    "id": 48,
+    "tier": "basic",
+    "title": "Filter NULL with COALESCE in ORDER",
+    "body": "Sort by salary treating NULL as 0.",
+    "solution": "SELECT *\nFROM employees\nORDER BY COALESCE(salary, 0) DESC;",
+    "anchor": "q-48"
+  },
+  {
+    "id": 49,
+    "tier": "basic",
+    "title": "Self join preview",
+    "body": "Employee name with manager name (`manager_id` \u2192 `emp_id`).",
+    "solution": "SELECT e.name AS employee, m.name AS manager\nFROM employees e\nLEFT JOIN employees m ON e.manager_id = m.emp_id;",
+    "anchor": "q-49"
+  },
+  {
+    "id": 50,
+    "tier": "basic",
+    "title": "Date filter range",
+    "body": "Orders in year 2024 without applying function on column.",
+    "solution": "SELECT *\nFROM orders\nWHERE order_date >= '2024-01-01'\n  AND order_date < '2025-01-01';",
+    "anchor": "q-50"
+  },
+  {
+    "id": 51,
+    "tier": "medium",
+    "title": "Correlated subquery",
+    "body": "Employees earning more than their department average.",
+    "solution": "SELECT e.*\nFROM employees e\nWHERE e.salary > (\n  SELECT AVG(e2.salary)\n  FROM employees e2\n  WHERE e2.department = e.department\n);",
+    "anchor": "q-51"
+  },
+  {
+    "id": 52,
+    "tier": "medium",
+    "title": "CTE department stats",
+    "body": "Departments with total salary > 50000.",
+    "solution": "WITH dept AS (\n  SELECT department, SUM(salary) AS total\n  FROM employees GROUP BY department\n)\nSELECT * FROM dept WHERE total > 50000;",
+    "anchor": "q-52"
+  },
+  {
+    "id": 53,
+    "tier": "medium",
+    "title": "Multiple CTEs",
+    "body": "High earners in high-budget departments.",
+    "solution": "WITH dept_avg AS (\n  SELECT department, AVG(salary) AS avg_sal FROM employees GROUP BY department\n),\nhigh_dept AS (\n  SELECT department FROM dept_avg WHERE avg_sal > 7000\n)\nSELECT e.*\nFROM employees e\nJOIN high_dept h ON e.department = h.department\nWHERE e.salary > 8000;",
+    "anchor": "q-53"
+  },
+  {
+    "id": 54,
+    "tier": "medium",
+    "title": "ROW_NUMBER ranking",
+    "body": "Rank all employees by salary.",
+    "solution": "SELECT name, salary,\n  ROW_NUMBER() OVER (ORDER BY salary DESC) AS rn\nFROM employees;",
+    "anchor": "q-54"
+  },
+  {
+    "id": 55,
+    "tier": "medium",
+    "title": "RANK with ties",
+    "body": "Rank salaries allowing ties with gaps.",
+    "solution": "SELECT name, salary,\n  RANK() OVER (ORDER BY salary DESC) AS rnk\nFROM employees;",
+    "anchor": "q-55"
+  },
+  {
+    "id": 56,
+    "tier": "medium",
+    "title": "DENSE_RANK",
+    "body": "Rank salaries without gaps after ties.",
+    "solution": "SELECT name, salary,\n  DENSE_RANK() OVER (ORDER BY salary DESC) AS dr\nFROM employees;",
+    "anchor": "q-56"
+  },
+  {
+    "id": 57,
+    "tier": "medium",
+    "title": "Top 3 per department",
+    "body": "Top 3 earners in each department.",
+    "solution": "SELECT * FROM (\n  SELECT *, ROW_NUMBER() OVER (\n    PARTITION BY department ORDER BY salary DESC\n  ) AS rn\n  FROM employees\n) x WHERE rn <= 3;",
+    "anchor": "q-57"
+  },
+  {
+    "id": 58,
+    "tier": "medium",
+    "title": "LAG previous salary",
+    "body": "Show salary and previous month's salary from `salary_history(emp_id, salary, effective_date)`.",
+    "solution": "SELECT emp_id, effective_date, salary,\n  LAG(salary) OVER (PARTITION BY emp_id ORDER BY effective_date) AS prev_salary\nFROM salary_history;",
+    "anchor": "q-58"
+  },
+  {
+    "id": 59,
+    "tier": "medium",
+    "title": "LEAD next order",
+    "body": "Next order date per customer from `orders(customer_id, order_date)`.",
+    "solution": "SELECT customer_id, order_date,\n  LEAD(order_date) OVER (PARTITION BY customer_id ORDER BY order_date) AS next_order\nFROM orders;",
+    "anchor": "q-59"
+  },
+  {
+    "id": 60,
+    "tier": "medium",
+    "title": "Running total",
+    "body": "Cumulative revenue by date from `sales(sale_date, revenue)`.",
+    "solution": "SELECT sale_date, revenue,\n  SUM(revenue) OVER (ORDER BY sale_date ROWS UNBOUNDED PRECEDING) AS running_total\nFROM sales;",
+    "anchor": "q-60"
+  },
+  {
+    "id": 61,
+    "tier": "medium",
+    "title": "Running total per customer",
+    "body": "Running order amount per customer.",
+    "solution": "SELECT customer_id, order_date, amount,\n  SUM(amount) OVER (\n    PARTITION BY customer_id ORDER BY order_date\n    ROWS UNBOUNDED PRECEDING\n  ) AS running_total\nFROM orders;",
+    "anchor": "q-61"
+  },
+  {
+    "id": 62,
+    "tier": "medium",
+    "title": "Moving average 3-day",
+    "body": "3-row moving average of revenue.",
+    "solution": "SELECT sale_date, revenue,\n  AVG(revenue) OVER (\n    ORDER BY sale_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW\n  ) AS moving_avg\nFROM sales;",
+    "anchor": "q-62"
+  },
+  {
+    "id": 63,
+    "tier": "medium",
+    "title": "Dept avg with window",
+    "body": "Each employee vs department average without GROUP BY collapse.",
+    "solution": "SELECT name, department, salary,\n  AVG(salary) OVER (PARTITION BY department) AS dept_avg\nFROM employees;",
+    "anchor": "q-63"
+  },
+  {
+    "id": 64,
+    "tier": "medium",
+    "title": "NTILE quartiles",
+    "body": "Split employees into 4 salary buckets.",
+    "solution": "SELECT name, salary,\n  NTILE(4) OVER (ORDER BY salary) AS quartile\nFROM employees;",
+    "anchor": "q-64"
+  },
+  {
+    "id": 65,
+    "tier": "medium",
+    "title": "FIRST_VALUE in partition",
+    "body": "Highest salary in each department shown on every row.",
+    "solution": "SELECT name, department, salary,\n  FIRST_VALUE(salary) OVER (\n    PARTITION BY department ORDER BY salary DESC\n  ) AS dept_max\nFROM employees;",
+    "anchor": "q-65"
+  },
+  {
+    "id": 66,
+    "tier": "medium",
+    "title": "Find duplicates by email",
+    "body": "Emails appearing more than once in `customers(email)`.",
+    "solution": "SELECT email, COUNT(*) AS cnt\nFROM customers\nGROUP BY email\nHAVING COUNT(*) > 1;",
+    "anchor": "q-66"
+  },
+  {
+    "id": 67,
+    "tier": "medium",
+    "title": "Latest record per key",
+    "body": "Latest row per `customer_id` from `customer_history(customer_id, updated_at, ...)`.",
+    "solution": "SELECT * FROM (\n  SELECT *, ROW_NUMBER() OVER (\n    PARTITION BY customer_id ORDER BY updated_at DESC\n  ) AS rn\n  FROM customer_history\n) x WHERE rn = 1;",
+    "anchor": "q-67"
+  },
+  {
+    "id": 68,
+    "tier": "medium",
+    "title": "Second latest transaction",
+    "body": "Second most recent transaction per customer.",
+    "solution": "SELECT * FROM (\n  SELECT *, ROW_NUMBER() OVER (\n    PARTITION BY customer_id ORDER BY transaction_date DESC\n  ) AS rn\n  FROM transactions\n) x WHERE rn = 2;",
+    "anchor": "q-68"
+  },
+  {
+    "id": 69,
+    "tier": "medium",
+    "title": "Employees above dept avg (window)",
+    "body": "Using window instead of correlated subquery.",
+    "solution": "SELECT * FROM (\n  SELECT *, AVG(salary) OVER (PARTITION BY department) AS dept_avg\n  FROM employees\n) x WHERE salary > dept_avg;",
+    "anchor": "q-69"
+  },
+  {
+    "id": 70,
+    "tier": "medium",
+    "title": "INTERSECT customers",
+    "body": "Customer IDs present in both `customers` and `orders`.",
+    "solution": "SELECT customer_id FROM customers\nINTERSECT\nSELECT customer_id FROM orders;",
+    "anchor": "q-70"
+  },
+  {
+    "id": 71,
+    "tier": "medium",
+    "title": "EXCEPT non-ordering customers",
+    "body": "Customers who never ordered.",
+    "solution": "SELECT customer_id FROM customers\nEXCEPT\nSELECT customer_id FROM orders;",
+    "anchor": "q-71"
+  },
+  {
+    "id": 72,
+    "tier": "medium",
+    "title": "SELF JOIN managers",
+    "body": "Employees earning more than their manager.",
+    "solution": "SELECT e.name AS employee, e.salary AS emp_sal, m.name AS manager, m.salary AS mgr_sal\nFROM employees e\nJOIN employees m ON e.manager_id = m.emp_id\nWHERE e.salary > m.salary;",
+    "anchor": "q-72"
+  },
+  {
+    "id": 73,
+    "tier": "medium",
+    "title": "Managers with 5+ reports",
+    "body": "Managers with at least 5 direct reports.",
+    "solution": "SELECT manager_id, COUNT(*) AS report_count\nFROM employees\nWHERE manager_id IS NOT NULL\nGROUP BY manager_id\nHAVING COUNT(*) >= 5;",
+    "anchor": "q-73"
+  },
+  {
+    "id": 74,
+    "tier": "medium",
+    "title": "CROSS JOIN count",
+    "body": "How many rows from CROSS JOIN of 3 employees \u00d7 4 departments? **Write query to verify.**",
+    "solution": "SELECT COUNT(*) AS row_count\nFROM employees e\nCROSS JOIN departments d;",
+    "anchor": "q-74"
+  },
+  {
+    "id": 75,
+    "tier": "medium",
+    "title": "FULL OUTER JOIN",
+    "body": "All employees and departments even without match.",
+    "solution": "SELECT e.name, d.dept_name\nFROM employees e\nFULL OUTER JOIN departments d ON e.dept_id = d.dept_id;",
+    "anchor": "q-75"
+  },
+  {
+    "id": 76,
+    "tier": "medium",
+    "title": "RIGHT JOIN",
+    "body": "All departments and matching employees.",
+    "solution": "SELECT e.name, d.dept_name\nFROM employees e\nRIGHT JOIN departments d ON e.dept_id = d.dept_id;",
+    "anchor": "q-76"
+  },
+  {
+    "id": 77,
+    "tier": "medium",
+    "title": "Pivot with CASE",
+    "body": "Sales per product as columns from `sales(product, amount)`.",
+    "solution": "SELECT\n  SUM(CASE WHEN product = 'A' THEN amount ELSE 0 END) AS product_a,\n  SUM(CASE WHEN product = 'B' THEN amount ELSE 0 END) AS product_b\nFROM sales;",
+    "anchor": "q-77"
+  },
+  {
+    "id": 78,
+    "tier": "medium",
+    "title": "Month-over-month change",
+    "body": "Revenue change vs previous month from `monthly_revenue(month, revenue)`.",
+    "solution": "WITH x AS (\n  SELECT month, revenue,\n    LAG(revenue) OVER (ORDER BY month) AS prev\n  FROM monthly_revenue\n)\nSELECT month, revenue, revenue - prev AS change\nFROM x;",
+    "anchor": "q-78"
+  },
+  {
+    "id": 79,
+    "tier": "medium",
+    "title": "MoM growth %",
+    "body": "Month-over-month growth percentage.",
+    "solution": "WITH x AS (\n  SELECT month, revenue,\n    LAG(revenue) OVER (ORDER BY month) AS prev\n  FROM monthly_revenue\n)\nSELECT month,\n  (revenue - prev) * 100.0 / NULLIF(prev, 0) AS growth_pct\nFROM x;",
+    "anchor": "q-79"
+  },
+  {
+    "id": 80,
+    "tier": "medium",
+    "title": "Salary increase detection",
+    "body": "Rows where salary increased vs previous effective date.",
+    "solution": "SELECT * FROM (\n  SELECT *, LAG(salary) OVER (\n    PARTITION BY emp_id ORDER BY effective_date\n  ) AS prev_sal\n  FROM salary_history\n) x WHERE salary > prev_sal;",
+    "anchor": "q-80"
+  },
+  {
+    "id": 81,
+    "tier": "medium",
+    "title": "Products never sold",
+    "body": "Products with no rows in `order_items`.",
+    "solution": "SELECT p.*\nFROM products p\nWHERE NOT EXISTS (\n  SELECT 1 FROM order_items oi WHERE oi.product_id = p.product_id\n);",
+    "anchor": "q-81"
+  },
+  {
+    "id": 82,
+    "tier": "medium",
+    "title": "Customers spending > 100k",
+    "body": "Customers with total orders over 100000.",
+    "solution": "SELECT customer_id, SUM(amount) AS total\nFROM orders\nGROUP BY customer_id\nHAVING SUM(amount) > 100000;",
+    "anchor": "q-82"
+  },
+  {
+    "id": 83,
+    "tier": "medium",
+    "title": "Customers with 3+ orders",
+    "body": "Customers with more than 3 orders.",
+    "solution": "SELECT customer_id, COUNT(*) AS cnt\nFROM orders\nGROUP BY customer_id\nHAVING COUNT(*) > 3;",
+    "anchor": "q-83"
+  },
+  {
+    "id": 84,
+    "tier": "medium",
+    "title": "Highest order per customer",
+    "body": "The order row with max amount per customer.",
+    "solution": "SELECT * FROM (\n  SELECT *, ROW_NUMBER() OVER (\n    PARTITION BY customer_id ORDER BY amount DESC\n  ) AS rn\n  FROM orders\n) x WHERE rn = 1;",
+    "anchor": "q-84"
+  },
+  {
+    "id": 85,
+    "tier": "medium",
+    "title": "Department max headcount",
+    "body": "Department(s) with the most employees.",
+    "solution": "WITH c AS (\n  SELECT department, COUNT(*) AS cnt\n  FROM employees GROUP BY department\n)\nSELECT * FROM c WHERE cnt = (SELECT MAX(cnt) FROM c);",
+    "anchor": "q-85"
+  },
+  {
+    "id": 86,
+    "tier": "medium",
+    "title": "Percentage contribution",
+    "body": "Each department's % of total salary using window.",
+    "solution": "SELECT department, SUM(salary) AS dept_sal,\n  SUM(salary) * 100.0 / SUM(SUM(salary)) OVER () AS pct\nFROM employees\nGROUP BY department;",
+    "anchor": "q-86"
+  },
+  {
+    "id": 87,
+    "tier": "medium",
+    "title": "Recursive CTE hierarchy",
+    "body": "Employee hierarchy levels from CEO (`manager_id IS NULL`).",
+    "solution": "WITH RECURSIVE eh AS (\n  SELECT emp_id, name, manager_id, 0 AS lvl\n  FROM employees WHERE manager_id IS NULL\n  UNION ALL\n  SELECT e.emp_id, e.name, e.manager_id, eh.lvl + 1\n  FROM employees e\n  JOIN eh ON e.manager_id = eh.emp_id\n)\nSELECT * FROM eh;",
+    "anchor": "q-87"
+  },
+  {
+    "id": 88,
+    "tier": "medium",
+    "title": "EXISTS vs IN",
+    "body": "Customers with orders \u2014 write using EXISTS.",
+    "solution": "SELECT c.*\nFROM customers c\nWHERE EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.customer_id);",
+    "anchor": "q-88"
+  },
+  {
+    "id": 89,
+    "tier": "medium",
+    "title": "LEFT JOIN trap fix",
+    "body": "All customers including those without ACTIVE orders only \u2014 filter in ON not WHERE.",
+    "solution": "SELECT c.*, o.order_id\nFROM customers c\nLEFT JOIN orders o\n  ON c.customer_id = o.customer_id AND o.status = 'ACTIVE';",
+    "anchor": "q-89"
+  },
+  {
+    "id": 90,
+    "tier": "medium",
+    "title": "Deduplicate keep latest",
+    "body": "Keep one row per email, highest `customer_id`.",
+    "solution": "WITH d AS (\n  SELECT *, ROW_NUMBER() OVER (\n    PARTITION BY email ORDER BY customer_id DESC\n  ) AS rn FROM customers\n)\nSELECT * FROM d WHERE rn = 1;",
+    "anchor": "q-90"
+  },
+  {
+    "id": 91,
+    "tier": "medium",
+    "title": "Scalar subquery in SELECT",
+    "body": "Show each salary and company average side by side.",
+    "solution": "SELECT name, salary,\n  (SELECT AVG(salary) FROM employees) AS company_avg\nFROM employees;",
+    "anchor": "q-91"
+  },
+  {
+    "id": 92,
+    "tier": "medium",
+    "title": "Conditional aggregate",
+    "body": "Count active vs inactive employees in one query (`status` column).",
+    "solution": "SELECT\n  COUNT(*) FILTER (WHERE status = 'ACTIVE') AS active_cnt,\n  COUNT(*) FILTER (WHERE status = 'INACTIVE') AS inactive_cnt\nFROM employees;",
+    "anchor": "q-92"
+  },
+  {
+    "id": 93,
+    "tier": "medium",
+    "title": "SQL Server conditional count",
+    "body": "Same using SUM(CASE) for SQL Server.",
+    "solution": "SELECT\n  SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END) AS active_cnt,\n  SUM(CASE WHEN status = 'INACTIVE' THEN 1 ELSE 0 END) AS inactive_cnt\nFROM employees;",
+    "anchor": "q-93"
+  },
+  {
+    "id": 94,
+    "tier": "medium",
+    "title": "Gap: missing order dates",
+    "body": "Dates in `calendar(dt)` with no sale in `sales(sale_date)`.",
+    "solution": "SELECT c.dt\nFROM calendar c\nLEFT JOIN sales s ON c.dt = s.sale_date\nWHERE s.sale_date IS NULL;",
+    "anchor": "q-94"
+  },
+  {
+    "id": 95,
+    "tier": "medium",
+    "title": "Top 10% by NTILE",
+    "body": "Employees in top decile by salary.",
+    "solution": "SELECT * FROM (\n  SELECT *, NTILE(10) OVER (ORDER BY salary DESC) AS bucket\n  FROM employees\n) x WHERE bucket = 1;",
+    "anchor": "q-95"
+  },
+  {
+    "id": 96,
+    "tier": "medium",
+    "title": "Median with PERCENTILE_CONT",
+    "body": "Median salary (SQL Server).",
+    "solution": "SELECT DISTINCT\n  PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY salary) OVER () AS median_salary\nFROM employees;",
+    "anchor": "q-96"
+  },
+  {
+    "id": 97,
+    "tier": "medium",
+    "title": "Running count per day",
+    "body": "Cumulative order count by order_date.",
+    "solution": "SELECT order_date,\n  COUNT(*) OVER (ORDER BY order_date ROWS UNBOUNDED PRECEDING) AS running_orders\nFROM orders;",
+    "anchor": "q-97"
+  },
+  {
+    "id": 98,
+    "tier": "medium",
+    "title": "Join + window",
+    "body": "Each order with customer's previous order amount.",
+    "solution": "SELECT o.*,\n  LAG(amount) OVER (PARTITION BY customer_id ORDER BY order_date) AS prev_amount\nFROM orders o;",
+    "anchor": "q-98"
+  },
+  {
+    "id": 99,
+    "tier": "medium",
+    "title": "Aggregate join filter",
+    "body": "Departments where max salary > 10000.",
+    "solution": "SELECT department, MAX(salary) AS max_sal\nFROM employees\nGROUP BY department\nHAVING MAX(salary) > 10000;",
+    "anchor": "q-99"
+  },
+  {
+    "id": 100,
+    "tier": "medium",
+    "title": "String aggregate",
+    "body": "Comma-separated employee names per department (SQL Server 2017+).",
+    "solution": "SELECT department,\n  STRING_AGG(name, ', ') WITHIN GROUP (ORDER BY name) AS employees\nFROM employees\nGROUP BY department;",
+    "anchor": "q-100"
+  },
+  {
+    "id": 101,
+    "tier": "hard",
+    "title": "Second highest salary",
+    "body": "Second highest distinct salary.",
+    "solution": "SELECT MAX(salary) AS second_highest\nFROM employees\nWHERE salary < (SELECT MAX(salary) FROM employees);",
+    "anchor": "q-101"
+  },
+  {
+    "id": 102,
+    "tier": "hard",
+    "title": "Nth highest salary",
+    "body": "Third highest using DENSE_RANK.",
+    "solution": "SELECT salary FROM (\n  SELECT salary, DENSE_RANK() OVER (ORDER BY salary DESC) AS rnk\n  FROM employees\n) x WHERE rnk = 3;",
+    "anchor": "q-102"
+  },
+  {
+    "id": 103,
+    "tier": "hard",
+    "title": "Second highest \u2014 window",
+    "body": "Using DENSE_RANK for duplicate-safe 2nd highest.",
+    "solution": "SELECT DISTINCT salary FROM (\n  SELECT salary, DENSE_RANK() OVER (ORDER BY salary DESC) AS rnk\n  FROM employees\n) x WHERE rnk = 2;",
+    "anchor": "q-103"
+  },
+  {
+    "id": 104,
+    "tier": "hard",
+    "title": "Delete duplicates",
+    "body": "Delete duplicate emails keeping lowest customer_id (concept).",
+    "solution": "WITH d AS (\n  SELECT *, ROW_NUMBER() OVER (PARTITION BY email ORDER BY customer_id) AS rn\n  FROM customers\n)\nDELETE FROM d WHERE rn > 1;",
+    "anchor": "q-104"
+  },
+  {
+    "id": 105,
+    "tier": "hard",
+    "title": "Employees same salary",
+    "body": "Employees who share salary with someone else.",
+    "solution": "SELECT *\nFROM employees\nWHERE salary IN (\n  SELECT salary FROM employees GROUP BY salary HAVING COUNT(*) > 1\n);",
+    "anchor": "q-105"
+  },
+  {
+    "id": 106,
+    "tier": "hard",
+    "title": "Dept highest avg salary",
+    "body": "Department with highest average salary.",
+    "solution": "WITH a AS (\n  SELECT department, AVG(salary) AS avg_sal\n  FROM employees GROUP BY department\n)\nSELECT TOP 1 * FROM a ORDER BY avg_sal DESC;",
+    "anchor": "q-106"
+  },
+  {
+    "id": 107,
+    "tier": "hard",
+    "title": "Max earner per dept",
+    "body": "Employee(s) with max salary in each department \u2014 use RANK for ties.",
+    "solution": "SELECT * FROM (\n  SELECT *, RANK() OVER (PARTITION BY department ORDER BY salary DESC) AS rnk\n  FROM employees\n) x WHERE rnk = 1;",
+    "anchor": "q-107"
+  },
+  {
+    "id": 108,
+    "tier": "hard",
+    "title": "Consecutive login days \u2014 island key",
+    "body": "From `logins(user_id, login_date)` find streak groups using `login_date - row_number`.",
+    "solution": "WITH d AS (\n  SELECT user_id, login_date,\n    DATEADD(day, -ROW_NUMBER() OVER (\n      PARTITION BY user_id ORDER BY login_date\n    ), login_date) AS grp\n  FROM (SELECT DISTINCT user_id, login_date FROM logins) x\n)\nSELECT user_id, MIN(login_date) AS streak_start, MAX(login_date) AS streak_end, COUNT(*) AS streak_len\nFROM d\nGROUP BY user_id, grp;",
+    "anchor": "q-108"
+  },
+  {
+    "id": 109,
+    "tier": "hard",
+    "title": "Longest consecutive streak",
+    "body": "User with longest login streak from previous problem's logic.",
+    "solution": "WITH d AS (\n  SELECT user_id, login_date,\n    DATEADD(day, -ROW_NUMBER() OVER (\n      PARTITION BY user_id ORDER BY login_date\n    ), login_date) AS grp\n  FROM (SELECT DISTINCT user_id, login_date FROM logins) x\n), streaks AS (\n  SELECT user_id, COUNT(*) AS len\n  FROM d GROUP BY user_id, grp\n)\nSELECT TOP 1 user_id, len FROM streaks ORDER BY len DESC;",
+    "anchor": "q-109"
+  },
+  {
+    "id": 110,
+    "tier": "hard",
+    "title": "Gaps in dates",
+    "body": "Missing dates between min and max in `sales(sale_date)` \u2014 use calendar join.",
+    "solution": "SELECT c.dt AS missing_date\nFROM calendar c\nWHERE c.dt BETWEEN (SELECT MIN(sale_date) FROM sales)\n                   AND (SELECT MAX(sale_date) FROM sales)\n  AND NOT EXISTS (SELECT 1 FROM sales s WHERE s.sale_date = c.dt);",
+    "anchor": "q-110"
+  },
+  {
+    "id": 111,
+    "tier": "hard",
+    "title": "Running balance",
+    "body": "Running balance from `transactions(account_id, txn_date, amount)`.",
+    "solution": "SELECT account_id, txn_date, amount,\n  SUM(amount) OVER (\n    PARTITION BY account_id ORDER BY txn_date\n    ROWS UNBOUNDED PRECEDING\n  ) AS balance\nFROM transactions;",
+    "anchor": "q-111"
+  },
+  {
+    "id": 112,
+    "tier": "hard",
+    "title": "YoY comparison",
+    "body": "Compare revenue same month year-over-year.",
+    "solution": "SELECT month, revenue,\n  LAG(revenue, 12) OVER (ORDER BY month) AS revenue_prev_year,\n  revenue - LAG(revenue, 12) OVER (ORDER BY month) AS yoy_change\nFROM monthly_revenue;",
+    "anchor": "q-112"
+  },
+  {
+    "id": 113,
+    "tier": "hard",
+    "title": "Cumulative distinct customers",
+    "body": "Running count of distinct customers seen so far (advanced).",
+    "solution": "SELECT order_date, customer_id,\n  DENSE_RANK() OVER (ORDER BY customer_id) AS approx_distinct_so_far\nFROM orders;",
+    "anchor": "q-113"
+  },
+  {
+    "id": 114,
+    "tier": "hard",
+    "title": "SCD Type 2 expire",
+    "body": "Expire current dimension row when city changes (conceptual MERGE step 1).",
+    "solution": "UPDATE dim_customer\nSET end_date = CAST(GETDATE() AS date), is_current = 0\nFROM dim_customer t\nJOIN staging_customer s ON t.customer_id = s.customer_id\nWHERE t.is_current = 1 AND t.city <> s.city;",
+    "anchor": "q-114"
+  },
+  {
+    "id": 115,
+    "tier": "hard",
+    "title": "SCD Type 2 insert",
+    "body": "Insert new version after expire (conceptual step 2).",
+    "solution": "INSERT INTO dim_customer (customer_id, city, start_date, end_date, is_current)\nSELECT s.customer_id, s.city, CAST(GETDATE() AS date), '9999-12-31', 1\nFROM staging_customer s\nJOIN dim_customer t ON s.customer_id = t.customer_id AND t.is_current = 1\nWHERE t.city <> s.city;",
+    "anchor": "q-115"
+  },
+  {
+    "id": 116,
+    "tier": "hard",
+    "title": "Incremental load filter",
+    "body": "Orders modified after watermark.",
+    "solution": "SELECT *\nFROM orders\nWHERE modified_at > @last_watermark;",
+    "anchor": "q-116"
+  },
+  {
+    "id": 117,
+    "tier": "hard",
+    "title": "Deduplication pipeline",
+    "body": "Keep latest row per business key from staging.",
+    "solution": "SELECT * FROM (\n  SELECT *, ROW_NUMBER() OVER (\n    PARTITION BY business_key ORDER BY updated_at DESC\n  ) AS rn\n  FROM staging\n) x WHERE rn = 1;",
+    "anchor": "q-117"
+  },
+  {
+    "id": 118,
+    "tier": "hard",
+    "title": "Referential check",
+    "body": "Orders with invalid customer_id not in customers.",
+    "solution": "SELECT o.*\nFROM orders o\nLEFT JOIN customers c ON o.customer_id = c.customer_id\nWHERE c.customer_id IS NULL;",
+    "anchor": "q-118"
+  },
+  {
+    "id": 119,
+    "tier": "hard",
+    "title": "Data quality null check",
+    "body": "Columns with null rate > 10% (concept on `employees`).",
+    "solution": "SELECT\n  SUM(CASE WHEN phone IS NULL THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS phone_null_pct\nFROM employees;",
+    "anchor": "q-119"
+  },
+  {
+    "id": 120,
+    "tier": "hard",
+    "title": "Pivot year columns",
+    "body": "Revenue by year as columns from `sales(year, revenue)`.",
+    "solution": "SELECT\n  SUM(CASE WHEN year = 2024 THEN revenue END) AS y2024,\n  SUM(CASE WHEN year = 2025 THEN revenue END) AS y2025,\n  SUM(CASE WHEN year = 2026 THEN revenue END) AS y2026\nFROM sales;",
+    "anchor": "q-120"
+  },
+  {
+    "id": 121,
+    "tier": "hard",
+    "title": "Top product per category",
+    "body": "Most expensive product per category.",
+    "solution": "SELECT * FROM (\n  SELECT *, ROW_NUMBER() OVER (\n    PARTITION BY category ORDER BY price DESC\n  ) AS rn\n  FROM products\n) x WHERE rn = 1;",
+    "anchor": "q-121"
+  },
+  {
+    "id": 122,
+    "tier": "hard",
+    "title": "Customers only one order",
+    "body": "Customers with exactly one order.",
+    "solution": "SELECT customer_id\nFROM orders\nGROUP BY customer_id\nHAVING COUNT(*) = 1;",
+    "anchor": "q-122"
+  },
+  {
+    "id": 123,
+    "tier": "hard",
+    "title": "Employees no projects",
+    "body": "Employees not in `project_assignments(emp_id)`.",
+    "solution": "SELECT e.*\nFROM employees e\nWHERE NOT EXISTS (\n  SELECT 1 FROM project_assignments p WHERE p.emp_id = e.emp_id\n);",
+    "anchor": "q-123"
+  },
+  {
+    "id": 124,
+    "tier": "hard",
+    "title": "Revenue rank within month",
+    "body": "Rank orders by amount within each month.",
+    "solution": "SELECT *, RANK() OVER (\n  PARTITION BY YEAR(order_date), MONTH(order_date)\n  ORDER BY amount DESC\n) AS monthly_rank\nFROM orders;",
+    "anchor": "q-124"
+  },
+  {
+    "id": 125,
+    "tier": "hard",
+    "title": "Cohort retention",
+    "body": "Customers who ordered in month 1 and month 2 (simplified).",
+    "solution": "SELECT DISTINCT a.customer_id\nFROM orders a\nJOIN orders b ON a.customer_id = b.customer_id\nWHERE FORMAT(a.order_date, 'yyyy-MM') = '2025-01'\n  AND FORMAT(b.order_date, 'yyyy-MM') = '2025-02';",
+    "anchor": "q-125"
+  },
+  {
+    "id": 126,
+    "tier": "hard",
+    "title": "SARGable date filter",
+    "body": "Rewrite `YEAR(order_date)=2024` to range filter.",
+    "solution": "SELECT * FROM orders\nWHERE order_date >= '2024-01-01' AND order_date < '2025-01-01';",
+    "anchor": "q-126"
+  },
+  {
+    "id": 127,
+    "tier": "hard",
+    "title": "Anti-join pattern",
+    "body": "Products not in any order using LEFT JOIN.",
+    "solution": "SELECT p.*\nFROM products p\nLEFT JOIN order_items oi ON p.product_id = oi.product_id\nWHERE oi.product_id IS NULL;",
+    "anchor": "q-127"
+  },
+  {
+    "id": 128,
+    "tier": "hard",
+    "title": "Semi-join duplicate safe",
+    "body": "Customers with high-value order (>5000) without duplicating customer rows.",
+    "solution": "SELECT c.*\nFROM customers c\nWHERE EXISTS (\n  SELECT 1 FROM orders o\n  WHERE o.customer_id = c.customer_id AND o.amount > 5000\n);",
+    "anchor": "q-128"
+  },
+  {
+    "id": 129,
+    "tier": "hard",
+    "title": "Rolling 7-day sum",
+    "body": "7-day rolling revenue.",
+    "solution": "SELECT sale_date, revenue,\n  SUM(revenue) OVER (\n    ORDER BY sale_date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW\n  ) AS rolling_7d\nFROM daily_sales;",
+    "anchor": "q-129"
+  },
+  {
+    "id": 130,
+    "tier": "hard",
+    "title": "Session gap 30 min",
+    "body": "New session if gap > 30 min between events (simplified).",
+    "solution": "SELECT user_id, event_time,\n  SUM(CASE WHEN gap_mins > 30 THEN 1 ELSE 0 END) OVER (\n    PARTITION BY user_id ORDER BY event_time\n  ) AS session_id\nFROM (\n  SELECT user_id, event_time,\n    DATEDIFF(minute, LAG(event_time) OVER (\n      PARTITION BY user_id ORDER BY event_time\n    ), event_time) AS gap_mins\n  FROM events\n) x;",
+    "anchor": "q-130"
+  },
+  {
+    "id": 131,
+    "tier": "hard",
+    "title": "Bill of materials explosion",
+    "body": "One-level BOM from `bom(parent_id, child_id, qty)`.",
+    "solution": "SELECT parent_id, child_id, qty\nFROM bom\nWHERE parent_id = @product_id;",
+    "anchor": "q-131"
+  },
+  {
+    "id": 132,
+    "tier": "hard",
+    "title": "FIFO layer count",
+    "body": "Count inventory layers per SKU from `inventory(sku, received_date, qty)`.",
+    "solution": "SELECT sku, COUNT(*) AS layers\nFROM inventory\nWHERE qty > 0\nGROUP BY sku;",
+    "anchor": "q-132"
+  },
+  {
+    "id": 133,
+    "tier": "hard",
+    "title": "Zipper table current",
+    "body": "Current rows from SCD2 `dim(cust_id, city, start_dt, end_dt, is_current)`.",
+    "solution": "SELECT * FROM dim_customer WHERE is_current = 1;",
+    "anchor": "q-133"
+  },
+  {
+    "id": 134,
+    "tier": "hard",
+    "title": "Compare staging vs target",
+    "body": "Staging rows not matching current dimension attribute.",
+    "solution": "SELECT s.*\nFROM staging_customer s\nJOIN dim_customer d\n  ON s.customer_id = d.customer_id AND d.is_current = 1\nWHERE s.city <> d.city;",
+    "anchor": "q-134"
+  },
+  {
+    "id": 135,
+    "tier": "hard",
+    "title": "Rank dense top 2 salaries",
+    "body": "Employees with 1st or 2nd distinct salary level company-wide.",
+    "solution": "SELECT * FROM (\n  SELECT *, DENSE_RANK() OVER (ORDER BY salary DESC) AS dr\n  FROM employees\n) x WHERE dr <= 2;",
+    "anchor": "q-135"
+  },
+  {
+    "id": 136,
+    "tier": "hard",
+    "title": "Mutual managers check",
+    "body": "Pairs where each is other's manager (edge case).",
+    "solution": "SELECT a.emp_id, b.emp_id\nFROM employees a\nJOIN employees b ON a.manager_id = b.emp_id AND b.manager_id = a.emp_id;",
+    "anchor": "q-136"
+  },
+  {
+    "id": 137,
+    "tier": "hard",
+    "title": "Orphan departments",
+    "body": "Departments with zero employees.",
+    "solution": "SELECT d.*\nFROM departments d\nLEFT JOIN employees e ON d.dept_id = e.dept_id\nWHERE e.emp_id IS NULL;",
+    "anchor": "q-137"
+  },
+  {
+    "id": 138,
+    "tier": "hard",
+    "title": "Order sequence gaps",
+    "body": "Order IDs with gaps in sequence (simplified).",
+    "solution": "SELECT o1.order_id + 1 AS missing_id\nFROM orders o1\nLEFT JOIN orders o2 ON o2.order_id = o1.order_id + 1\nWHERE o2.order_id IS NULL;",
+    "anchor": "q-138"
+  },
+  {
+    "id": 139,
+    "tier": "hard",
+    "title": "Weighted average salary",
+    "body": "Weighted avg salary by headcount per dept \u2014 verify with two-step.",
+    "solution": "SELECT SUM(dept_total) * 1.0 / SUM(headcount) AS weighted_avg\nFROM (\n  SELECT department, COUNT(*) AS headcount, SUM(salary) AS dept_total\n  FROM employees GROUP BY department\n) x;",
+    "anchor": "q-139"
+  },
+  {
+    "id": 140,
+    "tier": "hard",
+    "title": "Customer first order value",
+    "body": "Amount of each customer's first order.",
+    "solution": "SELECT * FROM (\n  SELECT *, ROW_NUMBER() OVER (\n    PARTITION BY customer_id ORDER BY order_date\n  ) AS rn\n  FROM orders\n) x WHERE rn = 1;",
+    "anchor": "q-140"
+  },
+  {
+    "id": 141,
+    "tier": "hard",
+    "title": "Active employees Q1",
+    "body": "Employees hired before Q1 who weren't terminated before Q1 end.",
+    "solution": "SELECT *\nFROM employees\nWHERE hire_date < '2025-04-01'\n  AND (termination_date IS NULL OR termination_date >= '2025-01-01');",
+    "anchor": "q-141"
+  },
+  {
+    "id": 142,
+    "tier": "hard",
+    "title": "Churn definition",
+    "body": "Customers whose last order was > 90 days ago.",
+    "solution": "SELECT customer_id, MAX(order_date) AS last_order\nFROM orders\nGROUP BY customer_id\nHAVING MAX(order_date) < DATEADD(day, -90, CAST(GETDATE() AS date));",
+    "anchor": "q-142"
+  },
+  {
+    "id": 143,
+    "tier": "hard",
+    "title": "Revenue per employee",
+    "body": "Company revenue divided by employee count (scalar subqueries).",
+    "solution": "SELECT\n  (SELECT SUM(amount) FROM orders) * 1.0 /\n  (SELECT COUNT(*) FROM employees) AS revenue_per_employee;",
+    "anchor": "q-143"
+  },
+  {
+    "id": 144,
+    "tier": "hard",
+    "title": "Bucket salaries",
+    "body": "Assign custom salary buckets 0-5k, 5-8k, 8k+.",
+    "solution": "SELECT name, salary,\n  CASE\n    WHEN salary < 5000 THEN '0-5k'\n    WHEN salary < 8000 THEN '5-8k'\n    ELSE '8k+'\n  END AS bucket\nFROM employees;",
+    "anchor": "q-144"
+  },
+  {
+    "id": 145,
+    "tier": "hard",
+    "title": "Merge upsert pattern",
+    "body": "Conceptual MERGE for `target` from `source` on `id`.",
+    "solution": "MERGE target AS t\nUSING source AS s ON t.id = s.id\nWHEN MATCHED THEN UPDATE SET t.val = s.val\nWHEN NOT MATCHED THEN INSERT (id, val) VALUES (s.id, s.val);",
+    "anchor": "q-145"
+  },
+  {
+    "id": 146,
+    "tier": "hard",
+    "title": "Late arriving fact",
+    "body": "Attach fact to current dimension version by business key.",
+    "solution": "SELECT f.*, d.surrogate_key\nFROM fact_sales f\nJOIN dim_product d\n  ON f.product_bk = d.product_bk AND d.is_current = 1;",
+    "anchor": "q-146"
+  },
+  {
+    "id": 147,
+    "tier": "hard",
+    "title": "Histogram buckets",
+    "body": "Count employees per 2000 salary bucket.",
+    "solution": "SELECT (salary / 2000) * 2000 AS bucket_start, COUNT(*) AS cnt\nFROM employees\nGROUP BY (salary / 2000) * 2000\nORDER BY bucket_start;",
+    "anchor": "q-147"
+  },
+  {
+    "id": 148,
+    "tier": "hard",
+    "title": "Interview: explain plan approach",
+    "body": "Write a comment block listing 5 steps you'd take to tune a slow query.",
+    "solution": "-- 1. Capture actual execution plan\n-- 2. Find highest-cost operators\n-- 3. Check row estimates vs actuals\n-- 4. Review indexes and SARGability\n-- 5. Re-test with production-like volume",
+    "anchor": "q-148"
+  },
+  {
+    "id": 149,
+    "tier": "hard",
+    "title": "Self-assessment query",
+    "body": "Write a query returning one row: your readiness score 1-10 as `SELECT 8 AS readiness`.",
+    "solution": "SELECT 8 AS readiness;",
+    "anchor": "q-149"
+  },
+  {
+    "id": 150,
+    "tier": "hard",
+    "title": "Recent hires",
+    "body": "Employees hired in the last 30 days.",
+    "solution": "SELECT *\nFROM employees\nWHERE hire_date >= DATEADD(day, -30, CAST(GETDATE() AS date));",
+    "anchor": "q-150"
+  }
+]

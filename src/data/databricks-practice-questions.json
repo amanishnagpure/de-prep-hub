@@ -1,0 +1,227 @@
+[
+  {
+    "id": 1,
+    "tier": "basic",
+    "category": "merge",
+    "title": "Basic MERGE upsert",
+    "body": "MERGE staging into `silver.orders` on `order_id`. Update all columns when matched, insert when not.",
+    "solution": "MERGE INTO silver.orders AS t\nUSING staging.orders AS s\nON t.order_id = s.order_id\nWHEN MATCHED THEN UPDATE SET *\nWHEN NOT MATCHED THEN INSERT *",
+    "anchor": "q-1"
+  },
+  {
+    "id": 2,
+    "tier": "basic",
+    "category": "merge",
+    "title": "MERGE with DELETE (CDC)",
+    "body": "Apply CDC: delete when `_op = 'D'`, else upsert.",
+    "solution": "MERGE INTO silver.orders AS t\nUSING cdc.orders AS s\nON t.order_id = s.order_id\nWHEN MATCHED AND s._op = 'D' THEN DELETE\nWHEN MATCHED THEN UPDATE SET *\nWHEN NOT MATCHED AND s._op <> 'D' THEN INSERT *",
+    "anchor": "q-2"
+  },
+  {
+    "id": 3,
+    "tier": "medium",
+    "category": "merge",
+    "title": "Dedupe before MERGE",
+    "body": "Write SQL to keep latest row per `customer_id` from staging using `updated_at`.",
+    "solution": "MERGE INTO silver.customers AS t\nUSING (\n  SELECT * FROM (\n    SELECT *, ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY updated_at DESC) rn\n    FROM staging.customers\n  ) WHERE rn = 1\n) AS s\nON t.customer_id = s.customer_id\nWHEN MATCHED THEN UPDATE SET *\nWHEN NOT MATCHED THEN INSERT *",
+    "anchor": "q-3"
+  },
+  {
+    "id": 4,
+    "tier": "medium",
+    "category": "delta-lake",
+    "title": "Time travel audit",
+    "body": "Compare row counts between current table and version 3.",
+    "solution": "SELECT\n  (SELECT COUNT(*) FROM silver.orders) AS current_cnt,\n  (SELECT COUNT(*) FROM silver.orders VERSION AS OF 3) AS v3_cnt",
+    "anchor": "q-4"
+  },
+  {
+    "id": 5,
+    "tier": "basic",
+    "category": "optimize-vacuum",
+    "title": "OPTIMIZE with Z-ORDER",
+    "body": "Compact `gold.events` and Z-ORDER by `event_date`, `region`.",
+    "solution": "OPTIMIZE gold.events\nZORDER BY (event_date, region)",
+    "anchor": "q-5"
+  },
+  {
+    "id": 6,
+    "tier": "basic",
+    "category": "optimize-vacuum",
+    "title": "VACUUM with retention",
+    "body": "Remove orphaned files older than 7 days from `silver.orders`.",
+    "solution": "VACUUM silver.orders RETAIN 168 HOURS",
+    "anchor": "q-6"
+  },
+  {
+    "id": 7,
+    "tier": "medium",
+    "category": "optimize-vacuum",
+    "title": "Describe table detail",
+    "body": "Write query to inspect file count and size for a Delta table.",
+    "solution": "DESCRIBE DETAIL silver.orders",
+    "anchor": "q-7"
+  },
+  {
+    "id": 8,
+    "tier": "medium",
+    "category": "delta-lake",
+    "title": "Enable Change Data Feed",
+    "body": "Enable CDF on existing Delta table `silver.orders`.",
+    "solution": "ALTER TABLE silver.orders\nSET TBLPROPERTIES (delta.enableChangeDataFeed = true)",
+    "anchor": "q-8"
+  },
+  {
+    "id": 9,
+    "tier": "hard",
+    "category": "delta-lake",
+    "title": "Read CDF changes",
+    "body": "Select changes between versions 10 and 15 for `silver.orders`.",
+    "solution": "SELECT * FROM table_changes('silver.orders', 10, 15)",
+    "anchor": "q-9"
+  },
+  {
+    "id": 10,
+    "tier": "basic",
+    "category": "delta-lake",
+    "title": "Create partitioned Delta table",
+    "body": "Create `bronze.events` partitioned by `ingest_date` from JSON path.",
+    "solution": "CREATE TABLE bronze.events\nUSING DELTA\nPARTITIONED BY (ingest_date)\nAS SELECT *, current_date() AS ingest_date\nFROM json.`abfss://bronze@acct.dfs.core.windows.net/events/`",
+    "anchor": "q-10"
+  },
+  {
+    "id": 11,
+    "tier": "basic",
+    "category": "unity-catalog",
+    "title": "Grant read access",
+    "body": "Grant SELECT on `prod.gold.revenue` to group `analysts`.",
+    "solution": "GRANT SELECT ON TABLE prod.gold.revenue TO `analysts`",
+    "anchor": "q-11"
+  },
+  {
+    "id": 12,
+    "tier": "medium",
+    "category": "unity-catalog",
+    "title": "Create external table",
+    "body": "Register Delta path as external table in UC.",
+    "solution": "CREATE EXTERNAL TABLE prod.bronze.raw_orders (\n  order_id STRING,\n  amount DOUBLE\n)\nUSING DELTA\nLOCATION 'abfss://bronze@acct.dfs.core.windows.net/raw_orders/'",
+    "anchor": "q-12"
+  },
+  {
+    "id": 13,
+    "tier": "medium",
+    "category": "unity-catalog",
+    "title": "Revoke modify access",
+    "body": "Revoke MODIFY on silver PII table from interns group.",
+    "solution": "REVOKE MODIFY ON TABLE prod.silver.customer_pii FROM `interns`",
+    "anchor": "q-13"
+  },
+  {
+    "id": 14,
+    "tier": "basic",
+    "category": "unity-catalog",
+    "title": "Show table lineage context",
+    "body": "Display extended metadata for UC table.",
+    "solution": "DESCRIBE TABLE EXTENDED prod.gold.orders",
+    "anchor": "q-14"
+  },
+  {
+    "id": 15,
+    "tier": "hard",
+    "category": "unity-catalog",
+    "title": "Create catalog and schema",
+    "body": "Create `prod` catalog and `silver` schema.",
+    "solution": "CREATE CATALOG IF NOT EXISTS prod;\nCREATE SCHEMA IF NOT EXISTS prod.silver;",
+    "anchor": "q-15"
+  },
+  {
+    "id": 16,
+    "tier": "basic",
+    "category": "workflows",
+    "title": "Pass job parameter",
+    "body": "In notebook, read widget `run_date` default today.",
+    "solution": "dbutils.widgets.text('run_date', '2024-01-01')\nrun_date = dbutils.widgets.get('run_date')",
+    "anchor": "q-16"
+  },
+  {
+    "id": 17,
+    "tier": "medium",
+    "category": "workflows",
+    "title": "Conditional SQL task",
+    "body": "Write SQL that fails job if bronze row count is zero today.",
+    "solution": "SELECT CASE WHEN COUNT(*) = 0 THEN raise_error('No bronze rows') END\nFROM bronze.orders\nWHERE ingest_date = current_date()",
+    "anchor": "q-17"
+  },
+  {
+    "id": 18,
+    "tier": "medium",
+    "category": "workflows",
+    "title": "Incremental filter",
+    "body": "Select rows from silver where `updated_at` > job watermark param.",
+    "solution": "SELECT * FROM silver.orders\nWHERE updated_at > '${watermark}'",
+    "anchor": "q-18"
+  },
+  {
+    "id": 19,
+    "tier": "basic",
+    "category": "medallion",
+    "title": "Bronze append stream",
+    "body": "Append streaming JSON from path to Delta bronze with checkpoint.",
+    "solution": "spark.readStream.format('json')\n  .load('abfss://bronze@.../landing/')\n  .writeStream.format('delta')\n  .option('checkpointLocation', 'abfss://.../_checkpoints/bronze_events')\n  .trigger(availableNow=True)\n  .start('abfss://bronze@.../delta/events')",
+    "anchor": "q-19"
+  },
+  {
+    "id": 20,
+    "tier": "medium",
+    "category": "medallion",
+    "title": "Silver daily aggregate",
+    "body": "Build gold daily revenue from silver orders.",
+    "solution": "CREATE OR REPLACE TABLE gold.daily_revenue AS\nSELECT order_date, region, SUM(amount) AS revenue\nFROM silver.orders\nWHERE order_status = 'completed'\nGROUP BY order_date, region",
+    "anchor": "q-20"
+  },
+  {
+    "id": 21,
+    "tier": "medium",
+    "category": "medallion",
+    "title": "Incremental gold MERGE",
+    "body": "MERGE daily revenue summary into gold for today's date.",
+    "solution": "MERGE INTO gold.daily_revenue AS t\nUSING (\n  SELECT order_date, region, SUM(amount) revenue\n  FROM silver.orders\n  WHERE order_date = current_date()\n  GROUP BY 1, 2\n) s\nON t.order_date = s.order_date AND t.region = s.region\nWHEN MATCHED THEN UPDATE SET revenue = s.revenue\nWHEN NOT MATCHED THEN INSERT *",
+    "anchor": "q-21"
+  },
+  {
+    "id": 22,
+    "tier": "hard",
+    "category": "workflows",
+    "title": "Watermark control table",
+    "body": "Update control table watermark after successful silver load.",
+    "solution": "MERGE INTO control.ingestion_state AS t\nUSING (SELECT 'orders' AS table_name, MAX(updated_at) AS wm FROM silver.orders) s\nON t.table_name = s.table_name\nWHEN MATCHED THEN UPDATE SET watermark = s.wm, updated_at = current_timestamp()\nWHEN NOT MATCHED THEN INSERT *",
+    "anchor": "q-22"
+  },
+  {
+    "id": 23,
+    "tier": "hard",
+    "category": "merge",
+    "title": "SCD Type 2 MERGE",
+    "body": "When hash changes, close current row and insert new version.",
+    "solution": "MERGE INTO gold.dim_customer t\nUSING staging.customer s\nON t.customer_id = s.customer_id AND t.is_current = true\nWHEN MATCHED AND t.row_hash <> s.row_hash THEN UPDATE SET end_date = current_date(), is_current = false\nWHEN NOT MATCHED THEN INSERT (customer_id, attrs, start_date, end_date, is_current, row_hash)\nVALUES (s.customer_id, s.attrs, current_date(), NULL, true, s.row_hash)",
+    "anchor": "q-23"
+  },
+  {
+    "id": 24,
+    "tier": "medium",
+    "category": "delta-lake",
+    "title": "Schema evolution ALTER",
+    "body": "Add nullable column `source_system` to bronze table.",
+    "solution": "ALTER TABLE bronze.orders ADD COLUMN source_system STRING",
+    "anchor": "q-24"
+  },
+  {
+    "id": 25,
+    "tier": "hard",
+    "category": "medallion",
+    "title": "Clone prod to dev",
+    "body": "Create dev copy of gold orders for testing (shallow clone).",
+    "solution": "CREATE OR REPLACE TABLE dev.gold.orders SHALLOW CLONE prod.gold.orders",
+    "anchor": "q-25"
+  }
+]

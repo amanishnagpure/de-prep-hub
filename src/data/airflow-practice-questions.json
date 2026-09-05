@@ -1,0 +1,227 @@
+[
+  {
+    "id": 1,
+    "tier": "basic",
+    "category": "dag-design",
+    "title": "Minimal daily DAG",
+    "body": "Create a DAG `hello_etl` with schedule `@daily`, catchup=False, one BashOperator printing logical date.",
+    "solution": "from airflow import DAG\nfrom airflow.operators.bash import BashOperator\nfrom pendulum import datetime\n\nwith DAG(\n    dag_id=\"hello_etl\",\n    start_date=datetime(2024, 1, 1, tz=\"UTC\"),\n    schedule=\"@daily\",\n    catchup=False,\n) as dag:\n    BashOperator(\n        task_id=\"print_ds\",\n        bash_command=\"echo Processing {{ ds }}\",\n    )",
+    "anchor": "q-1"
+  },
+  {
+    "id": 2,
+    "tier": "basic",
+    "category": "dag-design",
+    "title": "Linear ETL chain",
+    "body": "DAG with three EmptyOperators: extract >> transform >> load.",
+    "solution": "from airflow import DAG\nfrom airflow.operators.empty import EmptyOperator\nfrom pendulum import datetime\n\nwith DAG(\"linear_etl\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    extract = EmptyOperator(task_id=\"extract\")\n    transform = EmptyOperator(task_id=\"transform\")\n    load = EmptyOperator(task_id=\"load\")\n    extract >> transform >> load",
+    "anchor": "q-2"
+  },
+  {
+    "id": 3,
+    "tier": "basic",
+    "category": "dag-design",
+    "title": "default_args retries",
+    "body": "Set default_args with owner='de-team', retries=2, retry_delay=5 minutes on a DAG.",
+    "solution": "from datetime import timedelta\nfrom airflow import DAG\nfrom airflow.operators.empty import EmptyOperator\nfrom pendulum import datetime\n\ndefault_args = {\n    \"owner\": \"de-team\",\n    \"retries\": 2,\n    \"retry_delay\": timedelta(minutes=5),\n}\n\nwith DAG(\"retry_dag\", default_args=default_args, start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    EmptyOperator(task_id=\"start\")",
+    "anchor": "q-3"
+  },
+  {
+    "id": 4,
+    "tier": "basic",
+    "category": "operators",
+    "title": "PythonOperator with ds",
+    "body": "PythonOperator calls a function logging the ds from context.",
+    "solution": "import logging\nfrom airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom pendulum import datetime\n\ndef log_ds(**context):\n    logging.info(\"date=%s\", context[\"ds\"])\n\nwith DAG(\"log_ds_dag\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    PythonOperator(task_id=\"log_ds\", python_callable=log_ds)",
+    "anchor": "q-4"
+  },
+  {
+    "id": 5,
+    "tier": "basic",
+    "category": "operators",
+    "title": "BashOperator dbt run",
+    "body": "BashOperator runs `dbt run --select tag:daily`.",
+    "solution": "from airflow import DAG\nfrom airflow.operators.bash import BashOperator\nfrom pendulum import datetime\n\nwith DAG(\"dbt_daily\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"0 6 * * *\", catchup=False) as dag:\n    BashOperator(task_id=\"dbt_run\", bash_command=\"dbt run --select tag:daily\")",
+    "anchor": "q-5"
+  },
+  {
+    "id": 6,
+    "tier": "basic",
+    "category": "xcoms",
+    "title": "Push XCom manually",
+    "body": "PythonOperator pushes key `row_count` value 42 via xcom_push.",
+    "solution": "from airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom pendulum import datetime\n\ndef push(**context):\n    context[\"ti\"].xcom_push(key=\"row_count\", value=42)\n\nwith DAG(\"xcom_push\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    PythonOperator(task_id=\"push\", python_callable=push)",
+    "anchor": "q-6"
+  },
+  {
+    "id": 7,
+    "tier": "basic",
+    "category": "xcoms",
+    "title": "Pull XCom in Bash",
+    "body": "Task pulls row_count from task_id `push` using Jinja.",
+    "solution": "from airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom airflow.operators.bash import BashOperator\nfrom pendulum import datetime\n\ndef push(**context):\n    context[\"ti\"].xcom_push(key=\"row_count\", value=42)\n\nwith DAG(\"xcom_pull\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    push = PythonOperator(task_id=\"push\", python_callable=push)\n    show = BashOperator(\n        task_id=\"show\",\n        bash_command=\"echo rows={{ ti.xcom_pull(task_ids='push', key='row_count') }}\",\n    )\n    push >> show",
+    "anchor": "q-7"
+  },
+  {
+    "id": 8,
+    "tier": "basic",
+    "category": "dag-design",
+    "title": "TaskGroup staging",
+    "body": "Wrap two tasks in TaskGroup `staging` between extract and load.",
+    "solution": "from airflow import DAG\nfrom airflow.operators.empty import EmptyOperator\nfrom airflow.utils.task_group import TaskGroup\nfrom pendulum import datetime\n\nwith DAG(\"tg_dag\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    extract = EmptyOperator(task_id=\"extract\")\n    load = EmptyOperator(task_id=\"load\")\n    with TaskGroup(\"staging\") as staging:\n        clean = EmptyOperator(task_id=\"clean\")\n        validate = EmptyOperator(task_id=\"validate\")\n        clean >> validate\n    extract >> staging >> load",
+    "anchor": "q-8"
+  },
+  {
+    "id": 9,
+    "tier": "medium",
+    "category": "dag-design",
+    "title": "TaskFlow extract-load",
+    "body": "Use @task: extract returns list of dicts; load prints len(rows).",
+    "solution": "from airflow import DAG\nfrom airflow.decorators import task\nfrom pendulum import datetime\n\nwith DAG(\"taskflow_el\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    @task\n    def extract():\n        return [{\"id\": 1}, {\"id\": 2}]\n\n    @task\n    def load(rows: list[dict]):\n        print(len(rows))\n\n    load(extract())",
+    "anchor": "q-9"
+  },
+  {
+    "id": 10,
+    "tier": "medium",
+    "category": "scheduling",
+    "title": "Cron weekly Monday",
+    "body": "DAG scheduled every Monday at 3am UTC.",
+    "solution": "from airflow import DAG\nfrom airflow.operators.empty import EmptyOperator\nfrom pendulum import datetime\n\nwith DAG(\n    \"weekly_mon\",\n    start_date=datetime(2024, 1, 1, tz=\"UTC\"),\n    schedule=\"0 3 * * 1\",\n    catchup=False,\n) as dag:\n    EmptyOperator(task_id=\"run\")",
+    "anchor": "q-10"
+  },
+  {
+    "id": 11,
+    "tier": "medium",
+    "category": "scheduling",
+    "title": "max_active_runs=1",
+    "body": "DAG with max_active_runs=1 to prevent overlapping runs.",
+    "solution": "from airflow import DAG\nfrom airflow.operators.empty import EmptyOperator\nfrom pendulum import datetime\n\nwith DAG(\n    \"serial_runs\",\n    start_date=datetime(2024, 1, 1, tz=\"UTC\"),\n    schedule=\"@daily\",\n    catchup=False,\n    max_active_runs=1,\n) as dag:\n    EmptyOperator(task_id=\"step\")",
+    "anchor": "q-11"
+  },
+  {
+    "id": 12,
+    "tier": "medium",
+    "category": "sensors",
+    "title": "FileSensor reschedule",
+    "body": "FileSensor waits for `/tmp/ready.flag`, mode=reschedule, timeout 1h.",
+    "solution": "from datetime import timedelta\nfrom airflow import DAG\nfrom airflow.sensors.filesystem import FileSensor\nfrom pendulum import datetime\n\nwith DAG(\"wait_file\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    FileSensor(\n        task_id=\"wait_ready\",\n        filepath=\"/tmp/ready.flag\",\n        mode=\"reschedule\",\n        timeout=3600,\n        poke_interval=60,\n    )",
+    "anchor": "q-12"
+  },
+  {
+    "id": 13,
+    "tier": "medium",
+    "category": "sensors",
+    "title": "ExternalTaskSensor",
+    "body": "Wait for task `done` in DAG `upstream_dag`.",
+    "solution": "from airflow import DAG\nfrom airflow.sensors.external_task import ExternalTaskSensor\nfrom pendulum import datetime\n\nwith DAG(\"downstream\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    ExternalTaskSensor(\n        task_id=\"wait_upstream\",\n        external_dag_id=\"upstream_dag\",\n        external_task_id=\"done\",\n        mode=\"reschedule\",\n    )",
+    "anchor": "q-13"
+  },
+  {
+    "id": 14,
+    "tier": "medium",
+    "category": "operators",
+    "title": "Branch on empty file",
+    "body": "BranchPythonOperator: if file size 0 return `skip_load` else `load`.",
+    "solution": "from airflow import DAG\nfrom airflow.operators.python import BranchPythonOperator\nfrom airflow.operators.empty import EmptyOperator\nfrom pendulum import datetime\nimport os\n\ndef choose(**context):\n    path = f\"/data/{context['ds']}.csv\"\n    return \"skip_load\" if not os.path.getsize(path) else \"load\"\n\nwith DAG(\"branch_empty\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    branch = BranchPythonOperator(task_id=\"branch\", python_callable=choose)\n    load = EmptyOperator(task_id=\"load\")\n    skip_load = EmptyOperator(task_id=\"skip_load\")\n    branch >> [load, skip_load]",
+    "anchor": "q-14"
+  },
+  {
+    "id": 15,
+    "tier": "medium",
+    "category": "operators",
+    "title": "TriggerDagRunOperator",
+    "body": "Trigger DAG `child_pipeline` with conf partition=ds.",
+    "solution": "from airflow import DAG\nfrom airflow.operators.trigger_dagrun import TriggerDagRunOperator\nfrom pendulum import datetime\n\nwith DAG(\"parent\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    TriggerDagRunOperator(\n        task_id=\"trigger_child\",\n        trigger_dag_id=\"child_pipeline\",\n        conf={\"partition\": \"{{ ds }}\"},\n        wait_for_completion=True,\n    )",
+    "anchor": "q-15"
+  },
+  {
+    "id": 16,
+    "tier": "medium",
+    "category": "xcoms",
+    "title": "TaskFlow return path",
+    "body": "@task extract returns S3 path string; load task receives it.",
+    "solution": "from airflow import DAG\nfrom airflow.decorators import task\nfrom pendulum import datetime\n\nwith DAG(\"xcom_path\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    @task\n    def extract(ds: str) -> str:\n        return f\"s3://bucket/raw/{ds}/data.parquet\"\n\n    @task\n    def load(path: str):\n        print(\"loading\", path)\n\n    load(extract())",
+    "anchor": "q-16"
+  },
+  {
+    "id": 17,
+    "tier": "medium",
+    "category": "dag-design",
+    "title": "Parallel then join",
+    "body": "extract feeds transform_a and transform_b in parallel, both feed load.",
+    "solution": "from airflow import DAG\nfrom airflow.operators.empty import EmptyOperator\nfrom pendulum import datetime\n\nwith DAG(\"fanout\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    extract = EmptyOperator(task_id=\"extract\")\n    ta = EmptyOperator(task_id=\"transform_a\")\n    tb = EmptyOperator(task_id=\"transform_b\")\n    load = EmptyOperator(task_id=\"load\")\n    extract >> [ta, tb] >> load",
+    "anchor": "q-17"
+  },
+  {
+    "id": 18,
+    "tier": "medium",
+    "category": "scheduling",
+    "title": "Idempotent partition load",
+    "body": "PythonOperator deletes partition ds then inserts — idempotent reload.",
+    "solution": "from airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom pendulum import datetime\n\ndef reload_partition(**context):\n    ds = context[\"ds\"]\n    # DELETE FROM fact WHERE dt = ds\n    # INSERT INTO fact SELECT ... WHERE dt = ds\n    print(f\"reloaded {ds}\")\n\nwith DAG(\"idempotent_load\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    PythonOperator(task_id=\"reload\", python_callable=reload_partition)",
+    "anchor": "q-18"
+  },
+  {
+    "id": 19,
+    "tier": "medium",
+    "category": "production",
+    "title": "on_failure_callback",
+    "body": "default_args on_failure_callback logs dag_id and task_id.",
+    "solution": "import logging\nfrom airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom pendulum import datetime\n\ndef on_fail(context):\n    logging.error(\"fail %s %s\", context[\"dag\"].dag_id, context[\"task_instance\"].task_id)\n\ndefault_args = {\"on_failure_callback\": on_fail}\n\nwith DAG(\"alert_dag\", default_args=default_args, start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    PythonOperator(task_id=\"fail_task\", python_callable=lambda: 1 / 0)",
+    "anchor": "q-19"
+  },
+  {
+    "id": 20,
+    "tier": "medium",
+    "category": "production",
+    "title": "Pool assignment",
+    "body": "PythonOperator uses pool `spark_pool` with priority_weight 5.",
+    "solution": "from airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom pendulum import datetime\n\nwith DAG(\"pooled\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    PythonOperator(\n        task_id=\"spark_job\",\n        python_callable=lambda: None,\n        pool=\"spark_pool\",\n        priority_weight=5,\n    )",
+    "anchor": "q-20"
+  },
+  {
+    "id": 21,
+    "tier": "hard",
+    "category": "dag-design",
+    "title": "Dynamic task mapping",
+    "body": "Map process task over files list from config.",
+    "solution": "from airflow import DAG\nfrom airflow.decorators import task\nfrom pendulum import datetime\n\nFILES = [\"a.csv\", \"b.csv\", \"c.csv\"]\n\nwith DAG(\"dynamic_map\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    @task\n    def process(file: str):\n        print(file)\n\n    process.expand(file=FILES)",
+    "anchor": "q-21"
+  },
+  {
+    "id": 22,
+    "tier": "hard",
+    "category": "scheduling",
+    "title": "Dataset-triggered DAG",
+    "body": "DAG scheduled on Dataset `s3://curated/orders`.",
+    "solution": "from airflow import DAG\nfrom airflow.datasets import Dataset\nfrom airflow.decorators import task\nfrom pendulum import datetime\n\ncurated = Dataset(\"s3://curated/orders\")\n\nwith DAG(\"on_orders\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=[curated], catchup=False) as dag:\n    @task\n    def build_mart():\n        print(\"building mart\")",
+    "anchor": "q-22"
+  },
+  {
+    "id": 23,
+    "tier": "hard",
+    "category": "production",
+    "title": "Variable-driven schedule",
+    "body": "Read batch_size from Airflow Variable inside python_callable.",
+    "solution": "from airflow import DAG\nfrom airflow.models import Variable\nfrom airflow.operators.python import PythonOperator\nfrom pendulum import datetime\n\ndef run():\n    batch = int(Variable.get(\"batch_size\", default_var=\"1000\"))\n    print(batch)\n\nwith DAG(\"var_dag\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    PythonOperator(task_id=\"run\", python_callable=run)",
+    "anchor": "q-23"
+  },
+  {
+    "id": 24,
+    "tier": "hard",
+    "category": "production",
+    "title": "Custom template field",
+    "body": "PythonOperator uses templated field partition={{ ds }} in op_kwargs.",
+    "solution": "from airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom pendulum import datetime\n\ndef load(partition, **context):\n    print(\"load\", partition)\n\nwith DAG(\"templated\", start_date=datetime(2024, 1, 1, tz=\"UTC\"), schedule=\"@daily\", catchup=False) as dag:\n    PythonOperator(\n        task_id=\"load\",\n        python_callable=load,\n        op_kwargs={\"partition\": \"{{ ds }}\"},\n    )",
+    "anchor": "q-24"
+  },
+  {
+    "id": 25,
+    "tier": "hard",
+    "category": "production",
+    "title": "DAG factory pattern",
+    "body": "Function build_dag(team) returns DAG; register two DAGs for finance and ops.",
+    "solution": "from airflow import DAG\nfrom airflow.operators.empty import EmptyOperator\nfrom pendulum import datetime\n\ndef build_dag(team: str) -> DAG:\n    with DAG(\n        dag_id=f\"etl_{team}\",\n        start_date=datetime(2024, 1, 1, tz=\"UTC\"),\n        schedule=\"@daily\",\n        catchup=False,\n        tags=[team],\n    ) as dag:\n        EmptyOperator(task_id=\"start\")\n    return dag\n\nglobals()[\"etl_finance\"] = build_dag(\"finance\")\nglobals()[\"etl_ops\"] = build_dag(\"ops\")",
+    "anchor": "q-25"
+  }
+]

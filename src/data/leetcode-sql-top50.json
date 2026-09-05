@@ -1,0 +1,823 @@
+[
+  {
+    "id": 1757,
+    "slug": "recyclable-and-low-fat-products",
+    "title": "Recyclable and Low Fat Products",
+    "difficulty": "easy",
+    "pattern": "filtering",
+    "mustDo": true,
+    "tables": [
+      "Products"
+    ],
+    "summary": "Return product ids where low_fats = 'Y' and recyclable = 'Y'.",
+    "approach": "Simple WHERE with AND on both flags.",
+    "solution": "SELECT product_id\nFROM Products\nWHERE low_fats = 'Y' AND recyclable = 'Y';",
+    "leetcodeUrl": "https://leetcode.com/problems/recyclable-and-low-fat-products/",
+    "order": 1
+  },
+  {
+    "id": 584,
+    "slug": "find-customer-referee",
+    "title": "Find Customer Referee",
+    "difficulty": "easy",
+    "pattern": "filtering",
+    "mustDo": true,
+    "tables": [
+      "Customer"
+    ],
+    "summary": "Customers whose referee is not 2, including NULL referees.",
+    "approach": "Use referee <> 2 OR referee IS NULL \u2014 <> does not match NULL.",
+    "dialectNote": "On LeetCode (MySQL) the same NULL logic applies.",
+    "solution": "SELECT name\nFROM Customer\nWHERE referee <> 2 OR referee IS NULL;",
+    "leetcodeUrl": "https://leetcode.com/problems/find-customer-referee/",
+    "order": 2
+  },
+  {
+    "id": 595,
+    "slug": "big-countries",
+    "title": "Big Countries",
+    "difficulty": "easy",
+    "pattern": "filtering",
+    "mustDo": true,
+    "tables": [
+      "World"
+    ],
+    "summary": "Countries with area >= 3M km\u00b2 or population >= 25M.",
+    "approach": "OR filter on two numeric thresholds.",
+    "solution": "SELECT name, population, area\nFROM World\nWHERE area >= 3000000 OR population >= 25000000;",
+    "leetcodeUrl": "https://leetcode.com/problems/big-countries/",
+    "order": 3
+  },
+  {
+    "id": 1148,
+    "slug": "article-views-i",
+    "title": "Article Views I",
+    "difficulty": "easy",
+    "pattern": "filtering",
+    "mustDo": false,
+    "tables": [
+      "Views"
+    ],
+    "summary": "Authors who viewed their own articles more than once.",
+    "approach": "Filter author_id = viewer_id, GROUP BY author_id, HAVING COUNT(*) > 1.",
+    "solution": "SELECT author_id AS id\nFROM Views\nWHERE author_id = viewer_id\nGROUP BY author_id\nHAVING COUNT(*) > 1;",
+    "leetcodeUrl": "https://leetcode.com/problems/article-views-i/",
+    "order": 4
+  },
+  {
+    "id": 1683,
+    "slug": "invalid-tweets",
+    "title": "Invalid Tweets",
+    "difficulty": "easy",
+    "pattern": "filtering",
+    "mustDo": false,
+    "tables": [
+      "Tweets"
+    ],
+    "summary": "Tweet ids where content length exceeds 15 characters.",
+    "approach": "CHAR_LENGTH or LEN on content column.",
+    "dialectNote": "LeetCode uses CHAR_LENGTH; SQL Server uses LEN.",
+    "solution": "SELECT tweet_id\nFROM Tweets\nWHERE LEN(content) > 15;",
+    "leetcodeUrl": "https://leetcode.com/problems/invalid-tweets/",
+    "order": 5
+  },
+  {
+    "id": 1795,
+    "slug": "rearrange-products-table",
+    "title": "Rearrange Products Table",
+    "difficulty": "easy",
+    "pattern": "reporting",
+    "mustDo": false,
+    "tables": [
+      "Products"
+    ],
+    "summary": "Unpivot store columns into (product_id, store, price) rows.",
+    "approach": "UNION ALL three SELECTs or UNPIVOT on store columns.",
+    "solution": "SELECT product_id, 'store1' AS store, store1 AS price FROM Products\nUNION ALL\nSELECT product_id, 'store2', store2 FROM Products\nUNION ALL\nSELECT product_id, 'store3', store3 FROM Products;",
+    "leetcodeUrl": "https://leetcode.com/problems/rearrange-products-table/",
+    "order": 6
+  },
+  {
+    "id": 1378,
+    "slug": "replace-employee-id-with-unique-identifier",
+    "title": "Replace Employee ID With The Unique Identifier",
+    "difficulty": "easy",
+    "pattern": "join",
+    "mustDo": true,
+    "tables": [
+      "Employees",
+      "EmployeeUNI"
+    ],
+    "summary": "Map legacy id to unique id via join.",
+    "approach": "JOIN Employees to EmployeeUNI on id = employee_id.",
+    "solution": "SELECT u.unique_id, e.name\nFROM Employees e\nJOIN EmployeeUNI u ON e.id = u.employee_id;",
+    "leetcodeUrl": "https://leetcode.com/problems/replace-employee-id-with-unique-identifier/",
+    "order": 7
+  },
+  {
+    "id": 1068,
+    "slug": "product-sales-analysis-i",
+    "title": "Product Sales Analysis I",
+    "difficulty": "easy",
+    "pattern": "join",
+    "mustDo": true,
+    "tables": [
+      "Sales",
+      "Product"
+    ],
+    "summary": "Product name, year, and price for each sale.",
+    "approach": "JOIN Sales to Product, project columns.",
+    "solution": "SELECT p.product_name, s.year, s.price\nFROM Sales s\nJOIN Product p ON s.product_id = p.product_id;",
+    "leetcodeUrl": "https://leetcode.com/problems/product-sales-analysis-i/",
+    "order": 8
+  },
+  {
+    "id": 1581,
+    "slug": "customer-who-visited-but-did-not-transact",
+    "title": "Customer Who Visited but Did Not Make Any Transactions",
+    "difficulty": "easy",
+    "pattern": "anti-join",
+    "mustDo": true,
+    "tables": [
+      "Visits",
+      "Transactions"
+    ],
+    "summary": "Count visits with zero transactions per customer.",
+    "approach": "LEFT JOIN transactions, filter NULL transaction_id, GROUP BY customer.",
+    "solution": "SELECT v.customer_id, COUNT(*) AS count_no_trans\nFROM Visits v\nLEFT JOIN Transactions t\n  ON v.visit_id = t.visit_id AND v.customer_id = t.customer_id\nWHERE t.transaction_id IS NULL\nGROUP BY v.customer_id;",
+    "leetcodeUrl": "https://leetcode.com/problems/customer-who-visited-but-did-not-transact/",
+    "order": 9
+  },
+  {
+    "id": 197,
+    "slug": "rising-temperature",
+    "title": "Rising Temperature",
+    "difficulty": "easy",
+    "pattern": "self-join",
+    "mustDo": true,
+    "tables": [
+      "Weather"
+    ],
+    "summary": "Dates where temperature is higher than the previous day.",
+    "approach": "Self-join on date + 1 day, compare temperatures.",
+    "dialectNote": "LeetCode uses DATEDIFF; SQL Server uses DATEADD.",
+    "solution": "SELECT w1.id\nFROM Weather w1\nJOIN Weather w2\n  ON DATEDIFF(day, w2.recordDate, w1.recordDate) = 1\nWHERE w1.temperature > w2.temperature;",
+    "leetcodeUrl": "https://leetcode.com/problems/rising-temperature/",
+    "order": 10
+  },
+  {
+    "id": 1729,
+    "slug": "find-followers-count",
+    "title": "Find Followers Count",
+    "difficulty": "easy",
+    "pattern": "aggregation",
+    "mustDo": false,
+    "tables": [
+      "Followers"
+    ],
+    "summary": "Users with at least 1000 followers.",
+    "approach": "GROUP BY user_id, HAVING COUNT(*) >= 1000.",
+    "solution": "SELECT user_id\nFROM Followers\nGROUP BY user_id\nHAVING COUNT(*) >= 1000;",
+    "leetcodeUrl": "https://leetcode.com/problems/find-followers-count/",
+    "order": 11
+  },
+  {
+    "id": 619,
+    "slug": "biggest-single-number",
+    "title": "Biggest Single Number",
+    "difficulty": "easy",
+    "pattern": "aggregation",
+    "mustDo": false,
+    "tables": [
+      "MyNumbers"
+    ],
+    "summary": "Largest number that appears exactly once.",
+    "approach": "GROUP BY num HAVING COUNT=1, then MAX.",
+    "solution": "SELECT MAX(num) AS num\nFROM (\n  SELECT num\n  FROM MyNumbers\n  GROUP BY num\n  HAVING COUNT(*) = 1\n) x;",
+    "leetcodeUrl": "https://leetcode.com/problems/biggest-single-number/",
+    "order": 12
+  },
+  {
+    "id": 1075,
+    "slug": "project-employees-i",
+    "title": "Project Employees I",
+    "difficulty": "easy",
+    "pattern": "aggregation",
+    "mustDo": false,
+    "tables": [
+      "Project",
+      "Employee"
+    ],
+    "summary": "Average experience years per project.",
+    "approach": "JOIN and AVG grouped by project_id.",
+    "solution": "SELECT p.project_id, ROUND(AVG(e.experience_years), 2) AS average_years\nFROM Project p\nJOIN Employee e ON p.employee_id = e.employee_id\nGROUP BY p.project_id;",
+    "leetcodeUrl": "https://leetcode.com/problems/project-employees-i/",
+    "order": 13
+  },
+  {
+    "id": 1084,
+    "slug": "sales-analysis-iii",
+    "title": "Sales Analysis III",
+    "difficulty": "easy",
+    "pattern": "aggregation",
+    "mustDo": false,
+    "tables": [
+      "Product",
+      "Sales"
+    ],
+    "summary": "Products sold only in first year (2018) and never in 2019.",
+    "approach": "GROUP BY product, use MIN(year) and MAX(year) both = 2018.",
+    "solution": "SELECT p.product_id, p.product_name\nFROM Sales s\nJOIN Product p ON s.product_id = p.product_id\nGROUP BY p.product_id, p.product_name\nHAVING MIN(s.year) = 2018 AND MAX(s.year) = 2018;",
+    "leetcodeUrl": "https://leetcode.com/problems/sales-analysis-iii/",
+    "order": 14
+  },
+  {
+    "id": 1831,
+    "slug": "maximum-transaction-each-day",
+    "title": "Maximum Transaction Each Day",
+    "difficulty": "medium",
+    "pattern": "window",
+    "mustDo": false,
+    "tables": [
+      "Transactions"
+    ],
+    "summary": "Highest amount transaction per day (ties included).",
+    "approach": "RANK or DENSE_RANK partitioned by day on amount.",
+    "solution": "SELECT transaction_id\nFROM (\n  SELECT transaction_id,\n    DENSE_RANK() OVER (\n      PARTITION BY DAY(day) ORDER BY amount DESC\n    ) AS dr\n  FROM Transactions\n) x\nWHERE dr = 1;",
+    "leetcodeUrl": "https://leetcode.com/problems/maximum-transaction-each-day/",
+    "order": 15
+  },
+  {
+    "id": 176,
+    "slug": "second-highest-salary",
+    "title": "Second Highest Salary",
+    "difficulty": "medium",
+    "pattern": "ranking",
+    "mustDo": true,
+    "tables": [
+      "Employee"
+    ],
+    "summary": "Return the second highest distinct salary.",
+    "approach": "MAX where salary < (SELECT MAX(salary)) or DENSE_RANK = 2.",
+    "solution": "SELECT MAX(salary) AS SecondHighestSalary\nFROM Employee\nWHERE salary < (SELECT MAX(salary) FROM Employee);",
+    "leetcodeUrl": "https://leetcode.com/problems/second-highest-salary/",
+    "order": 16
+  },
+  {
+    "id": 177,
+    "slug": "nth-highest-salary",
+    "title": "Nth Highest Salary",
+    "difficulty": "medium",
+    "pattern": "ranking",
+    "mustDo": true,
+    "tables": [
+      "Employee"
+    ],
+    "summary": "Function returning Nth highest salary.",
+    "approach": "DENSE_RANK in subquery filtered to N.",
+    "solution": "-- LeetCode expects a function; core query:\nSELECT salary\nFROM (\n  SELECT salary, DENSE_RANK() OVER (ORDER BY salary DESC) AS rk\n  FROM Employee\n) x\nWHERE rk = @N;",
+    "leetcodeUrl": "https://leetcode.com/problems/nth-highest-salary/",
+    "order": 17
+  },
+  {
+    "id": 178,
+    "slug": "rank-scores",
+    "title": "Rank Scores",
+    "difficulty": "medium",
+    "pattern": "window",
+    "mustDo": true,
+    "tables": [
+      "Scores"
+    ],
+    "summary": "Rank scores with ties (gaps after ties).",
+    "approach": "RANK() OVER (ORDER BY score DESC).",
+    "solution": "SELECT score,\n  RANK() OVER (ORDER BY score DESC) AS rank\nFROM Scores;",
+    "leetcodeUrl": "https://leetcode.com/problems/rank-scores/",
+    "order": 18
+  },
+  {
+    "id": 180,
+    "slug": "consecutive-numbers",
+    "title": "Consecutive Numbers",
+    "difficulty": "medium",
+    "pattern": "consecutive",
+    "mustDo": true,
+    "tables": [
+      "Logs"
+    ],
+    "summary": "Numbers appearing at least three times in a row.",
+    "approach": "Self-join id+1 and id+2 with same num, or LAG window.",
+    "solution": "SELECT DISTINCT l1.num AS ConsecutiveNums\nFROM Logs l1\nJOIN Logs l2 ON l1.id = l2.id - 1 AND l1.num = l2.num\nJOIN Logs l3 ON l2.id = l3.id - 1 AND l2.num = l3.num;",
+    "leetcodeUrl": "https://leetcode.com/problems/consecutive-numbers/",
+    "order": 19
+  },
+  {
+    "id": 181,
+    "slug": "employees-earning-more-than-managers",
+    "title": "Employees Earning More Than Their Managers",
+    "difficulty": "easy",
+    "pattern": "self-join",
+    "mustDo": true,
+    "tables": [
+      "Employee"
+    ],
+    "summary": "Employees paid more than their direct manager.",
+    "approach": "Self-join employee to manager on managerId.",
+    "solution": "SELECT e1.name AS Employee\nFROM Employee e1\nJOIN Employee e2 ON e1.managerId = e2.id\nWHERE e1.salary > e2.salary;",
+    "leetcodeUrl": "https://leetcode.com/problems/employees-earning-more-than-managers/",
+    "order": 20
+  },
+  {
+    "id": 182,
+    "slug": "duplicate-emails",
+    "title": "Duplicate Emails",
+    "difficulty": "easy",
+    "pattern": "duplicate",
+    "mustDo": true,
+    "tables": [
+      "Person"
+    ],
+    "summary": "Emails that appear more than once.",
+    "approach": "GROUP BY email HAVING COUNT(*) > 1.",
+    "solution": "SELECT email\nFROM Person\nGROUP BY email\nHAVING COUNT(*) > 1;",
+    "leetcodeUrl": "https://leetcode.com/problems/duplicate-emails/",
+    "order": 21
+  },
+  {
+    "id": 183,
+    "slug": "customers-who-never-order",
+    "title": "Customers Who Never Order",
+    "difficulty": "easy",
+    "pattern": "anti-join",
+    "mustDo": true,
+    "tables": [
+      "Customers",
+      "Orders"
+    ],
+    "summary": "Customer names with no orders.",
+    "approach": "LEFT JOIN orders WHERE order id IS NULL, or NOT EXISTS.",
+    "solution": "SELECT c.name AS Customers\nFROM Customers c\nLEFT JOIN Orders o ON c.id = o.customerId\nWHERE o.id IS NULL;",
+    "leetcodeUrl": "https://leetcode.com/problems/customers-who-never-order/",
+    "order": 22
+  },
+  {
+    "id": 184,
+    "slug": "department-highest-salary",
+    "title": "Department Highest Salary",
+    "difficulty": "medium",
+    "pattern": "ranking",
+    "mustDo": true,
+    "tables": [
+      "Employee",
+      "Department"
+    ],
+    "summary": "Employee with max salary in each department.",
+    "approach": "Join dept, filter salary = MAX per department.",
+    "solution": "SELECT d.name AS Department, e.name AS Employee, e.salary\nFROM Employee e\nJOIN Department d ON e.departmentId = d.id\nWHERE e.salary = (\n  SELECT MAX(salary) FROM Employee e2\n  WHERE e2.departmentId = e.departmentId\n);",
+    "leetcodeUrl": "https://leetcode.com/problems/department-highest-salary/",
+    "order": 23
+  },
+  {
+    "id": 185,
+    "slug": "department-top-three-salaries",
+    "title": "Department Top Three Salaries",
+    "difficulty": "hard",
+    "pattern": "window",
+    "mustDo": true,
+    "tables": [
+      "Employee",
+      "Department"
+    ],
+    "summary": "Top 3 salaries per department (ties may yield more than 3).",
+    "approach": "DENSE_RANK partitioned by department ORDER BY salary DESC <= 3.",
+    "solution": "SELECT d.name AS Department, e.name AS Employee, e.salary\nFROM (\n  SELECT *, DENSE_RANK() OVER (\n    PARTITION BY departmentId ORDER BY salary DESC\n  ) AS dr\n  FROM Employee\n) e\nJOIN Department d ON e.departmentId = d.id\nWHERE e.dr <= 3;",
+    "leetcodeUrl": "https://leetcode.com/problems/department-top-three-salaries/",
+    "order": 24
+  },
+  {
+    "id": 196,
+    "slug": "delete-duplicate-emails",
+    "title": "Delete Duplicate Emails",
+    "difficulty": "easy",
+    "pattern": "duplicate",
+    "mustDo": true,
+    "tables": [
+      "Person"
+    ],
+    "summary": "Keep one row per email (lowest id).",
+    "approach": "DELETE where id not in min(id) per email group.",
+    "dialectNote": "LeetCode allows DELETE with subquery; test on their editor.",
+    "solution": "DELETE p1\nFROM Person p1\nJOIN Person p2\n  ON p1.email = p2.email AND p1.id > p2.id;",
+    "leetcodeUrl": "https://leetcode.com/problems/delete-duplicate-emails/",
+    "order": 25
+  },
+  {
+    "id": 511,
+    "slug": "game-play-analysis-i",
+    "title": "Game Play Analysis I",
+    "difficulty": "easy",
+    "pattern": "aggregation",
+    "mustDo": true,
+    "tables": [
+      "Activity"
+    ],
+    "summary": "First login date per player.",
+    "approach": "GROUP BY player_id, MIN(event_date).",
+    "solution": "SELECT player_id, MIN(event_date) AS first_login\nFROM Activity\nGROUP BY player_id;",
+    "leetcodeUrl": "https://leetcode.com/problems/game-play-analysis-i/",
+    "order": 26
+  },
+  {
+    "id": 512,
+    "slug": "game-play-analysis-ii",
+    "title": "Game Play Analysis II",
+    "difficulty": "easy",
+    "pattern": "date",
+    "mustDo": false,
+    "tables": [
+      "Activity"
+    ],
+    "summary": "Fraction of players who logged in on day 1 and day 2 after first login.",
+    "approach": "CTE first login, count day+1 logins / total players.",
+    "solution": "WITH first AS (\n  SELECT player_id, MIN(event_date) AS first_login\n  FROM Activity GROUP BY player_id\n)\nSELECT ROUND(\n  1.0 * SUM(CASE WHEN DATEDIFF(day, f.first_login, a.event_date) = 1 THEN 1 ELSE 0 END)\n  / COUNT(DISTINCT f.player_id), 2\n) AS fraction\nFROM first f\nLEFT JOIN Activity a ON f.player_id = a.player_id;",
+    "leetcodeUrl": "https://leetcode.com/problems/game-play-analysis-ii/",
+    "order": 27
+  },
+  {
+    "id": 534,
+    "slug": "game-play-analysis-iii",
+    "title": "Game Play Analysis III",
+    "difficulty": "hard",
+    "pattern": "consecutive",
+    "mustDo": true,
+    "tables": [
+      "Activity"
+    ],
+    "summary": "Players with login streak of at least 5 consecutive days.",
+    "approach": "Date minus row_number grouping (islands pattern).",
+    "solution": "WITH d AS (\n  SELECT player_id, event_date,\n    DATEADD(day, -ROW_NUMBER() OVER (\n      PARTITION BY player_id ORDER BY event_date\n    ), event_date) AS grp\n  FROM (SELECT DISTINCT player_id, event_date FROM Activity) x\n)\nSELECT DISTINCT player_id\nFROM d\nGROUP BY player_id, grp\nHAVING COUNT(*) >= 5;",
+    "leetcodeUrl": "https://leetcode.com/problems/game-play-analysis-iii/",
+    "order": 28
+  },
+  {
+    "id": 550,
+    "slug": "game-play-analysis-iv",
+    "title": "Game Play Analysis IV",
+    "difficulty": "medium",
+    "pattern": "date",
+    "mustDo": false,
+    "tables": [
+      "Activity"
+    ],
+    "summary": "Percentage of players active each day in first 7 days after install.",
+    "approach": "Self-join activity within 7-day window of first login.",
+    "solution": "WITH first AS (\n  SELECT player_id, MIN(event_date) AS install\n  FROM Activity GROUP BY player_id\n)\nSELECT a.event_date AS install_dt,\n  ROUND(100.0 * COUNT(DISTINCT b.player_id) / COUNT(DISTINCT a.player_id), 2) AS percentage\nFROM first a\nJOIN Activity b\n  ON a.player_id = b.player_id\n AND b.event_date BETWEEN a.install AND DATEADD(day, 6, a.install)\nGROUP BY a.event_date;",
+    "leetcodeUrl": "https://leetcode.com/problems/game-play-analysis-iv/",
+    "order": 29
+  },
+  {
+    "id": 570,
+    "slug": "managers-with-at-least-5-direct-reports",
+    "title": "Managers with At Least 5 Direct Reports",
+    "difficulty": "medium",
+    "pattern": "aggregation",
+    "mustDo": true,
+    "tables": [
+      "Employee"
+    ],
+    "summary": "Manager names with 5+ direct reports.",
+    "approach": "GROUP BY managerId HAVING COUNT >= 5, join for name.",
+    "solution": "SELECT e2.name\nFROM Employee e1\nJOIN Employee e2 ON e1.managerId = e2.id\nGROUP BY e2.id, e2.name\nHAVING COUNT(*) >= 5;",
+    "leetcodeUrl": "https://leetcode.com/problems/managers-with-at-least-5-direct-reports/",
+    "order": 30
+  },
+  {
+    "id": 571,
+    "slug": "find-median-given-frequency-of-numbers",
+    "title": "Find Median Given Frequency of Numbers",
+    "difficulty": "hard",
+    "pattern": "window",
+    "mustDo": false,
+    "tables": [
+      "Numbers"
+    ],
+    "summary": "Median from frequency table.",
+    "approach": "Running sum window to find middle position.",
+    "solution": "WITH expanded AS (\n  SELECT num FROM Numbers\n  -- expand by frequency in practice; LC schema uses freq column\n),\nranked AS (\n  SELECT num, ROW_NUMBER() OVER (ORDER BY num) AS rn,\n    COUNT(*) OVER () AS cnt\n  FROM expanded\n)\nSELECT AVG(1.0 * num) AS median\nFROM ranked\nWHERE rn IN ((cnt + 1) / 2, (cnt + 2) / 2);",
+    "leetcodeUrl": "https://leetcode.com/problems/find-median-given-frequency-of-numbers/",
+    "order": 31
+  },
+  {
+    "id": 603,
+    "slug": "consecutive-available-seats",
+    "title": "Consecutive Available Seats",
+    "difficulty": "medium",
+    "pattern": "consecutive",
+    "mustDo": true,
+    "tables": [
+      "Cinema"
+    ],
+    "summary": "Seat ids that are free and next to another free seat.",
+    "approach": "Self-join on seat id difference 1 with both free.",
+    "solution": "SELECT DISTINCT c1.seat_id\nFROM Cinema c1\nJOIN Cinema c2\n  ON ABS(c1.seat_id - c2.seat_id) = 1\n AND c1.free = 1 AND c2.free = 1\nORDER BY c1.seat_id;",
+    "leetcodeUrl": "https://leetcode.com/problems/consecutive-available-seats/",
+    "order": 32
+  },
+  {
+    "id": 607,
+    "slug": "sales-person",
+    "title": "Sales Person",
+    "difficulty": "easy",
+    "pattern": "anti-join",
+    "mustDo": true,
+    "tables": [
+      "SalesPerson",
+      "Orders",
+      "Company"
+    ],
+    "summary": "Salespeople with no orders for RED company.",
+    "approach": "NOT EXISTS orders linked to RED company.",
+    "solution": "SELECT s.name\nFROM SalesPerson s\nWHERE NOT EXISTS (\n  SELECT 1\n  FROM Orders o\n  JOIN Company c ON o.company_id = c.com_id\n  WHERE o.sales_id = s.sales_id AND c.name = 'RED'\n);",
+    "leetcodeUrl": "https://leetcode.com/problems/sales-person/",
+    "order": 33
+  },
+  {
+    "id": 610,
+    "slug": "triangle-judgement",
+    "title": "Triangle Judgement",
+    "difficulty": "easy",
+    "pattern": "filtering",
+    "mustDo": false,
+    "tables": [
+      "Triangle"
+    ],
+    "summary": "Rows where x+y>z, x+z>y, y+z>x.",
+    "approach": "Three inequality checks in WHERE.",
+    "solution": "SELECT x, y, z\nFROM Triangle\nWHERE x + y > z AND x + z > y AND y + z > x;",
+    "leetcodeUrl": "https://leetcode.com/problems/triangle-judgement/",
+    "order": 34
+  },
+  {
+    "id": 612,
+    "slug": "shortest-distance-in-a-plane",
+    "title": "Shortest Distance in a Plane",
+    "difficulty": "medium",
+    "pattern": "self-join",
+    "mustDo": false,
+    "tables": [
+      "Point2D"
+    ],
+    "summary": "Minimum Euclidean distance between any two points.",
+    "approach": "Self-join all pairs, compute distance, MIN.",
+    "solution": "SELECT ROUND(MIN(SQRT(POWER(p1.x - p2.x, 2) + POWER(p1.y - p2.y, 2))), 2) AS shortest\nFROM Point2D p1\nJOIN Point2D p2\n  ON (p1.x <> p2.x OR p1.y <> p2.y);",
+    "leetcodeUrl": "https://leetcode.com/problems/shortest-distance-in-a-plane/",
+    "order": 35
+  },
+  {
+    "id": 614,
+    "slug": "second-degree-follower",
+    "title": "Second Degree Follower",
+    "difficulty": "medium",
+    "pattern": "join",
+    "mustDo": false,
+    "tables": [
+      "Follow"
+    ],
+    "summary": "Users followed by someone you follow.",
+    "approach": "Join Follow to itself on followee/follower chain.",
+    "solution": "SELECT DISTINCT f1.follower\nFROM Follow f1\nJOIN Follow f2 ON f1.followee = f2.follower;",
+    "leetcodeUrl": "https://leetcode.com/problems/second-degree-follower/",
+    "order": 36
+  },
+  {
+    "id": 626,
+    "slug": "exchange-seats",
+    "title": "Exchange Seats",
+    "difficulty": "medium",
+    "pattern": "reporting",
+    "mustDo": true,
+    "tables": [
+      "Seat"
+    ],
+    "summary": "Swap adjacent seat ids; last stays if odd count.",
+    "approach": "CASE on id parity with neighbor id.",
+    "solution": "SELECT\n  CASE\n    WHEN id = (SELECT MAX(id) FROM Seat) AND id % 2 = 1 THEN id\n    WHEN id % 2 = 1 THEN id + 1\n    ELSE id - 1\n  END AS id,\n  student\nFROM Seat\nORDER BY id;",
+    "leetcodeUrl": "https://leetcode.com/problems/exchange-seats/",
+    "order": 37
+  },
+  {
+    "id": 1045,
+    "slug": "customers-who-bought-all-products",
+    "title": "Customers Who Bought All Products",
+    "difficulty": "medium",
+    "pattern": "aggregation",
+    "mustDo": true,
+    "tables": [
+      "Customer",
+      "Product"
+    ],
+    "summary": "Customers who purchased every product in catalog.",
+    "approach": "GROUP BY customer HAVING COUNT(DISTINCT product) = total products.",
+    "solution": "SELECT customer_id\nFROM Customer\nGROUP BY customer_id\nHAVING COUNT(DISTINCT product_key) = (SELECT COUNT(*) FROM Product);",
+    "leetcodeUrl": "https://leetcode.com/problems/customers-who-bought-all-products/",
+    "order": 38
+  },
+  {
+    "id": 1050,
+    "slug": "actors-and-directors-cooperated-three-times",
+    "title": "Actors and Directors Who Cooperated At Least Three Times",
+    "difficulty": "easy",
+    "pattern": "aggregation",
+    "mustDo": false,
+    "tables": [
+      "ActorDirector"
+    ],
+    "summary": "Pairs with 3+ joint movies.",
+    "approach": "GROUP BY actor, director HAVING COUNT >= 3.",
+    "solution": "SELECT actor_id, director_id\nFROM ActorDirector\nGROUP BY actor_id, director_id\nHAVING COUNT(*) >= 3;",
+    "leetcodeUrl": "https://leetcode.com/problems/actors-and-directors-cooperated-three-times/",
+    "order": 39
+  },
+  {
+    "id": 1070,
+    "slug": "product-sales-analysis-ii",
+    "title": "Product Sales Analysis II",
+    "difficulty": "easy",
+    "pattern": "aggregation",
+    "mustDo": false,
+    "tables": [
+      "Sales",
+      "Product"
+    ],
+    "summary": "Total sales quantity per product (no sales = 0).",
+    "approach": "LEFT JOIN product to sales, SUM quantity.",
+    "solution": "SELECT p.product_name, ISNULL(SUM(s.quantity), 0) AS total\nFROM Product p\nLEFT JOIN Sales s ON p.product_id = s.product_id\nGROUP BY p.product_name;",
+    "leetcodeUrl": "https://leetcode.com/problems/product-sales-analysis-ii/",
+    "order": 40
+  },
+  {
+    "id": 1076,
+    "slug": "project-employees-ii",
+    "title": "Project Employees II",
+    "difficulty": "easy",
+    "pattern": "ranking",
+    "mustDo": false,
+    "tables": [
+      "Project",
+      "Employee"
+    ],
+    "summary": "Most experienced employee per project (ties \u2192 lowest id).",
+    "approach": "ROW_NUMBER by experience DESC, employee_id ASC per project.",
+    "solution": "SELECT project_id, employee_id\nFROM (\n  SELECT p.project_id, p.employee_id,\n    ROW_NUMBER() OVER (\n      PARTITION BY p.project_id\n      ORDER BY e.experience_years DESC, p.employee_id\n    ) AS rn\n  FROM Project p\n  JOIN Employee e ON p.employee_id = e.employee_id\n) x\nWHERE rn = 1;",
+    "leetcodeUrl": "https://leetcode.com/problems/project-employees-ii/",
+    "order": 41
+  },
+  {
+    "id": 1082,
+    "slug": "sales-analysis-i",
+    "title": "Sales Analysis I",
+    "difficulty": "easy",
+    "pattern": "filtering",
+    "mustDo": false,
+    "tables": [
+      "Product",
+      "Sales"
+    ],
+    "summary": "Products with no sales in 2018.",
+    "approach": "LEFT JOIN 2018 sales, filter NULL.",
+    "solution": "SELECT p.product_id, p.product_name\nFROM Product p\nLEFT JOIN Sales s\n  ON p.product_id = s.product_id AND s.year = 2018\nWHERE s.product_id IS NULL;",
+    "leetcodeUrl": "https://leetcode.com/problems/sales-analysis-i/",
+    "order": 42
+  },
+  {
+    "id": 1083,
+    "slug": "sales-analysis-ii",
+    "title": "Sales Analysis II",
+    "difficulty": "easy",
+    "pattern": "aggregation",
+    "mustDo": false,
+    "tables": [
+      "Product",
+      "Sales"
+    ],
+    "summary": "Products with sales in both 2018 and 2019.",
+    "approach": "GROUP BY product HAVING both years in set.",
+    "solution": "SELECT p.product_id, p.product_name\nFROM Sales s\nJOIN Product p ON s.product_id = p.product_id\nGROUP BY p.product_id, p.product_name\nHAVING SUM(CASE WHEN s.year = 2018 THEN 1 ELSE 0 END) > 0\n   AND SUM(CASE WHEN s.year = 2019 THEN 1 ELSE 0 END) > 0;",
+    "leetcodeUrl": "https://leetcode.com/problems/sales-analysis-ii/",
+    "order": 43
+  },
+  {
+    "id": 1112,
+    "slug": "highest-grade-for-each-student",
+    "title": "Highest Grade For Each Student",
+    "difficulty": "medium",
+    "pattern": "ranking",
+    "mustDo": true,
+    "tables": [
+      "Enrollments"
+    ],
+    "summary": "One row per student with their max grade (ties \u2192 lowest course).",
+    "approach": "ROW_NUMBER partition student order grade desc, course asc.",
+    "solution": "SELECT student_id, course_id, grade\nFROM (\n  SELECT *, ROW_NUMBER() OVER (\n    PARTITION BY student_id ORDER BY grade DESC, course_id\n  ) AS rn\n  FROM Enrollments\n) x\nWHERE rn = 1;",
+    "leetcodeUrl": "https://leetcode.com/problems/highest-grade-for-each-student/",
+    "order": 44
+  },
+  {
+    "id": 1141,
+    "slug": "user-activity-for-the-past-30-days-i",
+    "title": "User Activity for the Past 30 Days I",
+    "difficulty": "easy",
+    "pattern": "date",
+    "mustDo": false,
+    "tables": [
+      "Activity"
+    ],
+    "summary": "Daily active user count for last 30 days.",
+    "approach": "Filter activity_date window, GROUP BY day.",
+    "solution": "SELECT activity_date AS day, COUNT(DISTINCT user_id) AS active_users\nFROM Activity\nWHERE activity_date > DATEADD(day, -30, '2019-07-27')\nGROUP BY activity_date;",
+    "leetcodeUrl": "https://leetcode.com/problems/user-activity-for-the-past-30-days-i/",
+    "order": 45
+  },
+  {
+    "id": 1158,
+    "slug": "market-analysis-i",
+    "title": "Market Analysis I",
+    "difficulty": "medium",
+    "pattern": "join",
+    "mustDo": false,
+    "tables": [
+      "Users",
+      "Orders",
+      "Items"
+    ],
+    "summary": "Buyers in 2019 with no approve return in 2019.",
+    "approach": "Join users/orders/items, filter year and return flag.",
+    "solution": "SELECT u.user_id AS buyer_id, u.join_date\nFROM Users u\nJOIN Orders o ON u.user_id = o.buyer_id\nJOIN Items i ON o.order_id = i.order_id\nWHERE YEAR(o.order_date) = 2019 AND i.item_id IS NOT NULL\nGROUP BY u.user_id, u.join_date\nHAVING SUM(CASE WHEN i.is_return = 'approved' THEN 1 ELSE 0 END) = 0;",
+    "leetcodeUrl": "https://leetcode.com/problems/market-analysis-i/",
+    "order": 46
+  },
+  {
+    "id": 1164,
+    "slug": "product-price-at-a-given-date",
+    "title": "Product Price at a Given Date",
+    "difficulty": "medium",
+    "pattern": "window",
+    "mustDo": true,
+    "tables": [
+      "Products"
+    ],
+    "summary": "Latest price per product on or before 2019-08-16.",
+    "approach": "ROW_NUMBER partition product order change_date desc, filter date.",
+    "solution": "SELECT product_id, new_price AS price\nFROM (\n  SELECT product_id, new_price,\n    ROW_NUMBER() OVER (\n      PARTITION BY product_id ORDER BY change_date DESC\n    ) AS rn\n  FROM Products\n  WHERE change_date <= '2019-08-16'\n) x\nWHERE rn = 1;",
+    "leetcodeUrl": "https://leetcode.com/problems/product-price-at-a-given-date/",
+    "order": 47
+  },
+  {
+    "id": 1174,
+    "slug": "immediate-food-delivery-ii",
+    "title": "Immediate Food Delivery II",
+    "difficulty": "medium",
+    "pattern": "aggregation",
+    "mustDo": false,
+    "tables": [
+      "Delivery"
+    ],
+    "summary": "Percentage of orders delivered immediately on first day.",
+    "approach": "AVG of case when order_date = customer_pref_delivery_date.",
+    "solution": "SELECT ROUND(100.0 * AVG(CASE WHEN order_date = customer_pref_delivery_date THEN 1.0 ELSE 0 END), 2) AS immediate_percentage\nFROM Delivery;",
+    "leetcodeUrl": "https://leetcode.com/problems/immediate-food-delivery-ii/",
+    "order": 48
+  },
+  {
+    "id": 1193,
+    "slug": "monthly-transactions-i",
+    "title": "Monthly Transactions I",
+    "difficulty": "medium",
+    "pattern": "reporting",
+    "mustDo": true,
+    "tables": [
+      "Transactions"
+    ],
+    "summary": "Monthly approved trans count, total, and chargebacks per country/month.",
+    "approach": "FORMAT month, conditional SUM for approved vs chargeback.",
+    "solution": "SELECT DATEFROMPARTS(YEAR(trans_date), MONTH(trans_date), 1) AS month,\n  country,\n  COUNT(CASE WHEN state = 'approved' THEN 1 END) AS approved_count,\n  SUM(CASE WHEN state = 'approved' THEN amount ELSE 0 END) AS approved_total,\n  SUM(CASE WHEN state = 'chargeback' THEN amount ELSE 0 END) AS chargeback_total\nFROM Transactions\nGROUP BY YEAR(trans_date), MONTH(trans_date), country;",
+    "leetcodeUrl": "https://leetcode.com/problems/monthly-transactions-i/",
+    "order": 49
+  },
+  {
+    "id": 1204,
+    "slug": "last-person-to-fit-on-bus",
+    "title": "Last Person to Fit in the Bus",
+    "difficulty": "medium",
+    "pattern": "window",
+    "mustDo": true,
+    "tables": [
+      "Queue"
+    ],
+    "summary": "Last person who boards without exceeding 1000 kg cumulative weight.",
+    "approach": "Running sum window, max turn where sum <= 1000.",
+    "solution": "SELECT person_name\nFROM (\n  SELECT person_name, turn,\n    SUM(weight) OVER (ORDER BY turn ROWS UNBOUNDED PRECEDING) AS running\n  FROM Queue\n) x\nWHERE running <= 1000\nORDER BY turn DESC\nOFFSET 0 ROWS FETCH NEXT 1 ROW ONLY;",
+    "leetcodeUrl": "https://leetcode.com/problems/last-person-to-fit-on-bus/",
+    "order": 50
+  }
+]

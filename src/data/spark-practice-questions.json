@@ -1,0 +1,1352 @@
+[
+  {
+    "id": 1,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Filter high amounts",
+    "body": "Return rows where `amount` > 1000.",
+    "solution": "from pyspark.sql import functions as F\n\ndef high_amounts(df):\n    return df.filter(F.col(\"amount\") > 1000)",
+    "anchor": "q-1"
+  },
+  {
+    "id": 2,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Select and rename",
+    "body": "Select `id`, `name` and rename `name` to `customer_name`.",
+    "solution": "from pyspark.sql import functions as F\n\ndef select_rename(df):\n    return df.select(\"id\", F.col(\"name\").alias(\"customer_name\"))",
+    "anchor": "q-2"
+  },
+  {
+    "id": 3,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Add total column",
+    "body": "Add column `total` = `qty` * `price`.",
+    "solution": "from pyspark.sql import functions as F\n\ndef add_total(df):\n    return df.withColumn(\"total\", F.col(\"qty\") * F.col(\"price\"))",
+    "anchor": "q-3"
+  },
+  {
+    "id": 4,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Drop null keys",
+    "body": "Remove rows where `order_id` is null.",
+    "solution": "from pyspark.sql import functions as F\n\ndef drop_null_keys(df):\n    return df.filter(F.col(\"order_id\").isNotNull())",
+    "anchor": "q-4"
+  },
+  {
+    "id": 5,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Cast id to string",
+    "body": "Cast `customer_id` to string type.",
+    "solution": "from pyspark.sql import functions as F\n\ndef cast_id(df):\n    return df.withColumn(\"customer_id\", F.col(\"customer_id\").cast(\"string\"))",
+    "anchor": "q-5"
+  },
+  {
+    "id": 6,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Group sum by region",
+    "body": "Total `sales` per `region`.",
+    "solution": "from pyspark.sql import functions as F\n\ndef sales_by_region(df):\n    return df.groupBy(\"region\").agg(F.sum(\"sales\").alias(\"total_sales\"))",
+    "anchor": "q-6"
+  },
+  {
+    "id": 7,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Distinct countries",
+    "body": "Return distinct `country` values.",
+    "solution": "from pyspark.sql import functions as F\n\ndef distinct_countries(df):\n    return df.select(\"country\").distinct()",
+    "anchor": "q-7"
+  },
+  {
+    "id": 8,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Fill null country",
+    "body": "Replace null `country` with 'UNK'.",
+    "solution": "def fill_country(df):\n    return df.fillna({\"country\": \"UNK\"})",
+    "anchor": "q-8"
+  },
+  {
+    "id": 9,
+    "tier": "medium",
+    "category": "transformations",
+    "title": "Conditional flag",
+    "body": "Add `is_premium` = 1 if `amount` >= 500 else 0.",
+    "solution": "from pyspark.sql import functions as F\n\ndef premium_flag(df):\n    return df.withColumn(\n        \"is_premium\",\n        F.when(F.col(\"amount\") >= 500, 1).otherwise(0)\n    )",
+    "anchor": "q-9"
+  },
+  {
+    "id": 10,
+    "tier": "medium",
+    "category": "nested",
+    "title": "Explode tags",
+    "body": "Explode array column `tags` into rows.",
+    "solution": "from pyspark.sql import functions as F\n\ndef explode_tags(df):\n    return df.select(\"id\", F.explode(\"tags\").alias(\"tag\"))",
+    "anchor": "q-10"
+  },
+  {
+    "id": 11,
+    "tier": "basic",
+    "category": "joins",
+    "title": "Inner join orders customers",
+    "body": "Inner join `orders` and `customers` on `customer_id`.",
+    "solution": "def join_orders_customers(orders, customers):\n    return orders.join(customers, on=\"customer_id\", how=\"inner\")",
+    "anchor": "q-11"
+  },
+  {
+    "id": 12,
+    "tier": "basic",
+    "category": "joins",
+    "title": "Left join enrich",
+    "body": "Left join `facts` with `dim` on `id`, keep all facts.",
+    "solution": "def left_enrich(facts, dim):\n    return facts.join(dim, facts.id == dim.id, \"left\")",
+    "anchor": "q-12"
+  },
+  {
+    "id": 13,
+    "tier": "medium",
+    "category": "joins",
+    "title": "Broadcast join",
+    "body": "Join large `facts` to small `lookup` using broadcast.",
+    "solution": "from pyspark.sql.functions import broadcast\n\ndef broadcast_join(facts, lookup):\n    return facts.join(broadcast(lookup), \"key\")",
+    "anchor": "q-13"
+  },
+  {
+    "id": 14,
+    "tier": "medium",
+    "category": "joins",
+    "title": "Anti join",
+    "body": "Rows in `all_customers` not in `active` on `id`.",
+    "solution": "def inactive_customers(all_customers, active):\n    return all_customers.join(active.select(\"id\"), \"id\", \"left_anti\")",
+    "anchor": "q-14"
+  },
+  {
+    "id": 15,
+    "tier": "medium",
+    "category": "joins",
+    "title": "Multi-key join",
+    "body": "Join on `region` and `product_id`.",
+    "solution": "def multi_join(a, b):\n    return a.join(b, [\"region\", \"product_id\"], \"inner\")",
+    "anchor": "q-15"
+  },
+  {
+    "id": 16,
+    "tier": "hard",
+    "category": "joins",
+    "title": "Semi join active customers",
+    "body": "Return customers who have at least one order (left semi join).",
+    "solution": "def active_customers(customers, orders):\n    return customers.join(orders, \"customer_id\", \"left_semi\")",
+    "anchor": "q-16"
+  },
+  {
+    "id": 17,
+    "tier": "basic",
+    "category": "window",
+    "title": "Row number dedupe",
+    "body": "Keep one row per `user_id` — latest by `ts` (row_number = 1).",
+    "solution": "from pyspark.sql import functions as F\nfrom pyspark.sql.window import Window\n\ndef dedupe_latest(df):\n    w = Window.partitionBy(\"user_id\").orderBy(F.col(\"ts\").desc())\n    return df.withColumn(\"rn\", F.row_number().over(w)).filter(F.col(\"rn\") == 1).drop(\"rn\")",
+    "anchor": "q-17"
+  },
+  {
+    "id": 18,
+    "tier": "medium",
+    "category": "window",
+    "title": "Running sum",
+    "body": "Running sum of `amount` per `account_id` ordered by `dt`.",
+    "solution": "from pyspark.sql import functions as F\nfrom pyspark.sql.window import Window\n\ndef running_sum(df):\n    w = Window.partitionBy(\"account_id\").orderBy(\"dt\").rowsBetween(Window.unboundedPreceding, 0)\n    return df.withColumn(\"running_total\", F.sum(\"amount\").over(w))",
+    "anchor": "q-18"
+  },
+  {
+    "id": 19,
+    "tier": "medium",
+    "category": "window",
+    "title": "Lag previous amount",
+    "body": "Previous `amount` per `user_id` ordered by `event_time`.",
+    "solution": "from pyspark.sql import functions as F\nfrom pyspark.sql.window import Window\n\ndef lag_amount(df):\n    w = Window.partitionBy(\"user_id\").orderBy(\"event_time\")\n    return df.withColumn(\"prev_amount\", F.lag(\"amount\", 1).over(w))",
+    "anchor": "q-19"
+  },
+  {
+    "id": 20,
+    "tier": "medium",
+    "category": "window",
+    "title": "Rank by revenue",
+    "body": "Dense rank `revenue` per `region` descending.",
+    "solution": "from pyspark.sql import functions as F\nfrom pyspark.sql.window import Window\n\ndef rank_revenue(df):\n    w = Window.partitionBy(\"region\").orderBy(F.col(\"revenue\").desc())\n    return df.withColumn(\"rev_rank\", F.dense_rank().over(w))",
+    "anchor": "q-20"
+  },
+  {
+    "id": 21,
+    "tier": "hard",
+    "category": "window",
+    "title": "7-day moving avg",
+    "body": "Moving average of `value` over last 7 rows per `sensor_id`.",
+    "solution": "from pyspark.sql import functions as F\nfrom pyspark.sql.window import Window\n\ndef moving_avg_7(df):\n    w = Window.partitionBy(\"sensor_id\").orderBy(\"ts\").rowsBetween(-6, 0)\n    return df.withColumn(\"ma7\", F.avg(\"value\").over(w))",
+    "anchor": "q-21"
+  },
+  {
+    "id": 22,
+    "tier": "hard",
+    "category": "window",
+    "title": "Lead next status",
+    "body": "Add `next_status` using `lead()` per `customer_id` ordered by `updated_at`.",
+    "solution": "from pyspark.sql import functions as F\nfrom pyspark.sql.window import Window\n\ndef lead_status(df):\n    w = Window.partitionBy(\"customer_id\").orderBy(\"updated_at\")\n    return df.withColumn(\"next_status\", F.lead(\"status\").over(w))",
+    "anchor": "q-22"
+  },
+  {
+    "id": 23,
+    "tier": "basic",
+    "category": "optimization",
+    "title": "Repartition before write",
+    "body": "Repartition to 10 files before write.",
+    "solution": "def repartition_write(df, path):\n    df.repartition(10).write.mode(\"overwrite\").parquet(path)",
+    "anchor": "q-23"
+  },
+  {
+    "id": 24,
+    "tier": "basic",
+    "category": "optimization",
+    "title": "Cache and use",
+    "body": "Cache `dim` and join twice to same fact.",
+    "solution": "def cache_dim_join(fact, dim):\n    dim_cached = dim.cache()\n    a = fact.join(dim_cached, \"id\")\n    b = fact.join(dim_cached, \"id\")\n    dim_cached.unpersist()\n    return a, b",
+    "anchor": "q-24"
+  },
+  {
+    "id": 25,
+    "tier": "medium",
+    "category": "optimization",
+    "title": "Partition prune filter",
+    "body": "Read only `dt = '2024-01-01'` partition from orders.",
+    "solution": "from pyspark.sql import functions as F\n\ndef read_partition(spark, base_path):\n    return spark.read.parquet(base_path).filter(F.col(\"dt\") == \"2024-01-01\")",
+    "anchor": "q-25"
+  },
+  {
+    "id": 26,
+    "tier": "medium",
+    "category": "optimization",
+    "title": "Coalesce output files",
+    "body": "Write with coalesce(4) to limit output files.",
+    "solution": "def write_coalesced(df, path):\n    df.coalesce(4).write.mode(\"overwrite\").parquet(path)",
+    "anchor": "q-26"
+  },
+  {
+    "id": 27,
+    "tier": "medium",
+    "category": "optimization",
+    "title": "Select columns early",
+    "body": "Project only needed columns before join.",
+    "solution": "def project_before_join(fact, dim):\n    return fact.select(\"id\", \"amount\").join(dim.select(\"id\", \"name\"), \"id\")",
+    "anchor": "q-27"
+  },
+  {
+    "id": 28,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Salt skewed key",
+    "body": "Add random salt column 0–9 for skewed join prep.",
+    "solution": "from pyspark.sql import functions as F\n\ndef salt_key(df):\n    return df.withColumn(\"salt\", (F.rand() * 10).cast(\"int\"))",
+    "anchor": "q-28"
+  },
+  {
+    "id": 29,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Enable AQE",
+    "body": "Set Spark conf to enable AQE and skew join.",
+    "solution": "def enable_aqe(spark):\n    spark.conf.set(\"spark.sql.adaptive.enabled\", \"true\")\n    spark.conf.set(\"spark.sql.adaptive.skewJoin.enabled\", \"true\")",
+    "anchor": "q-29"
+  },
+  {
+    "id": 30,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Dynamic partition overwrite",
+    "body": "Configure dynamic partition overwrite mode.",
+    "solution": "def enable_dynamic_overwrite(spark):\n    spark.conf.set(\"spark.sql.sources.partitionOverwriteMode\", \"dynamic\")",
+    "anchor": "q-30"
+  },
+  {
+    "id": 31,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: What is PySpark?",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **What is PySpark?** (Notes topic #1). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 1: What is PySpark?\ndef solve_what-is-pyspark(df):\n    # TODO: implement based on notes topic 1\n    return df",
+    "anchor": "q-31"
+  },
+  {
+    "id": 32,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: Apache Spark vs PySpark",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Apache Spark vs PySpark** (Notes topic #2). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 2: Apache Spark vs PySpark\ndef solve_apache-spark-vs-pyspark(df):\n    # TODO: implement based on notes topic 2\n    return df",
+    "anchor": "q-32"
+  },
+  {
+    "id": 33,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: Why use PySpark?",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Why use PySpark?** (Notes topic #3). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 3: Why use PySpark?\ndef solve_why-use-pyspark(df):\n    # TODO: implement based on notes topic 3\n    return df",
+    "anchor": "q-33"
+  },
+  {
+    "id": 34,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: Spark Architecture",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Spark Architecture** (Notes topic #4). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 4: Spark Architecture\ndef solve_spark-architecture(df):\n    # TODO: implement based on notes topic 4\n    return df",
+    "anchor": "q-34"
+  },
+  {
+    "id": 35,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: Driver",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Driver** (Notes topic #5). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 5: Driver\ndef solve_driver(df):\n    # TODO: implement based on notes topic 5\n    return df",
+    "anchor": "q-35"
+  },
+  {
+    "id": 36,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: Executors",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Executors** (Notes topic #6). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 6: Executors\ndef solve_executors(df):\n    # TODO: implement based on notes topic 6\n    return df",
+    "anchor": "q-36"
+  },
+  {
+    "id": 37,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: Cluster Manager",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Cluster Manager** (Notes topic #7). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 7: Cluster Manager\ndef solve_cluster-manager(df):\n    # TODO: implement based on notes topic 7\n    return df",
+    "anchor": "q-37"
+  },
+  {
+    "id": 38,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: SparkSession",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **SparkSession** (Notes topic #8). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 8: SparkSession\ndef solve_sparksession(df):\n    # TODO: implement based on notes topic 8\n    return df",
+    "anchor": "q-38"
+  },
+  {
+    "id": 39,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: SparkContext",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **SparkContext** (Notes topic #9). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 9: SparkContext\ndef solve_sparkcontext(df):\n    # TODO: implement based on notes topic 9\n    return df",
+    "anchor": "q-39"
+  },
+  {
+    "id": 40,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: RDD vs DataFrame",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **RDD vs DataFrame** (Notes topic #10). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 10: RDD vs DataFrame\ndef solve_rdd-vs-dataframe(df):\n    # TODO: implement based on notes topic 10\n    return df",
+    "anchor": "q-40"
+  },
+  {
+    "id": 41,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: What is a DataFrame?",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **What is a DataFrame?** (Notes topic #11). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 11: What is a DataFrame?\ndef solve_what-is-a-dataframe(df):\n    # TODO: implement based on notes topic 11\n    return df",
+    "anchor": "q-41"
+  },
+  {
+    "id": 42,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: Creating a DataFrame",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Creating a DataFrame** (Notes topic #12). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 12: Creating a DataFrame\ndef solve_creating-a-dataframe(df):\n    # TODO: implement based on notes topic 12\n    return df",
+    "anchor": "q-42"
+  },
+  {
+    "id": 43,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: Schema and Data Types",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Schema and Data Types** (Notes topic #13). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 13: Schema and Data Types\ndef solve_schema-and-data-types(df):\n    # TODO: implement based on notes topic 13\n    return df",
+    "anchor": "q-43"
+  },
+  {
+    "id": 44,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: `printSchema()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`printSchema()`** (Notes topic #14). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 14: `printSchema()`\ndef solve_printschema(df):\n    # TODO: implement based on notes topic 14\n    return df",
+    "anchor": "q-44"
+  },
+  {
+    "id": 45,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: `show()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`show()`** (Notes topic #15). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 15: `show()`\ndef solve_show(df):\n    # TODO: implement based on notes topic 15\n    return df",
+    "anchor": "q-45"
+  },
+  {
+    "id": 46,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: `select()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`select()`** (Notes topic #16). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 16: `select()`\ndef solve_select(df):\n    # TODO: implement based on notes topic 16\n    return df",
+    "anchor": "q-46"
+  },
+  {
+    "id": 47,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: `filter()` / `where()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`filter()` / `where()`** (Notes topic #17). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 17: `filter()` / `where()`\ndef solve_filter-where(df):\n    # TODO: implement based on notes topic 17\n    return df",
+    "anchor": "q-47"
+  },
+  {
+    "id": 48,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: `withColumn()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`withColumn()`** (Notes topic #18). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 18: `withColumn()`\ndef solve_withcolumn(df):\n    # TODO: implement based on notes topic 18\n    return df",
+    "anchor": "q-48"
+  },
+  {
+    "id": 49,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: `drop()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`drop()`** (Notes topic #19). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 19: `drop()`\ndef solve_drop(df):\n    # TODO: implement based on notes topic 19\n    return df",
+    "anchor": "q-49"
+  },
+  {
+    "id": 50,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: `withColumnRenamed()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`withColumnRenamed()`** (Notes topic #20). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 20: `withColumnRenamed()`\ndef solve_withcolumnrenamed(df):\n    # TODO: implement based on notes topic 20\n    return df",
+    "anchor": "q-50"
+  },
+  {
+    "id": 51,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: `alias()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`alias()`** (Notes topic #21). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 21: `alias()`\ndef solve_alias(df):\n    # TODO: implement based on notes topic 21\n    return df",
+    "anchor": "q-51"
+  },
+  {
+    "id": 52,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: `lit()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`lit()`** (Notes topic #22). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 22: `lit()`\ndef solve_lit(df):\n    # TODO: implement based on notes topic 22\n    return df",
+    "anchor": "q-52"
+  },
+  {
+    "id": 53,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: `cast()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`cast()`** (Notes topic #23). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 23: `cast()`\ndef solve_cast(df):\n    # TODO: implement based on notes topic 23\n    return df",
+    "anchor": "q-53"
+  },
+  {
+    "id": 54,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: `when()` / `otherwise()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`when()` / `otherwise()`** (Notes topic #24). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 24: `when()` / `otherwise()`\ndef solve_when-otherwise(df):\n    # TODO: implement based on notes topic 24\n    return df",
+    "anchor": "q-54"
+  },
+  {
+    "id": 55,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: `distinct()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`distinct()`** (Notes topic #25). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 25: `distinct()`\ndef solve_distinct(df):\n    # TODO: implement based on notes topic 25\n    return df",
+    "anchor": "q-55"
+  },
+  {
+    "id": 56,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: `dropDuplicates()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`dropDuplicates()`** (Notes topic #26). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 26: `dropDuplicates()`\ndef solve_dropduplicates(df):\n    # TODO: implement based on notes topic 26\n    return df",
+    "anchor": "q-56"
+  },
+  {
+    "id": 57,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: `orderBy()` / `sort()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`orderBy()` / `sort()`** (Notes topic #27). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 27: `orderBy()` / `sort()`\ndef solve_orderby-sort(df):\n    # TODO: implement based on notes topic 27\n    return df",
+    "anchor": "q-57"
+  },
+  {
+    "id": 58,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: `groupBy()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`groupBy()`** (Notes topic #28). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 28: `groupBy()`\ndef solve_groupby(df):\n    # TODO: implement based on notes topic 28\n    return df",
+    "anchor": "q-58"
+  },
+  {
+    "id": 59,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: Aggregations",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Aggregations** (Notes topic #29). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 29: Aggregations\ndef solve_aggregations(df):\n    # TODO: implement based on notes topic 29\n    return df",
+    "anchor": "q-59"
+  },
+  {
+    "id": 60,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: `countDistinct()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`countDistinct()`** (Notes topic #30). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 30: `countDistinct()`\ndef solve_countdistinct(df):\n    # TODO: implement based on notes topic 30\n    return df",
+    "anchor": "q-60"
+  },
+  {
+    "id": 61,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: Null Handling",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Null Handling** (Notes topic #31). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 31: Null Handling\ndef solve_null-handling(df):\n    # TODO: implement based on notes topic 31\n    return df",
+    "anchor": "q-61"
+  },
+  {
+    "id": 62,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: String Functions",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **String Functions** (Notes topic #32). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 32: String Functions\ndef solve_string-functions(df):\n    # TODO: implement based on notes topic 32\n    return df",
+    "anchor": "q-62"
+  },
+  {
+    "id": 63,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: Date & Timestamp Functions",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Date & Timestamp Functions** (Notes topic #33). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 33: Date & Timestamp Functions\ndef solve_date-timestamp-functions(df):\n    # TODO: implement based on notes topic 33\n    return df",
+    "anchor": "q-63"
+  },
+  {
+    "id": 64,
+    "tier": "basic",
+    "category": "nested",
+    "title": "Apply: Reading CSV / JSON / Parquet",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Reading CSV / JSON / Parquet** (Notes topic #34). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 34: Reading CSV / JSON / Parquet\ndef solve_reading-csv-json-parquet(df):\n    # TODO: implement based on notes topic 34\n    return df",
+    "anchor": "q-64"
+  },
+  {
+    "id": 65,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Apply: Writing DataFrames",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Writing DataFrames** (Notes topic #35). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 35: Writing DataFrames\ndef solve_writing-dataframes(df):\n    # TODO: implement based on notes topic 35\n    return df",
+    "anchor": "q-65"
+  },
+  {
+    "id": 66,
+    "tier": "medium",
+    "category": "joins",
+    "title": "Apply: Joins in PySpark",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Joins in PySpark** (Notes topic #36). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 36: Joins in PySpark\ndef solve_joins-in-pyspark(df):\n    # TODO: implement based on notes topic 36\n    return df",
+    "anchor": "q-66"
+  },
+  {
+    "id": 67,
+    "tier": "medium",
+    "category": "joins",
+    "title": "Apply: Inner Join",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Inner Join** (Notes topic #37). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 37: Inner Join\ndef solve_inner-join(df):\n    # TODO: implement based on notes topic 37\n    return df",
+    "anchor": "q-67"
+  },
+  {
+    "id": 68,
+    "tier": "medium",
+    "category": "joins",
+    "title": "Apply: Left / Right / Full Join",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Left / Right / Full Join** (Notes topic #38). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 38: Left / Right / Full Join\ndef solve_left-right-full-join(df):\n    # TODO: implement based on notes topic 38\n    return df",
+    "anchor": "q-68"
+  },
+  {
+    "id": 69,
+    "tier": "medium",
+    "category": "joins",
+    "title": "Apply: Semi Join",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Semi Join** (Notes topic #39). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 39: Semi Join\ndef solve_semi-join(df):\n    # TODO: implement based on notes topic 39\n    return df",
+    "anchor": "q-69"
+  },
+  {
+    "id": 70,
+    "tier": "medium",
+    "category": "joins",
+    "title": "Apply: Anti Join",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Anti Join** (Notes topic #40). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 40: Anti Join\ndef solve_anti-join(df):\n    # TODO: implement based on notes topic 40\n    return df",
+    "anchor": "q-70"
+  },
+  {
+    "id": 71,
+    "tier": "medium",
+    "category": "joins",
+    "title": "Apply: Cross Join",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Cross Join** (Notes topic #41). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 41: Cross Join\ndef solve_cross-join(df):\n    # TODO: implement based on notes topic 41\n    return df",
+    "anchor": "q-71"
+  },
+  {
+    "id": 72,
+    "tier": "medium",
+    "category": "joins",
+    "title": "Apply: Multiple-column joins",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Multiple-column joins** (Notes topic #42). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 42: Multiple-column joins\ndef solve_multiple-column-joins(df):\n    # TODO: implement based on notes topic 42\n    return df",
+    "anchor": "q-72"
+  },
+  {
+    "id": 73,
+    "tier": "medium",
+    "category": "joins",
+    "title": "Apply: Join with different column names",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Join with different column names** (Notes topic #43). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 43: Join with different column names\ndef solve_join-with-different-column-names(df):\n    # TODO: implement based on notes topic 43\n    return df",
+    "anchor": "q-73"
+  },
+  {
+    "id": 74,
+    "tier": "medium",
+    "category": "transformations",
+    "title": "Apply: `groupBy().agg()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`groupBy().agg()`** (Notes topic #44). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 44: `groupBy().agg()`\ndef solve_groupby-agg(df):\n    # TODO: implement based on notes topic 44\n    return df",
+    "anchor": "q-74"
+  },
+  {
+    "id": 75,
+    "tier": "medium",
+    "category": "transformations",
+    "title": "Apply: Multiple aggregations",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Multiple aggregations** (Notes topic #45). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 45: Multiple aggregations\ndef solve_multiple-aggregations(df):\n    # TODO: implement based on notes topic 45\n    return df",
+    "anchor": "q-75"
+  },
+  {
+    "id": 76,
+    "tier": "medium",
+    "category": "transformations",
+    "title": "Apply: `collect_list()` / `collect_set()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`collect_list()` / `collect_set()`** (Notes topic #46). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 46: `collect_list()` / `collect_set()`\ndef solve_collect-list-collect-set(df):\n    # TODO: implement based on notes topic 46\n    return df",
+    "anchor": "q-76"
+  },
+  {
+    "id": 77,
+    "tier": "medium",
+    "category": "nested",
+    "title": "Apply: `explode()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`explode()`** (Notes topic #47). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 47: `explode()`\ndef solve_explode(df):\n    # TODO: implement based on notes topic 47\n    return df",
+    "anchor": "q-77"
+  },
+  {
+    "id": 78,
+    "tier": "medium",
+    "category": "nested",
+    "title": "Apply: Array and Struct Operations",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Array and Struct Operations** (Notes topic #48). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 48: Array and Struct Operations\ndef solve_array-and-struct-operations(df):\n    # TODO: implement based on notes topic 48\n    return df",
+    "anchor": "q-78"
+  },
+  {
+    "id": 79,
+    "tier": "medium",
+    "category": "nested",
+    "title": "Apply: Nested JSON processing",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Nested JSON processing** (Notes topic #49). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 49: Nested JSON processing\ndef solve_nested-json-processing(df):\n    # TODO: implement based on notes topic 49\n    return df",
+    "anchor": "q-79"
+  },
+  {
+    "id": 80,
+    "tier": "medium",
+    "category": "transformations",
+    "title": "Apply: `spark.sql()` and Spark SQL",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`spark.sql()` and Spark SQL** (Notes topic #50). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 50: `spark.sql()` and Spark SQL\ndef solve_spark-sql-and-spark-sql(df):\n    # TODO: implement based on notes topic 50\n    return df",
+    "anchor": "q-80"
+  },
+  {
+    "id": 81,
+    "tier": "medium",
+    "category": "window",
+    "title": "Apply: Window Functions",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Window Functions** (Notes topic #51). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 51: Window Functions\ndef solve_window-functions(df):\n    # TODO: implement based on notes topic 51\n    return df",
+    "anchor": "q-81"
+  },
+  {
+    "id": 82,
+    "tier": "medium",
+    "category": "window",
+    "title": "Apply: `row_number()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`row_number()`** (Notes topic #52). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 52: `row_number()`\ndef solve_row-number(df):\n    # TODO: implement based on notes topic 52\n    return df",
+    "anchor": "q-82"
+  },
+  {
+    "id": 83,
+    "tier": "medium",
+    "category": "window",
+    "title": "Apply: `rank()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`rank()`** (Notes topic #53). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 53: `rank()`\ndef solve_rank(df):\n    # TODO: implement based on notes topic 53\n    return df",
+    "anchor": "q-83"
+  },
+  {
+    "id": 84,
+    "tier": "medium",
+    "category": "window",
+    "title": "Apply: `dense_rank()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`dense_rank()`** (Notes topic #54). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 54: `dense_rank()`\ndef solve_dense-rank(df):\n    # TODO: implement based on notes topic 54\n    return df",
+    "anchor": "q-84"
+  },
+  {
+    "id": 85,
+    "tier": "medium",
+    "category": "window",
+    "title": "Apply: `lag()` / `lead()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`lag()` / `lead()`** (Notes topic #55). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 55: `lag()` / `lead()`\ndef solve_lag-lead(df):\n    # TODO: implement based on notes topic 55\n    return df",
+    "anchor": "q-85"
+  },
+  {
+    "id": 86,
+    "tier": "medium",
+    "category": "window",
+    "title": "Apply: Running Totals",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Running Totals** (Notes topic #56). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 56: Running Totals\ndef solve_running-totals(df):\n    # TODO: implement based on notes topic 56\n    return df",
+    "anchor": "q-86"
+  },
+  {
+    "id": 87,
+    "tier": "medium",
+    "category": "window",
+    "title": "Apply: Window `partitionBy()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Window `partitionBy()`** (Notes topic #57). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 57: Window `partitionBy()`\ndef solve_window-partitionby(df):\n    # TODO: implement based on notes topic 57\n    return df",
+    "anchor": "q-87"
+  },
+  {
+    "id": 88,
+    "tier": "medium",
+    "category": "window",
+    "title": "Apply: Window `orderBy()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Window `orderBy()`** (Notes topic #58). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 58: Window `orderBy()`\ndef solve_window-orderby(df):\n    # TODO: implement based on notes topic 58\n    return df",
+    "anchor": "q-88"
+  },
+  {
+    "id": 89,
+    "tier": "medium",
+    "category": "transformations",
+    "title": "Apply: Transformation vs Action",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Transformation vs Action** (Notes topic #59). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 59: Transformation vs Action\ndef solve_transformation-vs-action(df):\n    # TODO: implement based on notes topic 59\n    return df",
+    "anchor": "q-89"
+  },
+  {
+    "id": 90,
+    "tier": "medium",
+    "category": "transformations",
+    "title": "Apply: Lazy Evaluation",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Lazy Evaluation** (Notes topic #60). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 60: Lazy Evaluation\ndef solve_lazy-evaluation(df):\n    # TODO: implement based on notes topic 60\n    return df",
+    "anchor": "q-90"
+  },
+  {
+    "id": 91,
+    "tier": "medium",
+    "category": "transformations",
+    "title": "Apply: Narrow Transformation",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Narrow Transformation** (Notes topic #61). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 61: Narrow Transformation\ndef solve_narrow-transformation(df):\n    # TODO: implement based on notes topic 61\n    return df",
+    "anchor": "q-91"
+  },
+  {
+    "id": 92,
+    "tier": "medium",
+    "category": "transformations",
+    "title": "Apply: Wide Transformation",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Wide Transformation** (Notes topic #62). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 62: Wide Transformation\ndef solve_wide-transformation(df):\n    # TODO: implement based on notes topic 62\n    return df",
+    "anchor": "q-92"
+  },
+  {
+    "id": 93,
+    "tier": "medium",
+    "category": "optimization",
+    "title": "Apply: Shuffle",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Shuffle** (Notes topic #63). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 63: Shuffle\ndef solve_shuffle(df):\n    # TODO: implement based on notes topic 63\n    return df",
+    "anchor": "q-93"
+  },
+  {
+    "id": 94,
+    "tier": "medium",
+    "category": "transformations",
+    "title": "Apply: DAG",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **DAG** (Notes topic #64). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 64: DAG\ndef solve_dag(df):\n    # TODO: implement based on notes topic 64\n    return df",
+    "anchor": "q-94"
+  },
+  {
+    "id": 95,
+    "tier": "medium",
+    "category": "transformations",
+    "title": "Apply: Job",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Job** (Notes topic #65). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 65: Job\ndef solve_job(df):\n    # TODO: implement based on notes topic 65\n    return df",
+    "anchor": "q-95"
+  },
+  {
+    "id": 96,
+    "tier": "medium",
+    "category": "transformations",
+    "title": "Apply: Stage",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Stage** (Notes topic #66). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 66: Stage\ndef solve_stage(df):\n    # TODO: implement based on notes topic 66\n    return df",
+    "anchor": "q-96"
+  },
+  {
+    "id": 97,
+    "tier": "medium",
+    "category": "transformations",
+    "title": "Apply: Task",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Task** (Notes topic #67). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 67: Task\ndef solve_task(df):\n    # TODO: implement based on notes topic 67\n    return df",
+    "anchor": "q-97"
+  },
+  {
+    "id": 98,
+    "tier": "medium",
+    "category": "transformations",
+    "title": "Apply: Lineage",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Lineage** (Notes topic #68). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 68: Lineage\ndef solve_lineage(df):\n    # TODO: implement based on notes topic 68\n    return df",
+    "anchor": "q-98"
+  },
+  {
+    "id": 99,
+    "tier": "medium",
+    "category": "optimization",
+    "title": "Apply: What is a Partition?",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **What is a Partition?** (Notes topic #69). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 69: What is a Partition?\ndef solve_what-is-a-partition(df):\n    # TODO: implement based on notes topic 69\n    return df",
+    "anchor": "q-99"
+  },
+  {
+    "id": 100,
+    "tier": "medium",
+    "category": "optimization",
+    "title": "Apply: `repartition()` vs `coalesce()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`repartition()` vs `coalesce()`** (Notes topic #70). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 70: `repartition()` vs `coalesce()`\ndef solve_repartition-vs-coalesce(df):\n    # TODO: implement based on notes topic 70\n    return df",
+    "anchor": "q-100"
+  },
+  {
+    "id": 101,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Apply: Number of Partitions",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Number of Partitions** (Notes topic #71). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 71: Number of Partitions\ndef solve_number-of-partitions(df):\n    # TODO: implement based on notes topic 71\n    return df",
+    "anchor": "q-101"
+  },
+  {
+    "id": 102,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Apply: `spark.sql.shuffle.partitions`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`spark.sql.shuffle.partitions`** (Notes topic #72). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 72: `spark.sql.shuffle.partitions`\ndef solve_spark-sql-shuffle-partitions(df):\n    # TODO: implement based on notes topic 72\n    return df",
+    "anchor": "q-102"
+  },
+  {
+    "id": 103,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Apply: Shuffle Read vs Shuffle Write",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Shuffle Read vs Shuffle Write** (Notes topic #73). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 73: Shuffle Read vs Shuffle Write\ndef solve_shuffle-read-vs-shuffle-write(df):\n    # TODO: implement based on notes topic 73\n    return df",
+    "anchor": "q-103"
+  },
+  {
+    "id": 104,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Apply: Partition Pruning",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Partition Pruning** (Notes topic #74). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 74: Partition Pruning\ndef solve_partition-pruning(df):\n    # TODO: implement based on notes topic 74\n    return df",
+    "anchor": "q-104"
+  },
+  {
+    "id": 105,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Apply: File Partitioning",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **File Partitioning** (Notes topic #75). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 75: File Partitioning\ndef solve_file-partitioning(df):\n    # TODO: implement based on notes topic 75\n    return df",
+    "anchor": "q-105"
+  },
+  {
+    "id": 106,
+    "tier": "hard",
+    "category": "transformations",
+    "title": "Apply: Small File Problem",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Small File Problem** (Notes topic #76). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 76: Small File Problem\ndef solve_small-file-problem(df):\n    # TODO: implement based on notes topic 76\n    return df",
+    "anchor": "q-106"
+  },
+  {
+    "id": 107,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Apply: Cache vs Persist",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Cache vs Persist** (Notes topic #77). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 77: Cache vs Persist\ndef solve_cache-vs-persist(df):\n    # TODO: implement based on notes topic 77\n    return df",
+    "anchor": "q-107"
+  },
+  {
+    "id": 108,
+    "tier": "hard",
+    "category": "joins",
+    "title": "Apply: Broadcast Join",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Broadcast Join** (Notes topic #78). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 78: Broadcast Join\ndef solve_broadcast-join(df):\n    # TODO: implement based on notes topic 78\n    return df",
+    "anchor": "q-108"
+  },
+  {
+    "id": 109,
+    "tier": "hard",
+    "category": "joins",
+    "title": "Apply: Join Strategies",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Join Strategies** (Notes topic #79). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 79: Join Strategies\ndef solve_join-strategies(df):\n    # TODO: implement based on notes topic 79\n    return df",
+    "anchor": "q-109"
+  },
+  {
+    "id": 110,
+    "tier": "hard",
+    "category": "joins",
+    "title": "Apply: Sort Merge Join",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Sort Merge Join** (Notes topic #80). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 80: Sort Merge Join\ndef solve_sort-merge-join(df):\n    # TODO: implement based on notes topic 80\n    return df",
+    "anchor": "q-110"
+  },
+  {
+    "id": 111,
+    "tier": "hard",
+    "category": "joins",
+    "title": "Apply: Broadcast Hash Join",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Broadcast Hash Join** (Notes topic #81). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 81: Broadcast Hash Join\ndef solve_broadcast-hash-join(df):\n    # TODO: implement based on notes topic 81\n    return df",
+    "anchor": "q-111"
+  },
+  {
+    "id": 112,
+    "tier": "hard",
+    "category": "joins",
+    "title": "Apply: Join Hints",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Join Hints** (Notes topic #82). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 82: Join Hints\ndef solve_join-hints(df):\n    # TODO: implement based on notes topic 82\n    return df",
+    "anchor": "q-112"
+  },
+  {
+    "id": 113,
+    "tier": "hard",
+    "category": "transformations",
+    "title": "Apply: Predicate Pushdown",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Predicate Pushdown** (Notes topic #83). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 83: Predicate Pushdown\ndef solve_predicate-pushdown(df):\n    # TODO: implement based on notes topic 83\n    return df",
+    "anchor": "q-113"
+  },
+  {
+    "id": 114,
+    "tier": "hard",
+    "category": "transformations",
+    "title": "Apply: Column Pruning",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Column Pruning** (Notes topic #84). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 84: Column Pruning\ndef solve_column-pruning(df):\n    # TODO: implement based on notes topic 84\n    return df",
+    "anchor": "q-114"
+  },
+  {
+    "id": 115,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Apply: Catalyst Optimizer",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Catalyst Optimizer** (Notes topic #85). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 85: Catalyst Optimizer\ndef solve_catalyst-optimizer(df):\n    # TODO: implement based on notes topic 85\n    return df",
+    "anchor": "q-115"
+  },
+  {
+    "id": 116,
+    "tier": "hard",
+    "category": "transformations",
+    "title": "Apply: Physical vs Logical Plan",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Physical vs Logical Plan** (Notes topic #86). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 86: Physical vs Logical Plan\ndef solve_physical-vs-logical-plan(df):\n    # TODO: implement based on notes topic 86\n    return df",
+    "anchor": "q-116"
+  },
+  {
+    "id": 117,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Apply: `explain()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`explain()`** (Notes topic #87). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 87: `explain()`\ndef solve_explain(df):\n    # TODO: implement based on notes topic 87\n    return df",
+    "anchor": "q-117"
+  },
+  {
+    "id": 118,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Apply: Adaptive Query Execution — AQE",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Adaptive Query Execution — AQE** (Notes topic #88). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 88: Adaptive Query Execution — AQE\ndef solve_adaptive-query-execution-aqe(df):\n    # TODO: implement based on notes topic 88\n    return df",
+    "anchor": "q-118"
+  },
+  {
+    "id": 119,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Apply: What is Data Skew?",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **What is Data Skew?** (Notes topic #89). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 89: What is Data Skew?\ndef solve_what-is-data-skew(df):\n    # TODO: implement based on notes topic 89\n    return df",
+    "anchor": "q-119"
+  },
+  {
+    "id": 120,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Apply: Detecting Data Skew",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Detecting Data Skew** (Notes topic #90). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 90: Detecting Data Skew\ndef solve_detecting-data-skew(df):\n    # TODO: implement based on notes topic 90\n    return df",
+    "anchor": "q-120"
+  },
+  {
+    "id": 121,
+    "tier": "hard",
+    "category": "transformations",
+    "title": "Apply: Hot Keys",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Hot Keys** (Notes topic #91). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 91: Hot Keys\ndef solve_hot-keys(df):\n    # TODO: implement based on notes topic 91\n    return df",
+    "anchor": "q-121"
+  },
+  {
+    "id": 122,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Apply: Salting",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Salting** (Notes topic #92). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 92: Salting\ndef solve_salting(df):\n    # TODO: implement based on notes topic 92\n    return df",
+    "anchor": "q-122"
+  },
+  {
+    "id": 123,
+    "tier": "hard",
+    "category": "joins",
+    "title": "Apply: Salting for Joins",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Salting for Joins** (Notes topic #93). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 93: Salting for Joins\ndef solve_salting-for-joins(df):\n    # TODO: implement based on notes topic 93\n    return df",
+    "anchor": "q-123"
+  },
+  {
+    "id": 124,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Apply: AQE Skew Handling",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **AQE Skew Handling** (Notes topic #94). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 94: AQE Skew Handling\ndef solve_aqe-skew-handling(df):\n    # TODO: implement based on notes topic 94\n    return df",
+    "anchor": "q-124"
+  },
+  {
+    "id": 125,
+    "tier": "hard",
+    "category": "transformations",
+    "title": "Apply: UDF vs Built-in Functions",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **UDF vs Built-in Functions** (Notes topic #95). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 95: UDF vs Built-in Functions\ndef solve_udf-vs-built-in-functions(df):\n    # TODO: implement based on notes topic 95\n    return df",
+    "anchor": "q-125"
+  },
+  {
+    "id": 126,
+    "tier": "hard",
+    "category": "transformations",
+    "title": "Apply: Pandas UDF / Vectorized UDF",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Pandas UDF / Vectorized UDF** (Notes topic #96). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 96: Pandas UDF / Vectorized UDF\ndef solve_pandas-udf-vectorized-udf(df):\n    # TODO: implement based on notes topic 96\n    return df",
+    "anchor": "q-126"
+  },
+  {
+    "id": 127,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Apply: `map()` vs `mapPartitions()`",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **`map()` vs `mapPartitions()`** (Notes topic #97). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 97: `map()` vs `mapPartitions()`\ndef solve_map-vs-mappartitions(df):\n    # TODO: implement based on notes topic 97\n    return df",
+    "anchor": "q-127"
+  },
+  {
+    "id": 128,
+    "tier": "hard",
+    "category": "optimization",
+    "title": "Apply: Driver OOM / Executor OOM / Spill",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Driver OOM / Executor OOM / Spill** (Notes topic #98). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 98: Driver OOM / Executor OOM / Spill\ndef solve_driver-oom-executor-oom-spill(df):\n    # TODO: implement based on notes topic 98\n    return df",
+    "anchor": "q-128"
+  },
+  {
+    "id": 129,
+    "tier": "hard",
+    "category": "transformations",
+    "title": "Apply: Incremental Processing, CDC, SCD & Upsert",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **Incremental Processing, CDC, SCD & Upsert** (Notes topic #99). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 99: Incremental Processing, CDC, SCD & Upsert\ndef solve_incremental-processing-cdc-scd-upsert(df):\n    # TODO: implement based on notes topic 99\n    return df",
+    "anchor": "q-129"
+  },
+  {
+    "id": 130,
+    "tier": "hard",
+    "category": "transformations",
+    "title": "Apply: End-to-End Production PySpark Pipeline & Optimization",
+    "body": "Given a PySpark DataFrame, implement a transformation related to **End-to-End Production PySpark Pipeline & Optimization** (Notes topic #100). Write clean PySpark code using DataFrame API.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 100: End-to-End Production PySpark Pipeline & Optimization\ndef solve_end-to-end-production-pyspark-pipeline-o(df):\n    # TODO: implement based on notes topic 100\n    return df",
+    "anchor": "q-130"
+  },
+  {
+    "id": 131,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: What is PySpark?",
+    "body": "Extended coding drill for **What is PySpark?** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 1: What is PySpark?\ndef solve_what-is-pyspark(df):\n    # TODO: implement based on notes topic 1\n    return df",
+    "anchor": "q-131"
+  },
+  {
+    "id": 132,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: Apache Spark vs PySpark",
+    "body": "Extended coding drill for **Apache Spark vs PySpark** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 2: Apache Spark vs PySpark\ndef solve_apache-spark-vs-pyspark(df):\n    # TODO: implement based on notes topic 2\n    return df",
+    "anchor": "q-132"
+  },
+  {
+    "id": 133,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: Why use PySpark?",
+    "body": "Extended coding drill for **Why use PySpark?** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 3: Why use PySpark?\ndef solve_why-use-pyspark(df):\n    # TODO: implement based on notes topic 3\n    return df",
+    "anchor": "q-133"
+  },
+  {
+    "id": 134,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: Spark Architecture",
+    "body": "Extended coding drill for **Spark Architecture** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 4: Spark Architecture\ndef solve_spark-architecture(df):\n    # TODO: implement based on notes topic 4\n    return df",
+    "anchor": "q-134"
+  },
+  {
+    "id": 135,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: Driver",
+    "body": "Extended coding drill for **Driver** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 5: Driver\ndef solve_driver(df):\n    # TODO: implement based on notes topic 5\n    return df",
+    "anchor": "q-135"
+  },
+  {
+    "id": 136,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: Executors",
+    "body": "Extended coding drill for **Executors** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 6: Executors\ndef solve_executors(df):\n    # TODO: implement based on notes topic 6\n    return df",
+    "anchor": "q-136"
+  },
+  {
+    "id": 137,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: Cluster Manager",
+    "body": "Extended coding drill for **Cluster Manager** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 7: Cluster Manager\ndef solve_cluster-manager(df):\n    # TODO: implement based on notes topic 7\n    return df",
+    "anchor": "q-137"
+  },
+  {
+    "id": 138,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: SparkSession",
+    "body": "Extended coding drill for **SparkSession** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 8: SparkSession\ndef solve_sparksession(df):\n    # TODO: implement based on notes topic 8\n    return df",
+    "anchor": "q-138"
+  },
+  {
+    "id": 139,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: SparkContext",
+    "body": "Extended coding drill for **SparkContext** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 9: SparkContext\ndef solve_sparkcontext(df):\n    # TODO: implement based on notes topic 9\n    return df",
+    "anchor": "q-139"
+  },
+  {
+    "id": 140,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: RDD vs DataFrame",
+    "body": "Extended coding drill for **RDD vs DataFrame** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 10: RDD vs DataFrame\ndef solve_rdd-vs-dataframe(df):\n    # TODO: implement based on notes topic 10\n    return df",
+    "anchor": "q-140"
+  },
+  {
+    "id": 141,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: What is a DataFrame?",
+    "body": "Extended coding drill for **What is a DataFrame?** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 11: What is a DataFrame?\ndef solve_what-is-a-dataframe(df):\n    # TODO: implement based on notes topic 11\n    return df",
+    "anchor": "q-141"
+  },
+  {
+    "id": 142,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: Creating a DataFrame",
+    "body": "Extended coding drill for **Creating a DataFrame** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 12: Creating a DataFrame\ndef solve_creating-a-dataframe(df):\n    # TODO: implement based on notes topic 12\n    return df",
+    "anchor": "q-142"
+  },
+  {
+    "id": 143,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: Schema and Data Types",
+    "body": "Extended coding drill for **Schema and Data Types** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 13: Schema and Data Types\ndef solve_schema-and-data-types(df):\n    # TODO: implement based on notes topic 13\n    return df",
+    "anchor": "q-143"
+  },
+  {
+    "id": 144,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: `printSchema()`",
+    "body": "Extended coding drill for **`printSchema()`** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 14: `printSchema()`\ndef solve_printschema(df):\n    # TODO: implement based on notes topic 14\n    return df",
+    "anchor": "q-144"
+  },
+  {
+    "id": 145,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: `show()`",
+    "body": "Extended coding drill for **`show()`** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 15: `show()`\ndef solve_show(df):\n    # TODO: implement based on notes topic 15\n    return df",
+    "anchor": "q-145"
+  },
+  {
+    "id": 146,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: `select()`",
+    "body": "Extended coding drill for **`select()`** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 16: `select()`\ndef solve_select(df):\n    # TODO: implement based on notes topic 16\n    return df",
+    "anchor": "q-146"
+  },
+  {
+    "id": 147,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: `filter()` / `where()`",
+    "body": "Extended coding drill for **`filter()` / `where()`** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 17: `filter()` / `where()`\ndef solve_filter-where(df):\n    # TODO: implement based on notes topic 17\n    return df",
+    "anchor": "q-147"
+  },
+  {
+    "id": 148,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: `withColumn()`",
+    "body": "Extended coding drill for **`withColumn()`** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 18: `withColumn()`\ndef solve_withcolumn(df):\n    # TODO: implement based on notes topic 18\n    return df",
+    "anchor": "q-148"
+  },
+  {
+    "id": 149,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: `drop()`",
+    "body": "Extended coding drill for **`drop()`** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 19: `drop()`\ndef solve_drop(df):\n    # TODO: implement based on notes topic 19\n    return df",
+    "anchor": "q-149"
+  },
+  {
+    "id": 150,
+    "tier": "basic",
+    "category": "transformations",
+    "title": "Practice variant: `withColumnRenamed()`",
+    "body": "Extended coding drill for **`withColumnRenamed()`** — implement with tests in mind.",
+    "solution": "from pyspark.sql import functions as F\n\n# Topic 20: `withColumnRenamed()`\ndef solve_withcolumnrenamed(df):\n    # TODO: implement based on notes topic 20\n    return df",
+    "anchor": "q-150"
+  }
+]
