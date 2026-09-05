@@ -1,18 +1,25 @@
 export function SiteBackground() {
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      <div className="absolute inset-0 hero-glow" />
+    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-background">
       <div
-        className="absolute inset-0 grid-fade opacity-[0.35] dark:opacity-[0.2]"
+        className="absolute inset-0 opacity-100 dark:opacity-80"
         style={{
-          backgroundImage:
-            "linear-gradient(to right, oklch(0.5 0.02 250 / 8%) 1px, transparent 1px), linear-gradient(to bottom, oklch(0.5 0.02 250 / 8%) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
+          background: `
+            radial-gradient(ellipse 90% 60% at 50% -15%, var(--glow), transparent 55%),
+            radial-gradient(ellipse 50% 40% at 100% 0%, oklch(0.58 0.08 220 / 0.06), transparent 50%),
+            radial-gradient(ellipse 40% 35% at 0% 30%, oklch(0.62 0.1 180 / 0.05), transparent 50%)
+          `,
         }}
       />
-      <div className="absolute -top-32 left-1/2 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl dark:bg-primary/8" />
-      <div className="absolute top-[40%] -right-24 h-64 w-64 rounded-full bg-chart-2/10 blur-3xl" />
-      <div className="absolute bottom-0 -left-16 h-56 w-56 rounded-full bg-chart-4/10 blur-3xl" />
+      <div
+        className="absolute inset-0 opacity-[0.4] dark:opacity-[0.15]"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, oklch(0.5 0.02 265 / 6%) 1px, transparent 1px), linear-gradient(to bottom, oklch(0.5 0.02 265 / 6%) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+          maskImage: "radial-gradient(ellipse 80% 70% at 50% 0%, black 20%, transparent 75%)",
+        }}
+      />
     </div>
   );
 }

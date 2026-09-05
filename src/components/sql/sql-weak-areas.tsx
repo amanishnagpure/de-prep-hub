@@ -27,7 +27,7 @@ export function SqlWeakAreas() {
   }
 
   return (
-    <section className="rounded-2xl border border-border/70 bg-card/50 p-6">
+    <section className="panel p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-bold">Weak areas</h2>
         <div className="flex flex-wrap gap-2">

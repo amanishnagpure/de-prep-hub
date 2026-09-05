@@ -84,8 +84,6 @@ const ALL_LABS = [
     title: "SQL Lab",
     description: "Notes, 150 practice, LeetCode, mock interviews",
     href: SQL_ROUTES.home,
-    accentHover: "hover:border-cyan-500/30 hover:shadow-cyan-500/5",
-    barColor: "bg-cyan-500",
     event: "sql-progress-updated",
     tracks: SQL_TRACKS,
     buildStats: () => {
@@ -108,8 +106,6 @@ const ALL_LABS = [
     title: "Python Lab",
     description: "pandas, pipelines, coding track, flashcards",
     href: PYTHON_ROUTES.home,
-    accentHover: "hover:border-amber-500/30 hover:shadow-amber-500/5",
-    barColor: "bg-amber-500",
     event: "python-progress-updated",
     tracks: PYTHON_TRACKS,
     buildStats: () => {
@@ -132,8 +128,6 @@ const ALL_LABS = [
     title: "PySpark Lab",
     description: "100 notes, 150 coding, 100 interview Q&A, mock",
     href: SPARK_ROUTES.home,
-    accentHover: "hover:border-orange-500/30 hover:shadow-orange-500/5",
-    barColor: "bg-orange-500",
     event: "spark-progress-updated",
     tracks: STANDARD_TRACKS,
     buildStats: () => buildStandardStats(SPARK_STATS, getSparkNotesStats, getSparkPracticeStats, getSparkInterviewStats),
@@ -145,8 +139,6 @@ const ALL_LABS = [
     title: "Databricks Lab",
     description: "Delta Lake, Unity Catalog, workflows",
     href: DATABRICKS_ROUTES.home,
-    accentHover: "hover:border-rose-500/30 hover:shadow-rose-500/5",
-    barColor: "bg-rose-500",
     event: "databricks-progress-updated",
     tracks: STANDARD_TRACKS,
     buildStats: () =>
@@ -164,8 +156,6 @@ const ALL_LABS = [
     title: "Airflow Lab",
     description: "DAGs, operators, scheduling patterns",
     href: AIRFLOW_ROUTES.home,
-    accentHover: "hover:border-emerald-500/30 hover:shadow-emerald-500/5",
-    barColor: "bg-emerald-500",
     event: "airflow-progress-updated",
     tracks: STANDARD_TRACKS,
     buildStats: () =>
@@ -178,8 +168,6 @@ const ALL_LABS = [
     title: "Cloud Lab",
     description: "Azure ADF, ADLS, Synapse patterns",
     href: CLOUD_ROUTES.home,
-    accentHover: "hover:border-cyan-500/30 hover:shadow-cyan-500/5",
-    barColor: "bg-sky-500",
     event: "cloud-progress-updated",
     tracks: STANDARD_TRACKS,
     buildStats: () =>
@@ -192,8 +180,6 @@ const ALL_LABS = [
     title: "System Design Lab",
     description: "Batch vs streaming, lakehouse, case studies",
     href: SYSTEM_DESIGN_ROUTES.home,
-    accentHover: "hover:border-violet-500/30 hover:shadow-violet-500/5",
-    barColor: "bg-violet-500",
     event: "system-design-progress-updated",
     tracks: STANDARD_TRACKS,
     buildStats: () =>
@@ -211,8 +197,6 @@ const ALL_LABS = [
     title: "Interview Prep Lab",
     description: "STAR prompts, behavioral, negotiation",
     href: INTERVIEW_PREP_ROUTES.home,
-    accentHover: "hover:border-fuchsia-500/30 hover:shadow-fuchsia-500/5",
-    barColor: "bg-fuchsia-500",
     event: "interview-prep-progress-updated",
     tracks: STANDARD_TRACKS,
     buildStats: () =>
@@ -275,7 +259,6 @@ export function HomeDashboard() {
       key: lab.key,
       title: lab.title,
       href: lab.href,
-      barColor: lab.barColor,
       percent,
       detail: lab.formatDetail(stats),
     };
@@ -284,17 +267,14 @@ export function HomeDashboard() {
   return (
     <section className="mx-auto max-w-6xl space-y-12 px-4 py-10 sm:px-6 sm:py-12">
       <div>
-        <HomeSectionHeader
-          title="Sections"
-          description="Jump straight into any track."
-        />
+        <HomeSectionHeader title="Sections" description="Eight tracks — pick one and go deep." />
         <HomeLabNav className="mt-6" />
       </div>
 
       <div>
         <HomeSectionHeader
           title="All labs"
-          description="Notes, practice, and interview prep — with progress for every track."
+          description="Progress across notes, practice, and interview prep."
         />
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
@@ -305,8 +285,6 @@ export function HomeDashboard() {
                   title={lab.title}
                   description={lab.description}
                   href={lab.href}
-                  accentHover={lab.accentHover}
-                  barColor={lab.barColor}
                   tracks={lab.tracks}
                   stats={labStats[lab.key] ?? {}}
                 />
@@ -314,7 +292,7 @@ export function HomeDashboard() {
             ))}
           </div>
 
-          <aside className="lg:sticky lg:top-24 lg:self-start">
+          <aside className="lg:sticky lg:top-20 lg:self-start">
             <HomeProgressPanel labs={progressEntries} />
           </aside>
         </div>

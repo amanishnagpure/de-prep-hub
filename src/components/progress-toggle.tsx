@@ -24,7 +24,7 @@ export function ProgressToggle({
 
   if (!mounted) {
     return (
-      <div className="inline-flex items-center gap-3 rounded-2xl border border-border/70 bg-card/60 px-4 py-3">
+      <div className="inline-flex items-center gap-3 panel px-4 py-3">
         <Circle className="size-5 text-muted-foreground/40" />
         <span className="text-sm text-muted-foreground">{label}</span>
       </div>
@@ -43,7 +43,7 @@ export function ProgressToggle({
         "inline-flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all",
         completed
           ? "border-primary/30 bg-primary/10 text-foreground"
-          : "border-border/70 bg-card/60 text-muted-foreground hover:border-primary/20 hover:bg-card hover:text-foreground"
+          : "border-border bg-card text-muted-foreground hover:border-primary/20 hover:bg-card hover:text-foreground"
       )}
     >
       {completed ? (

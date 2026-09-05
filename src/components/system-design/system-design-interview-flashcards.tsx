@@ -27,8 +27,8 @@ import { cn } from "cn";
 type FilterMode = "all" | "needs-review" | "know" | "unsure" | "dont";
 
 const CONFIDENCE_STYLES: Record<InterviewConfidence, string> = {
-  know: "bg-emerald-500/10 text-emerald-500 ring-emerald-500/20",
-  unsure: "bg-violet-500/10 text-violet-500 ring-violet-500/20",
+  know: "bg-emerald-500/10 text-primary ring-emerald-500/20",
+  unsure: "bg-muted font-medium text-foreground ring-violet-500/20",
   dont: "bg-rose-500/10 text-rose-400 ring-rose-500/20",
 };
 
@@ -205,10 +205,10 @@ export function SystemDesignInterviewFlashcards({
       </div>
 
       <div className="mx-auto max-w-3xl">
-        <div className="min-h-[320px] rounded-3xl border border-border/70 bg-gradient-to-br from-card via-card/90 to-violet-500/5 p-8 shadow-xl">
+        <div className="min-h-[320px] rounded-3xl border border-border bg-gradient-to-br from-card via-card/90 to-violet-500/5 p-8 shadow-xl">
           {!flipped ? (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 Case {index + 1} of {deck.length}
               </p>
               {confidenceMap[current.id] && (
@@ -227,7 +227,7 @@ export function SystemDesignInterviewFlashcards({
             </div>
           ) : (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-400">
+              <p className="text-xs font-medium text-violet-400">
                 Answer
               </p>
               <div className="mt-4 text-sm leading-relaxed text-muted-foreground">

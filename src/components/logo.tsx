@@ -5,40 +5,33 @@ interface LogoProps {
   size?: number;
 }
 
-export function Logo({ className, size = 36 }: LogoProps) {
+export function Logo({ className, size = 32 }: LogoProps) {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 36 36"
+      viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={cn("shrink-0", className)}
       aria-hidden
     >
       <rect
-        x="2"
-        y="2"
-        width="32"
-        height="32"
-        rx="10"
-        className="fill-primary/15 stroke-primary/25"
-        strokeWidth="1"
+        x="3"
+        y="3"
+        width="26"
+        height="26"
+        rx="7"
+        className="fill-primary/12 stroke-primary/25"
+        strokeWidth="1.25"
       />
       <path
-        d="M10 12h8M10 18h12M10 24h9"
+        d="M9 11h14M9 16h11M9 21h14"
         className="stroke-primary"
-        strokeWidth="2"
+        strokeWidth="1.75"
         strokeLinecap="round"
       />
-      <circle cx="25" cy="18" r="5" className="stroke-primary" strokeWidth="2" />
-      <path
-        d="M23 18h4M25 16v4"
-        className="stroke-primary"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <circle cx="25" cy="18" r="1.5" className="fill-primary" />
+      <circle cx="22" cy="16" r="3.5" className="fill-primary/20 stroke-primary" strokeWidth="1.25" />
     </svg>
   );
 }

@@ -35,8 +35,8 @@ const tierLabels: Record<TierFilter, string> = {
 };
 
 const tierBadge: Record<SqlPracticeQuestion["tier"], string> = {
-  basic: "bg-emerald-500/10 text-emerald-500 ring-emerald-500/20",
-  medium: "bg-amber-500/10 text-amber-500 ring-amber-500/20",
+  basic: "bg-emerald-500/10 text-primary ring-emerald-500/20",
+  medium: "bg-muted font-medium text-foreground ring-amber-500/20",
   hard: "bg-rose-500/10 text-rose-400 ring-rose-500/20",
 };
 
@@ -118,7 +118,7 @@ export function SqlPracticeQuiz() {
       <section className="mt-8 rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/8 via-card/80 to-card/60 p-6 shadow-lg shadow-primary/5 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+            <p className="text-xs font-medium text-primary">
               {mode === "timed" ? "20-min timed session" : "Random 10 quiz"}
             </p>
             <h2 className="mt-1 text-xl font-bold tracking-tight">
@@ -128,7 +128,7 @@ export function SqlPracticeQuiz() {
           <button
             type="button"
             onClick={exitQuiz}
-            className="inline-flex size-9 items-center justify-center rounded-xl border border-border/70 text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
+            className="inline-flex size-9 items-center justify-center rounded-xl border border-border text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
             aria-label="Exit quiz"
           >
             <X className="size-4" />
@@ -142,7 +142,7 @@ export function SqlPracticeQuiz() {
                 "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium",
                 sessionLow
                   ? "border-destructive/40 bg-destructive/10 text-destructive"
-                  : "border-border/70 bg-background/50"
+                  : "border-border bg-background/50"
               )}
             >
               <Timer className="size-4" />
@@ -153,8 +153,8 @@ export function SqlPracticeQuiz() {
             className={cn(
               "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium",
               questionLow
-                ? "border-amber-500/40 bg-amber-500/10 text-amber-500"
-                : "border-border/70 bg-background/50"
+                ? "border-amber-500/40 bg-muted font-medium text-foreground"
+                : "border-border bg-background/50"
             )}
           >
             <Clock className="size-4" />
@@ -186,7 +186,7 @@ export function SqlPracticeQuiz() {
           ))}
         </div>
 
-        <article className="mt-6 rounded-2xl border border-border/70 bg-background/60 p-5 sm:p-6">
+        <article className="mt-6 rounded-2xl border border-border bg-background/60 p-5 sm:p-6">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-xs text-muted-foreground">#{current.id}</span>
             <span
@@ -209,7 +209,7 @@ export function SqlPracticeQuiz() {
               Your query (scratchpad)
             </span>
             <textarea
-              className="mt-2 min-h-[120px] w-full resize-y rounded-xl border border-border/70 bg-muted/30 p-3 font-mono text-sm outline-none ring-primary/30 focus:ring-2"
+              className="mt-2 min-h-[120px] w-full resize-y rounded-xl border border-border bg-muted/30 p-3 font-mono text-sm outline-none ring-primary/30 focus:ring-2"
               placeholder="Write your SQL here before revealing the solution..."
               spellCheck={false}
             />
@@ -271,10 +271,10 @@ export function SqlPracticeQuiz() {
   }
 
   return (
-    <section className="mt-8 rounded-2xl border border-border/70 bg-card/60 p-6 sm:p-8">
+    <section className="mt-8 panel p-6 sm:p-8">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+          <p className="text-xs font-medium text-primary">
             Interactive practice
           </p>
           <h2 className="mt-1 text-xl font-bold tracking-tight">Quiz & timer modes</h2>
@@ -307,7 +307,7 @@ export function SqlPracticeQuiz() {
         <button
           type="button"
           onClick={() => startQuiz("random")}
-          className="group flex flex-col items-start rounded-2xl border border-border/70 bg-background/50 p-5 text-left transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
+          className="group flex flex-col items-start rounded-2xl border border-border bg-background/50 p-5 text-left transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
         >
           <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Dices className="size-5" />
@@ -325,9 +325,9 @@ export function SqlPracticeQuiz() {
         <button
           type="button"
           onClick={() => startQuiz("timed")}
-          className="group flex flex-col items-start rounded-2xl border border-border/70 bg-background/50 p-5 text-left transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
+          className="group flex flex-col items-start rounded-2xl border border-border bg-background/50 p-5 text-left transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
         >
-          <div className="flex size-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
+          <div className="flex size-11 items-center justify-center rounded-xl bg-muted font-medium text-foreground">
             <Timer className="size-5" />
           </div>
           <h3 className="mt-4 font-semibold group-hover:text-primary">20-minute timed session</h3>

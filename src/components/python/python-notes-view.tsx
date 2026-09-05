@@ -74,11 +74,11 @@ export function PythonNotesView({ chapters }: PythonNotesViewProps) {
                 className={cn(
                   "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                   isActive
-                    ? "bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/25"
+                    ? "bg-muted font-medium text-foreground ring-1 ring-amber-500/25"
                     : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                {isRead ? <CheckCircle2 className="size-3 text-emerald-500" /> : null}
+                {isRead ? <CheckCircle2 className="size-3 text-primary" /> : null}
                 {chapter.title}
               </button>
             );

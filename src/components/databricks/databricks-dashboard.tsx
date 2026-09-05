@@ -19,27 +19,13 @@ import {
 } from "@/lib/databricks-progress";
 import { DatabricksProgressRing } from "@/components/databricks/databricks-progress-ring";
 import { buttonVariants } from "@/components/ui/button";
+import { LabChapterLink, LabModuleLink } from "@/components/lab/nav";
 import { cn } from "cn";
 
 const MODULES = [
-  {
-    href: DATABRICKS_ROUTES.notes,
-    title: "Notes",
-    icon: BookOpen,
-    accent: "from-emerald-500/20 to-green-500/5 text-emerald-400 ring-emerald-500/20",
-  },
-  {
-    href: DATABRICKS_ROUTES.practice,
-    title: "Practice",
-    icon: Terminal,
-    accent: "from-rose-500/20 to-red-500/5 text-rose-400 ring-rose-500/20",
-  },
-  {
-    href: DATABRICKS_ROUTES.interview,
-    title: "Interview",
-    icon: Brain,
-    accent: "from-violet-500/20 to-purple-500/5 text-violet-400 ring-violet-500/20",
-  },
+  { href: DATABRICKS_ROUTES.notes, title: "Notes", icon: BookOpen },
+  { href: DATABRICKS_ROUTES.practice, title: "Practice", icon: Terminal },
+  { href: DATABRICKS_ROUTES.interview, title: "Interview", icon: Brain },
 ];
 
 export function DatabricksDashboard() {
@@ -91,8 +77,8 @@ export function DatabricksDashboard() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-2xl border border-rose-500/20 bg-card/60 p-6">
-        <h1 className="text-2xl font-bold tracking-tight">Databricks Lab</h1>
+      <section className="panel p-6">
+        <h1 className="text-2xl font-semibold tracking-tight">Databricks Lab</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Delta Lake → Unity Catalog → Workflows — lakehouse prep for DE interviews.
         </p>
@@ -101,7 +87,7 @@ export function DatabricksDashboard() {
           {lastVisited ? (
             <Link
               href={lastVisited.path}
-              className={cn(buttonVariants({ size: "sm" }), "gap-2 bg-rose-600 hover:bg-rose-600/90")}
+              className={cn(buttonVariants({ size: "sm" }))}
             >
               <PlayCircle className="size-4" />
               {lastVisited.label}
@@ -109,16 +95,18 @@ export function DatabricksDashboard() {
           ) : (
             <Link
               href={DATABRICKS_ROUTES.notes}
-              className={cn(buttonVariants({ size: "sm" }), "gap-2 bg-rose-600 hover:bg-rose-600/90")}
+              className={cn(buttonVariants({ size: "sm" }))}
             >
               <PlayCircle className="size-4" />
               Start Notes
             </Link>
           )}
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 px-3 py-1.5 text-sm">
-            <Flame className="size-4 text-rose-500" />
-            {streak}d
-          </span>
+          {streak > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-2 text-sm text-muted-foreground">
+              <Flame className="size-4 text-amber-600 dark:text-amber-500" />
+              {streak} day streak
+            </span>
+          )}
           <button
             type="button"
             onClick={handleExport}
@@ -148,78 +136,45 @@ export function DatabricksDashboard() {
         {importMessage && <p className="mt-2 text-sm text-muted-foreground">{importMessage}</p>}
       </section>
 
-      <section className="grid gap-4 rounded-2xl border border-border/70 bg-card/50 p-6 sm:grid-cols-3">
+      <section className="grid gap-4 panel p-6 sm:grid-cols-3">
         <DatabricksProgressRing percent={notes.percent} label="Notes" sublabel={`${notes.read}/${notes.total} chapters`} />
         <DatabricksProgressRing percent={practice.percent} label="Practice" sublabel={`${practice.solved}/${practice.total}`} />
         <DatabricksProgressRing percent={interview.percent} label="Interview" sublabel={`${interview.know}/${interview.total}`} />
       </section>
 
-      <section className="rounded-2xl border border-border/70 bg-card/50 p-6">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+      <section className="panel p-6">
+        <h2 className="text-sm font-medium text-muted-foreground">
           Notes progress
         </h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {DATABRICKS_CHAPTER_META.map((chapter) => {
-            const isRead = readChapters.includes(chapter.id);
-            return (
-              <Link
-                key={chapter.id}
-                href={chapter.href}
-                className={cn(
-                  "flex items-center justify-between rounded-xl border border-border/70 bg-card/60 px-4 py-3 transition-colors hover:border-rose-500/30",
-                  isRead && "border-emerald-500/25 bg-emerald-500/5"
-                )}
-              >
-                <div>
-                  <p className="font-medium">{chapter.title}</p>
-                  <p className="text-xs text-muted-foreground">{chapter.estimate}</p>
-                </div>
-                {isRead ? (
-                  <CheckCircle2 className="size-5 text-emerald-500" />
-                ) : (
-                  <BookOpen className="size-4 text-muted-foreground" />
-                )}
-              </Link>
-            );
-          })}
+          {DATABRICKS_CHAPTER_META.map((chapter) => (
+            <LabChapterLink
+              key={chapter.id}
+              href={chapter.href}
+              title={chapter.title}
+              estimate={chapter.estimate}
+              isRead={readChapters.includes(chapter.id)}
+            />
+          ))}
         </div>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-3">
-        {MODULES.map((module) => {
-          const Icon = module.icon;
-          return (
-            <Link
-              key={module.href}
-              href={module.href}
-              className="flex items-center gap-3 rounded-xl border border-border/70 bg-card/60 p-4 transition-colors hover:border-rose-500/25"
-            >
-              <div
-                className={cn(
-                  "flex size-10 items-center justify-center rounded-xl bg-gradient-to-br ring-1",
-                  module.accent
-                )}
-              >
-                <Icon className="size-4" />
-              </div>
-              <span className="font-semibold">{module.title}</span>
-            </Link>
-          );
-        })}
+      <section className="grid gap-2 sm:grid-cols-3">
+        {MODULES.map((module) => (
+          <LabModuleLink
+            key={module.href}
+            href={module.href}
+            title={module.title}
+            icon={module.icon}
+          />
+        ))}
       </section>
 
-      <section className="rounded-2xl border border-border/70 bg-card/50 p-6">
-        <div className="flex items-start gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-400 ring-1 ring-rose-500/20">
-            <Layers className="size-5" />
-          </div>
-          <div>
-            <h2 className="font-semibold">Study path</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Delta Lake → Unity Catalog → Workflows → DE Patterns → Traps → 25 practice → 45 flashcards
-            </p>
-          </div>
-        </div>
+      <section className="panel p-6">
+        <h2 className="text-sm font-medium">Suggested order</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Delta Lake → Unity Catalog → workflows → practice → flashcards
+        </p>
       </section>
     </div>
   );

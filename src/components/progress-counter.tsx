@@ -24,12 +24,12 @@ export function ProgressCounter({ totalTopics }: ProgressCounterProps) {
     count === 0 ? "Start." : count === totalTopics ? "Shipped." : percentage >= 50 ? "Momentum." : "Building.";
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card/70 p-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:shadow-black/20">
+    <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 ">
       <div className="pointer-events-none absolute -right-8 -top-8 size-32 rounded-full bg-primary/10 blur-2xl" />
 
       <div className="relative flex items-start justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <Target className="size-3.5 text-primary" />
             Progress
           </div>

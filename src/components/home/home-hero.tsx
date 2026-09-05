@@ -29,35 +29,36 @@ export function HomeHero() {
   }, []);
 
   return (
-    <section className="border-b border-border/60 bg-gradient-to-b from-muted/30 to-transparent">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
-        <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              Data Engineering
-            </p>
-            <h1 className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-              DE Prep Hub
-            </h1>
-            <p className="mt-2 max-w-md text-muted-foreground">
-              Notes, practice, and interview prep — all in one place.
+    <section className="relative overflow-hidden border-b border-border/60">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.04] via-transparent to-transparent"
+      />
+      <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-xl">
+            <p className="text-sm font-medium text-primary">Data engineering prep</p>
+            <h1 className="hero-title mt-2 text-4xl font-semibold sm:text-5xl">DE Prep Hub</h1>
+            <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
+              Notes, practice problems, and interview drills — built for the long grind, not a
+              weekend cram.
             </p>
 
             {streak > 0 && (
-              <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/60 px-3 py-1 text-xs font-medium">
-                <Flame className="size-3.5 text-amber-500" />
-                {streak} day streak
-              </span>
+              <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/80 px-3.5 py-1.5 text-sm shadow-sm backdrop-blur-sm">
+                <Flame className="size-4 text-amber-500" />
+                <span className="font-medium">{streak} day streak</span>
+              </div>
             )}
           </div>
 
-          <div className="flex flex-wrap gap-2 sm:justify-end">
+          <div className="flex flex-wrap gap-2.5">
             {lastVisited ? (
               <Link
                 href={lastVisited.path}
                 className={cn(
-                  buttonVariants({ size: "default" }),
-                  "gap-2 rounded-xl shadow-md shadow-primary/10"
+                  buttonVariants({ size: "lg" }),
+                  "gap-2 shadow-md shadow-primary/15"
                 )}
               >
                 <PlayCircle className="size-4" />
@@ -67,17 +68,17 @@ export function HomeHero() {
               <Link
                 href={SQL_ROUTES.notes}
                 className={cn(
-                  buttonVariants({ size: "default" }),
-                  "gap-2 rounded-xl shadow-md shadow-primary/10"
+                  buttonVariants({ size: "lg" }),
+                  "gap-2 shadow-md shadow-primary/15"
                 )}
               >
-                Get started
+                Start with SQL
                 <ArrowRight className="size-4" />
               </Link>
             )}
             <Link
               href="/roadmap"
-              className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2 rounded-xl")}
+              className={cn(buttonVariants({ variant: "outline", size: "lg" }), "gap-2 bg-card/60")}
             >
               <Map className="size-4" />
               Roadmap

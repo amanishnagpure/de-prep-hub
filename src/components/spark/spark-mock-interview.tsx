@@ -106,7 +106,7 @@ export function SparkMockInterview({ pools }: { pools: MockSessionPools }) {
 
   if (phase === "intro") {
     return (
-      <section className="rounded-2xl border border-border/70 bg-card/60 p-6">
+      <section className="panel p-6">
         <p className="text-muted-foreground">45 min · 5 conceptual · 3 PySpark coding</p>
         <button type="button" onClick={start} className={cn(buttonVariants(), "mt-4 gap-2")}>
           <Play className="size-4" />
@@ -118,8 +118,8 @@ export function SparkMockInterview({ pools }: { pools: MockSessionPools }) {
 
   if (phase === "done" || !current) {
     return (
-      <section className="rounded-3xl border border-border/70 bg-card/60 p-8 text-center">
-        <CheckCircle2 className="mx-auto size-12 text-emerald-500" />
+      <section className="rounded-3xl border border-border bg-card p-8 text-center">
+        <CheckCircle2 className="mx-auto size-12 text-primary" />
         <h2 className="mt-4 text-2xl font-bold">Session complete</h2>
         <p className="mt-2 text-muted-foreground">
           {doneCount}/{items.length} · {formatTime(MOCK_SESSION_SECONDS - secondsLeft)}
@@ -160,7 +160,7 @@ export function SparkMockInterview({ pools }: { pools: MockSessionPools }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border/70 bg-card/50 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 panel p-4">
         <div className="flex items-center gap-3">
           <div
             className={cn(
@@ -203,7 +203,7 @@ export function SparkMockInterview({ pools }: { pools: MockSessionPools }) {
               i === index
                 ? "bg-orange-500 text-white"
                 : statuses[item.id] === "done"
-                  ? "bg-emerald-500/20 text-emerald-500"
+                  ? "bg-emerald-500/20 text-primary"
                   : statuses[item.id] === "skip"
                     ? "bg-muted text-muted-foreground"
                     : "bg-muted/80 text-muted-foreground"
@@ -214,7 +214,7 @@ export function SparkMockInterview({ pools }: { pools: MockSessionPools }) {
         ))}
       </div>
 
-      <article className="rounded-2xl border border-border/70 bg-card/50 p-6 sm:p-8">
+      <article className="panel p-6 sm:p-8">
         <div className="flex flex-wrap items-center gap-2">
           <Icon className="size-4 text-orange-400" />
           <span className="rounded-full bg-orange-500/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase text-orange-400 ring-1 ring-orange-500/20">
@@ -235,7 +235,7 @@ export function SparkMockInterview({ pools }: { pools: MockSessionPools }) {
               value={userCode}
               onChange={(event) => setUserCode(event.target.value)}
               spellCheck={false}
-              className="min-h-[160px] w-full resize-y rounded-xl border border-border/70 bg-[oklch(0.12_0.02_250)] p-3 font-mono text-sm outline-none ring-orange-500/30 focus:ring-2"
+              className="min-h-[160px] w-full resize-y rounded-xl border border-border bg-[oklch(0.12_0.02_250)] p-3 font-mono text-sm outline-none ring-orange-500/30 focus:ring-2"
               placeholder="from pyspark.sql import functions as F\n\ndef solve(df):\n    ..."
             />
           </div>

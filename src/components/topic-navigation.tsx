@@ -16,9 +16,9 @@ export function TopicNavigation({ prev, next }: TopicNavigationProps) {
       {prev ? (
         <Link
           href={`/topics/${prev.slug}`}
-          className="group rounded-2xl border border-border/70 bg-card/50 p-5 transition-all hover:border-primary/25 hover:bg-card hover:shadow-lg hover:shadow-primary/5"
+          className="group panel p-5 transition-all hover:border-primary/25 hover:bg-card hover:shadow-lg hover:shadow-primary/5"
         >
-          <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <ArrowLeft className="size-3.5 transition-transform group-hover:-translate-x-0.5" />
             Previous
           </span>
@@ -34,11 +34,11 @@ export function TopicNavigation({ prev, next }: TopicNavigationProps) {
         <Link
           href={`/topics/${next.slug}`}
           className={cn(
-            "group rounded-2xl border border-border/70 bg-card/50 p-5 transition-all hover:border-primary/25 hover:bg-card hover:shadow-lg hover:shadow-primary/5",
+            "group panel p-5 transition-all hover:border-primary/25 hover:bg-card hover:shadow-lg hover:shadow-primary/5",
             !prev && "sm:col-start-2"
           )}
         >
-          <span className="flex items-center justify-end gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          <span className="flex items-center justify-end gap-2 text-xs font-medium text-muted-foreground">
             Next
             <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
           </span>

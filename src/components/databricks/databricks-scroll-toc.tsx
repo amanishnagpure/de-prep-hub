@@ -40,8 +40,8 @@ export function DatabricksScrollToc({ headings }: DatabricksScrollTocProps) {
 
   return (
     <aside className="hidden xl:block">
-      <nav className="sticky top-28 rounded-2xl border border-border/70 bg-card/50 p-5 shadow-sm shadow-black/5 dark:shadow-black/20">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+      <nav className="sticky top-28 panel p-5 ">
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <ListTree className="size-3.5 text-rose-500" />
           On this page
         </div>

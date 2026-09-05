@@ -34,7 +34,7 @@ export function LabNotesChapterPanel({
     <div className={cn("grid gap-8", !isInterviewGuide && "xl:grid-cols-[minmax(0,1fr)_260px]")}>
       <div
         className={cn(
-          !isInterviewGuide && "rounded-2xl border border-border/70 bg-card/50 p-6 shadow-sm sm:p-8"
+          !isInterviewGuide && "panel p-6 shadow-sm sm:p-8"
         )}
       >
         <div

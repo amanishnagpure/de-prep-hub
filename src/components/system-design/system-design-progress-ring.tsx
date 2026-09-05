@@ -41,7 +41,7 @@ export function SystemDesignProgressRing({
             strokeDasharray={circumference}
             strokeDashoffset={offset}
             strokeLinecap="round"
-            className="text-violet-500 transition-all duration-500"
+            className="text-primary transition-all duration-500"
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">

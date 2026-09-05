@@ -21,7 +21,7 @@ export function SqlStudyChecklist() {
   const doneCount = items.filter((item) => item.done).length;
 
   return (
-    <section className="rounded-2xl border border-border/70 bg-card/50 p-6">
+    <section className="panel p-6">
       <div className="mb-4 flex items-end justify-between gap-3">
         <div>
           <h2 className="font-bold">Checklist</h2>
@@ -36,11 +36,11 @@ export function SqlStudyChecklist() {
               href={item.href}
               className={cn(
                 "flex items-center gap-3 rounded-xl border px-4 py-2.5 transition-colors hover:bg-muted/40",
-                item.done ? "border-emerald-500/25 bg-emerald-500/5" : "border-border/60"
+                item.done ? "border-primary/30 bg-muted/30" : "border-border/60"
               )}
             >
               {item.done ? (
-                <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+                <CheckCircle2 className="size-4 shrink-0 text-primary" />
               ) : (
                 <Circle className="size-4 shrink-0 text-muted-foreground" />
               )}
@@ -67,7 +67,7 @@ export function SqlTodaysPlan() {
   if (plan.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border border-border/70 bg-card/50 p-6">
+    <section className="panel p-6">
       <h2 className="mb-4 font-bold">Today</h2>
       <ul className="space-y-2">
         {plan.map((item, index) => (

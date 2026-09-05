@@ -40,9 +40,9 @@ export function AirflowScrollToc({ headings }: AirflowScrollTocProps) {
 
   return (
     <aside className="hidden xl:block">
-      <nav className="sticky top-28 rounded-2xl border border-border/70 bg-card/50 p-5 shadow-sm shadow-black/5 dark:shadow-black/20">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          <ListTree className="size-3.5 text-emerald-500" />
+      <nav className="sticky top-28 panel p-5 ">
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          <ListTree className="size-3.5 text-primary" />
           On this page
         </div>
         <ul className="mt-4 max-h-[70vh] space-y-1 overflow-y-auto border-l border-border/80 pl-3">
@@ -56,7 +56,7 @@ export function AirflowScrollToc({ headings }: AirflowScrollTocProps) {
                   heading.level === 2 && "-ml-px border-l-2 pl-3",
                   heading.level === 3 && "pl-6 text-xs",
                   activeId === heading.id
-                    ? "border-emerald-500 text-emerald-500"
+                    ? "border-emerald-500 text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground"
                 )}
               >

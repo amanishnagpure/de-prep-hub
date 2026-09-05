@@ -12,7 +12,7 @@ interface SqlSchemaPanelProps {
 export function SqlSchemaPanel({ tables, className }: SqlSchemaPanelProps) {
   return (
     <aside className={cn("space-y-4", className)}>
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
         <Table2 className="size-3.5 text-cyan-500" />
         Schema
       </div>
@@ -20,7 +20,7 @@ export function SqlSchemaPanel({ tables, className }: SqlSchemaPanelProps) {
       {tables.map((table) => (
         <div
           key={table.label}
-          className="overflow-hidden rounded-xl border border-border/70 bg-card/60"
+          className="overflow-hidden rounded-md border border-border bg-card"
         >
           <div className="border-b border-border/60 bg-muted/30 px-4 py-3">
             <p className="font-mono text-sm font-semibold text-cyan-500">{table.label}</p>

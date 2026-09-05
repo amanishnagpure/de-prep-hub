@@ -27,7 +27,7 @@ export function SqlMarkdownRenderer({ content, className }: SqlMarkdownRendererP
   return (
     <div
       className={cn(
-        "prose prose-slate max-w-none dark:prose-invert prose-headings:font-display prose-p:leading-7 prose-li:leading-7",
+        "prose prose-slate max-w-none dark:prose-invert prose-headings:font-semibold prose-p:leading-7 prose-li:leading-7",
         className
       )}
     >
@@ -110,7 +110,7 @@ export function SqlMarkdownRenderer({ content, className }: SqlMarkdownRendererP
             <td className="border-b border-border/60 px-4 py-3">{children}</td>
           ),
           details: ({ children }) => (
-            <details className="my-4 rounded-xl border border-border/70 bg-muted/20 p-4">
+            <details className="my-4 rounded-xl border border-border bg-muted/20 p-4">
               {children}
             </details>
           ),

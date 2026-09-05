@@ -34,14 +34,14 @@ type PatternFilter = "all" | PythonCodingPattern;
 type MustDoFilter = "all" | "must-do" | "stretch" | "needs-review";
 
 const difficultyBadge: Record<PythonCodingDifficulty, string> = {
-  easy: "bg-emerald-500/10 text-emerald-500 ring-emerald-500/20",
-  medium: "bg-amber-500/10 text-amber-500 ring-amber-500/20",
+  easy: "bg-emerald-500/10 text-primary ring-emerald-500/20",
+  medium: "bg-muted font-medium text-foreground ring-amber-500/20",
   hard: "bg-rose-500/10 text-rose-400 ring-rose-500/20",
 };
 
 const CONFIDENCE_STYLES: Record<InterviewConfidence, string> = {
-  know: "bg-emerald-500/10 text-emerald-500 ring-emerald-500/20",
-  unsure: "bg-amber-500/10 text-amber-500 ring-amber-500/20",
+  know: "bg-emerald-500/10 text-primary ring-emerald-500/20",
+  unsure: "bg-muted font-medium text-foreground ring-amber-500/20",
   dont: "bg-rose-500/10 text-rose-400 ring-rose-500/20",
 };
 
@@ -140,7 +140,7 @@ export function PythonCodingTrack({
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search by title or #id..."
-              className="w-full rounded-xl border border-border/70 bg-background/60 py-2.5 pl-10 pr-3 text-sm outline-none ring-orange-500/30 focus:ring-2"
+              className="w-full rounded-xl border border-border bg-background/60 py-2.5 pl-10 pr-3 text-sm outline-none ring-orange-500/30 focus:ring-2"
             />
           </div>
 
@@ -190,7 +190,7 @@ export function PythonCodingTrack({
           <select
             value={pattern}
             onChange={(event) => setPattern(event.target.value as PatternFilter)}
-            className="w-full rounded-xl border border-border/70 bg-background/60 px-3 py-2 text-sm outline-none"
+            className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm outline-none"
           >
             <option value="all">All patterns</option>
             {Object.entries(PYTHON_CODING_PATTERNS).map(([key, label]) => (
@@ -214,7 +214,7 @@ export function PythonCodingTrack({
                 )}
               >
                 {solvedSlugs.includes(problem.slug) ? (
-                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" />
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
                 ) : problem.mustDo ? (
                   <Star className="mt-0.5 size-4 shrink-0 text-amber-500" />
                 ) : (
@@ -232,7 +232,7 @@ export function PythonCodingTrack({
         </aside>
 
         {active && (
-          <section className="rounded-2xl border border-border/70 bg-card/50 p-5 sm:p-6">
+          <section className="panel p-5 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="flex flex-wrap items-center gap-2">

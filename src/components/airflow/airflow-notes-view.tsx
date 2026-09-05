@@ -74,11 +74,11 @@ export function AirflowNotesView({ chapters }: AirflowNotesViewProps) {
                 className={cn(
                   "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                   isActive
-                    ? "bg-emerald-500/10 text-emerald-500 ring-1 ring-emerald-500/25"
+                    ? "bg-emerald-500/10 text-primary ring-1 ring-emerald-500/25"
                     : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                {isRead ? <CheckCircle2 className="size-3 text-emerald-500" /> : null}
+                {isRead ? <CheckCircle2 className="size-3 text-primary" /> : null}
                 {chapter.title}
               </button>
             );

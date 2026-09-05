@@ -51,7 +51,7 @@ export function SqlQueryRunner({ query, className }: SqlQueryRunnerProps) {
       )}
 
       {result && (
-        <div className="overflow-hidden rounded-xl border border-border/70">
+        <div className="overflow-hidden rounded-xl border border-border">
           {result.rows.length === 0 ? (
             <p className="bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
               Query returned 0 rows.
@@ -104,10 +104,10 @@ export function SqlPlaygroundPanel({ className }: SqlPlaygroundPanelProps) {
   const [query, setQuery] = React.useState("SELECT * FROM employees LIMIT 5;");
 
   return (
-    <div className={cn("rounded-2xl border border-border/70 bg-card/50 p-5", className)}>
+    <div className={cn("panel p-5", className)}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-500">
+          <p className="text-xs font-medium text-cyan-500">
             SQL playground
           </p>
           <h3 className="text-lg font-semibold">Run queries on sample data</h3>
@@ -125,7 +125,7 @@ export function SqlPlaygroundPanel({ className }: SqlPlaygroundPanelProps) {
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         spellCheck={false}
-        className="mb-3 min-h-[100px] w-full resize-y rounded-xl border border-border/70 bg-[oklch(0.12_0.02_250)] p-3 font-mono text-sm text-foreground outline-none ring-cyan-500/30 focus:ring-2"
+        className="mb-3 min-h-[100px] w-full resize-y rounded-xl border border-border bg-[oklch(0.12_0.02_250)] p-3 font-mono text-sm text-foreground outline-none ring-cyan-500/30 focus:ring-2"
       />
       <SqlQueryRunner query={query} />
     </div>

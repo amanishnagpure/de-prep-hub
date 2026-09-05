@@ -6,7 +6,7 @@ import { cn } from "cn";
 export default function NotFound() {
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-6xl flex-col items-center justify-center px-4 py-20 text-center sm:px-6">
-      <p className="text-7xl font-bold tracking-tight gradient-text sm:text-8xl">404</p>
+      <p className="text-7xl font-semibold tracking-tight text-muted-foreground/40 sm:text-8xl">404</p>
       <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Page not found</h1>
       <p className="mt-3 max-w-md text-muted-foreground">
         The page you&apos;re looking for doesn&apos;t exist or may have been moved. Try

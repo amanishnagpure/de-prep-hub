@@ -119,7 +119,7 @@ export function SearchTrigger() {
       <Button
         variant="outline"
         size="sm"
-        className="hidden h-9 gap-2 rounded-xl border-border/70 bg-background/50 text-muted-foreground backdrop-blur-sm sm:flex"
+        className="hidden h-9 gap-2 rounded-xl border-border bg-background/50 text-muted-foreground  sm:flex"
         onClick={() => context?.setOpen(true)}
       >
         <LucideSearch className="size-4" />

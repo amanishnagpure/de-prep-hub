@@ -15,7 +15,6 @@ export default function RoadmapPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
       <PageHeader
-        eyebrow="Roadmap"
         title={roadmap.title}
         description="From zero to production-ready."
         breadcrumbs={[
@@ -25,7 +24,7 @@ export default function RoadmapPage() {
       />
 
       <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-start">
-        <div className="rounded-2xl border border-border/70 bg-card/50 p-6 shadow-sm shadow-black/5 sm:p-8 dark:shadow-black/20">
+        <div className="panel p-6 sm:p-8">
           <MarkdownRenderer content={roadmap.content} />
         </div>
         <TableOfContents headings={headings} />

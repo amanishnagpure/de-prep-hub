@@ -13,6 +13,7 @@ import {
   PenLine,
 } from "lucide-react";
 import { SYSTEM_DESIGN_NOTES_SECTIONS, SYSTEM_DESIGN_ROUTES } from "@/lib/system-design";
+import { LabSidebarLink, LabMobileTab } from "@/components/lab/nav";
 import { cn } from "cn";
 
 type NavIcon = React.ComponentType<{ className?: string }>;
@@ -70,43 +71,6 @@ const NAV: NavGroup[] = [
   },
 ];
 
-function NavLink({
-  href,
-  active,
-  collapsed,
-  icon: Icon,
-  label,
-  nested,
-}: {
-  href: string;
-  active: boolean;
-  collapsed: boolean;
-  icon?: NavIcon;
-  label: string;
-  nested?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      title={label}
-      className={cn(
-        "flex items-center gap-3 rounded-xl text-sm font-medium transition-colors",
-        nested ? "px-3 py-2" : "px-3 py-2.5",
-        nested && "ml-6 border-l border-border/60 pl-4",
-        active
-          ? nested
-            ? "text-violet-500"
-            : "bg-violet-500/10 text-violet-500 ring-1 ring-violet-500/20"
-          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-        collapsed && !nested && "justify-center px-2"
-      )}
-    >
-      {Icon && <Icon className="size-4 shrink-0" />}
-      {!collapsed && label}
-    </Link>
-  );
-}
-
 export function SystemDesignSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -120,21 +84,14 @@ export function SystemDesignSidebar() {
     <>
       <aside
         className={cn(
-          "hidden shrink-0 border-r border-border/70 bg-card/30 transition-all duration-300 lg:block",
+          "hidden shrink-0 border-r border-border bg-card transition-all duration-300 lg:block",
           collapsed ? "w-[72px]" : "w-60"
         )}
       >
-        <div className="sticky top-24 flex h-[calc(100vh-6rem)] flex-col p-4">
-          <div className={cn("mb-6 flex items-center gap-3", collapsed && "justify-center")}>
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/10 text-violet-400 ring-1 ring-violet-500/20">
-              <Network className="size-5" />
-            </div>
-            {!collapsed && (
-              <div>
-                <p className="text-xs text-violet-500">Scale pipelines.</p>
-              </div>
-            )}
-          </div>
+        <div className="sticky top-20 flex h-[calc(100vh-6rem)] flex-col p-4">
+          {!collapsed && (
+            <p className="mb-6 text-xs font-medium text-muted-foreground">System design</p>
+          )}
 
           <nav className="space-y-1 overflow-y-auto">
             {NAV.map((group) => {
@@ -144,7 +101,7 @@ export function SystemDesignSidebar() {
               return (
                 <div key={group.id} className="space-y-0.5">
                   {group.href ? (
-                    <NavLink
+                    <LabSidebarLink
                       href={group.href}
                       active={groupActive && !(group.children?.some(isChildActive) ?? false)}
                       collapsed={collapsed}
@@ -155,7 +112,7 @@ export function SystemDesignSidebar() {
 
                   {!collapsed &&
                     group.children?.map((child) => (
-                      <NavLink
+                      <LabSidebarLink
                         key={child.href}
                         href={child.href}
                         active={isChildActive(child)}
@@ -172,7 +129,7 @@ export function SystemDesignSidebar() {
           <button
             type="button"
             onClick={() => setCollapsed((value) => !value)}
-            className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl border border-border/70 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+            className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl border border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
           >
             {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
             {!collapsed && "Collapse"}
@@ -180,54 +137,30 @@ export function SystemDesignSidebar() {
         </div>
       </aside>
 
-      <nav className="flex gap-2 overflow-x-auto border-b border-border/70 px-4 py-3 lg:hidden">
-        <Link
-          href={SYSTEM_DESIGN_ROUTES.home}
-          className={cn(
-            "shrink-0 rounded-full px-3 py-2 text-sm font-medium",
-            pathname === SYSTEM_DESIGN_ROUTES.home
-              ? "bg-violet-500/10 text-violet-500"
-              : "bg-muted/50 text-muted-foreground"
-          )}
-        >
+      <nav className="flex gap-2 overflow-x-auto border-b border-border px-4 py-3 lg:hidden">
+        <LabMobileTab href={SYSTEM_DESIGN_ROUTES.home} active={pathname === SYSTEM_DESIGN_ROUTES.home}>
           Overview
-        </Link>
+        </LabMobileTab>
         {SYSTEM_DESIGN_NOTES_SECTIONS.map((section) => (
           <Link
             key={section.id}
             href={`${SYSTEM_DESIGN_ROUTES.notes}?chapter=${section.id}`}
             className={cn(
-              "shrink-0 rounded-full px-3 py-2 text-sm font-medium",
+              "shrink-0 rounded-md px-3 py-2 text-sm transition-colors",
               pathname.startsWith(SYSTEM_DESIGN_ROUTES.notes) && chapter === section.id
-                ? "bg-violet-500/10 text-violet-500"
+                ? "bg-muted font-medium text-foreground"
                 : "bg-muted/50 text-muted-foreground"
             )}
           >
             {section.label}
           </Link>
         ))}
-        <Link
-          href={SYSTEM_DESIGN_ROUTES.practice}
-          className={cn(
-            "shrink-0 rounded-full px-3 py-2 text-sm font-medium",
-            pathname.startsWith(SYSTEM_DESIGN_ROUTES.practice)
-              ? "bg-violet-500/10 text-violet-500"
-              : "bg-muted/50 text-muted-foreground"
-          )}
-        >
+        <LabMobileTab href={SYSTEM_DESIGN_ROUTES.practice} active={pathname.startsWith(SYSTEM_DESIGN_ROUTES.practice)}>
           Practice
-        </Link>
-        <Link
-          href={SYSTEM_DESIGN_ROUTES.interview}
-          className={cn(
-            "shrink-0 rounded-full px-3 py-2 text-sm font-medium",
-            pathname.startsWith(SYSTEM_DESIGN_ROUTES.interview)
-              ? "bg-violet-500/10 text-violet-500"
-              : "bg-muted/50 text-muted-foreground"
-          )}
-        >
+        </LabMobileTab>
+        <LabMobileTab href={SYSTEM_DESIGN_ROUTES.interview} active={pathname.startsWith(SYSTEM_DESIGN_ROUTES.interview)}>
           Interview
-        </Link>
+        </LabMobileTab>
       </nav>
     </>
   );

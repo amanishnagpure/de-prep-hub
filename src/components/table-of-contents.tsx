@@ -10,8 +10,8 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
   if (headings.length === 0) {
     return (
       <aside className="hidden lg:block">
-        <div className="sticky top-28 rounded-2xl border border-dashed border-border/70 bg-card/40 p-5">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        <div className="sticky top-28 rounded-2xl border border-dashed border-border bg-card/40 p-5">
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <ListTree className="size-3.5" />
             On this page
           </div>
@@ -25,8 +25,8 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
 
   return (
     <aside className="hidden lg:block">
-      <nav className="sticky top-28 rounded-2xl border border-border/70 bg-card/50 p-5 shadow-sm shadow-black/5 dark:shadow-black/20">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+      <nav className="sticky top-28 panel p-5 ">
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <ListTree className="size-3.5 text-primary" />
           On this page
         </div>

@@ -8,7 +8,6 @@ interface Breadcrumb {
 }
 
 interface PageHeaderProps {
-  eyebrow?: string;
   title: string;
   description?: string;
   breadcrumbs?: Breadcrumb[];
@@ -17,7 +16,6 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({
-  eyebrow,
   title,
   description,
   breadcrumbs,
@@ -27,7 +25,7 @@ export function PageHeader({
   return (
     <div className={cn("relative", className)}>
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <nav className="mb-5 flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
+        <nav className="mb-4 flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
           {breadcrumbs.map((crumb, index) => (
             <span key={crumb.label} className="flex items-center gap-1">
               {index > 0 && <ChevronRight className="size-3.5 opacity-50" />}
@@ -43,21 +41,13 @@ export function PageHeader({
         </nav>
       )}
 
-      {eyebrow ? (
-        <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/8 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-          {eyebrow}
-        </div>
-      ) : null}
-
-      <h1 className={cn("max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl", eyebrow ? "mt-5" : "")}>
-        {title}
-      </h1>
+      <h1 className="max-w-3xl text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
 
       {description ? (
-        <p className="mt-4 max-w-2xl text-lg leading-relaxed text-muted-foreground">{description}</p>
+        <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">{description}</p>
       ) : null}
 
-      {children ? <div className="mt-8">{children}</div> : null}
+      {children ? <div className="mt-6">{children}</div> : null}
     </div>
   );
 }

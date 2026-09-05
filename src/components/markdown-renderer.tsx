@@ -33,7 +33,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
   return (
     <div
       className={cn(
-        "prose prose-slate max-w-none dark:prose-invert prose-headings:font-display prose-p:leading-7 prose-li:leading-7",
+        "prose prose-slate max-w-none dark:prose-invert prose-headings:font-semibold prose-p:leading-7 prose-li:leading-7",
         className
       )}
     >

@@ -30,7 +30,7 @@ export function SqlInterviewHub({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-xl border border-border/70 bg-muted/30 p-1">
+        <div className="inline-flex rounded-xl border border-border bg-muted/30 p-1">
           {(
             [
               ["leetcode", "LeetCode 50"],

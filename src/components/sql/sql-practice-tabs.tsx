@@ -20,7 +20,7 @@ export function SqlPracticeTabs({ questions }: SqlPracticeTabsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="inline-flex rounded-xl border border-border/70 bg-muted/30 p-1">
+      <div className="inline-flex rounded-xl border border-border bg-muted/30 p-1">
         {(
           [
             ["problems", "Problems"],

@@ -55,7 +55,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
       : [{ label: topic.title }]),
   ];
 
-  const eyebrow = topic.difficulty
+  const metaLabel = topic.difficulty
     ? {
         basic: "Basic · SQL",
         medium: "Medium · SQL",
@@ -71,8 +71,8 @@ export default async function TopicPage({ params }: TopicPageProps) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
       <PageHeader
-        eyebrow={eyebrow}
         title={topic.title}
+        description={metaLabel}
         breadcrumbs={breadcrumbs}
       >
         <ProgressToggle slug={topic.slug} />
@@ -86,7 +86,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
 
       {topic.content.trim() ? (
         <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-start">
-          <div className="rounded-2xl border border-border/70 bg-card/50 p-6 shadow-sm shadow-black/5 sm:p-8 dark:shadow-black/20">
+          <div className="panel p-6 sm:p-8">
             <MarkdownRenderer content={topic.content} />
           </div>
           <TableOfContents headings={headings} />

@@ -39,8 +39,8 @@ const tierLabels: Record<TierFilter, string> = {
 };
 
 const tierBadge: Record<CloudPracticeQuestion["tier"], string> = {
-  basic: "bg-emerald-500/10 text-emerald-500 ring-emerald-500/20",
-  medium: "bg-cyan-500/10 text-cyan-500 ring-cyan-500/20",
+  basic: "bg-emerald-500/10 text-primary ring-emerald-500/20",
+  medium: "bg-muted font-medium text-foreground ring-cyan-500/20",
   hard: "bg-rose-500/10 text-rose-400 ring-rose-500/20",
 };
 
@@ -140,7 +140,7 @@ export function CloudPracticeWorkspace({ questions }: CloudPracticeWorkspaceProp
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search scenarios..."
-                className="w-full rounded-xl border border-border/70 bg-background/60 py-2.5 pl-10 pr-3 text-sm outline-none ring-cyan-500/30 focus:ring-2"
+                className="w-full rounded-xl border border-border bg-background/60 py-2.5 pl-10 pr-3 text-sm outline-none ring-cyan-500/30 focus:ring-2"
               />
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -152,7 +152,7 @@ export function CloudPracticeWorkspace({ questions }: CloudPracticeWorkspaceProp
                   className={cn(
                     "rounded-full px-3 py-1 text-xs font-semibold",
                     tier === key
-                      ? "bg-cyan-500/10 text-cyan-500 ring-1 ring-cyan-500/20"
+                      ? "bg-muted font-medium text-foreground ring-1 ring-cyan-500/20"
                       : "bg-muted/70 text-muted-foreground"
                   )}
                 >
@@ -186,12 +186,12 @@ export function CloudPracticeWorkspace({ questions }: CloudPracticeWorkspaceProp
                   className={cn(
                     "flex w-full items-start gap-2 rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
                     selectedId === question.id
-                      ? "bg-cyan-500/10 text-cyan-500"
+                      ? "bg-muted font-medium text-foreground"
                       : "hover:bg-muted/60"
                   )}
                 >
                   {solvedIds.includes(question.id) ? (
-                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" />
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
                   ) : (
                     <span className="mt-0.5 w-4 shrink-0 font-mono text-xs text-muted-foreground">
                       {question.id}
@@ -205,7 +205,7 @@ export function CloudPracticeWorkspace({ questions }: CloudPracticeWorkspaceProp
         )}
 
         {activeQuestion && (
-          <section className="rounded-2xl border border-border/70 bg-card/50 p-5 sm:p-6">
+          <section className="panel p-5 sm:p-6">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-xs text-muted-foreground">#{activeQuestion.id}</span>
               <span
@@ -227,7 +227,7 @@ export function CloudPracticeWorkspace({ questions }: CloudPracticeWorkspaceProp
             </p>
 
             <div className="mt-5">
-              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <label className="mb-2 block text-xs font-medium text-muted-foreground">
                 Your approach
               </label>
               <textarea
@@ -235,7 +235,7 @@ export function CloudPracticeWorkspace({ questions }: CloudPracticeWorkspaceProp
                 onChange={(event) => setUserNotes(event.target.value)}
                 placeholder="Sketch pipeline steps, linked services, triggers, folder paths..."
                 rows={6}
-                className="w-full rounded-xl border border-border/70 bg-background/60 px-4 py-3 text-sm outline-none ring-cyan-500/30 focus:ring-2"
+                className="w-full rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none ring-cyan-500/30 focus:ring-2"
               />
             </div>
 

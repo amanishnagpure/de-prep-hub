@@ -40,7 +40,7 @@ export function SqlDialectToggle({ dialect, onChange, className }: SqlDialectTog
   return (
     <div
       className={cn(
-        "inline-flex rounded-xl border border-border/70 bg-muted/30 p-1",
+        "inline-flex rounded-xl border border-border bg-muted/30 p-1",
         className
       )}
       role="group"
@@ -84,7 +84,7 @@ export function SqlDialectBar() {
 
   return (
     <div className="mb-6 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-card/50 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3">
         <SqlDialectToggle dialect={dialect} onChange={setDialect} />
         <button
           type="button"

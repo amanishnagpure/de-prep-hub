@@ -17,8 +17,7 @@ export type LabNavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
-  accent: string;
-  ring: string;
+  tint: string;
 };
 
 export const LAB_NAV_ITEMS: LabNavItem[] = [
@@ -27,64 +26,56 @@ export const LAB_NAV_ITEMS: LabNavItem[] = [
     label: "SQL",
     href: "/sql",
     icon: Database,
-    accent: "from-sky-500/20 to-blue-500/5 text-sky-400",
-    ring: "ring-sky-500/20 group-hover:border-sky-500/40",
+    tint: "bg-sky-500/10 text-sky-700 ring-sky-500/20 dark:text-sky-300",
   },
   {
     key: "python",
     label: "Python",
     href: "/python",
     icon: Code2,
-    accent: "from-amber-500/20 to-yellow-500/5 text-amber-400",
-    ring: "ring-amber-500/20 group-hover:border-amber-500/40",
+    tint: "bg-amber-500/10 text-amber-800 ring-amber-500/20 dark:text-amber-300",
   },
   {
     key: "spark",
     label: "Spark",
     href: "/spark",
     icon: Zap,
-    accent: "from-orange-500/20 to-red-500/5 text-orange-400",
-    ring: "ring-orange-500/20 group-hover:border-orange-500/40",
+    tint: "bg-orange-500/10 text-orange-800 ring-orange-500/20 dark:text-orange-300",
   },
   {
     key: "databricks",
     label: "Databricks",
     href: "/databricks",
     icon: Layers,
-    accent: "from-rose-500/20 to-red-500/5 text-rose-400",
-    ring: "ring-rose-500/20 group-hover:border-rose-500/40",
+    tint: "bg-rose-500/10 text-rose-800 ring-rose-500/20 dark:text-rose-300",
   },
   {
     key: "airflow",
     label: "Airflow",
     href: "/airflow",
     icon: Workflow,
-    accent: "from-emerald-500/20 to-green-500/5 text-emerald-400",
-    ring: "ring-emerald-500/20 group-hover:border-emerald-500/40",
+    tint: "bg-emerald-500/10 text-emerald-800 ring-emerald-500/20 dark:text-emerald-300",
   },
   {
     key: "cloud",
     label: "Cloud",
     href: "/cloud",
     icon: Cloud,
-    accent: "from-cyan-500/20 to-teal-500/5 text-cyan-400",
-    ring: "ring-cyan-500/20 group-hover:border-cyan-500/40",
+    tint: "bg-cyan-500/10 text-cyan-800 ring-cyan-500/20 dark:text-cyan-300",
   },
   {
     key: "system-design",
-    label: "System Design",
+    label: "System design",
     href: "/system-design",
     icon: Network,
-    accent: "from-violet-500/20 to-purple-500/5 text-violet-400",
-    ring: "ring-violet-500/20 group-hover:border-violet-500/40",
+    tint: "bg-violet-500/10 text-violet-800 ring-violet-500/20 dark:text-violet-300",
   },
   {
     key: "interview",
     label: "Interview",
     href: "/interview-prep",
     icon: MessageSquare,
-    accent: "from-fuchsia-500/20 to-pink-500/5 text-fuchsia-400",
-    ring: "ring-fuchsia-500/20 group-hover:border-fuchsia-500/40",
+    tint: "bg-fuchsia-500/10 text-fuchsia-800 ring-fuchsia-500/20 dark:text-fuchsia-300",
   },
 ];
 
@@ -94,34 +85,24 @@ interface HomeLabNavProps {
 
 export function HomeLabNav({ className }: HomeLabNavProps) {
   return (
-    <nav className={cn("grid grid-cols-2 gap-3 sm:grid-cols-4", className)} aria-label="Lab sections">
-      {LAB_NAV_ITEMS.map((item, index) => {
+    <nav
+      className={cn("grid grid-cols-2 gap-3 sm:grid-cols-4", className)}
+      aria-label="Lab sections"
+    >
+      {LAB_NAV_ITEMS.map((item) => {
         const Icon = item.icon;
         return (
           <Link
             key={item.key}
             href={item.href}
-            className={cn(
-              "group flex items-center gap-3 rounded-2xl border border-border/70 bg-card/60 p-4 transition-all hover:-translate-y-0.5 hover:bg-card/80 hover:shadow-md",
-              item.ring
-            )}
+            className="panel-interactive group flex items-center gap-3 p-4"
           >
-            <div
-              className={cn(
-                "flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ring-1",
-                item.accent
-              )}
-            >
+            <div className={cn("icon-tile", item.tint)}>
               <Icon className="size-5" />
             </div>
-            <div className="min-w-0">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <p className="truncate text-sm font-semibold tracking-tight transition-colors group-hover:text-primary">
-                {item.label}
-              </p>
-            </div>
+            <span className="text-sm font-semibold tracking-tight transition-colors group-hover:text-primary">
+              {item.label}
+            </span>
           </Link>
         );
       })}
