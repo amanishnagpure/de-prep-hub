@@ -25,6 +25,7 @@ import { usePracticeQuestionId } from "@/hooks/use-practice-question-id";
 import { InterviewPrepMarkdownRenderer } from "@/components/interview-prep/interview-prep-markdown-renderer";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
+import { usePracticeScrollToEditor } from "@/hooks/use-practice-scroll";
 
 type TierFilter = "all" | InterviewPrepPracticeQuestion["tier"];
 type CategoryFilter = "all" | InterviewPrepPracticeQuestion["category"];
@@ -53,6 +54,7 @@ interface InterviewPrepPracticeWorkspaceProps {
 }
 
 export function InterviewPrepPracticeWorkspace({ questions }: InterviewPrepPracticeWorkspaceProps) {
+  usePracticeScrollToEditor();
   const [viewMode, setViewMode] = React.useState<ViewMode>("browse");
   const [tier, setTier] = React.useState<TierFilter>("all");
   const [category, setCategory] = React.useState<CategoryFilter>("all");
@@ -117,7 +119,7 @@ export function InterviewPrepPracticeWorkspace({ questions }: InterviewPrepPract
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm text-muted-foreground">
           {stats.solved}/{stats.total}
@@ -135,9 +137,9 @@ export function InterviewPrepPracticeWorkspace({ questions }: InterviewPrepPract
         )}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(220px,260px)_minmax(0,1fr)] lg:items-start">
         {viewMode === "browse" && (
-          <aside className="space-y-3 xl:max-h-[75vh] xl:overflow-y-auto">
+          <aside className="order-2 space-y-3 lg:order-1 lg:sticky lg:top-14 lg:max-h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -209,7 +211,7 @@ export function InterviewPrepPracticeWorkspace({ questions }: InterviewPrepPract
         )}
 
         {activeQuestion && (
-          <section className="panel p-5 sm:p-6">
+          <section id="practice-editor" className="panel order-1 p-5 sm:p-6 lg:order-2 lg:sticky lg:top-14 lg:self-start lg:max-h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-xs text-muted-foreground">#{activeQuestion.id}</span>
               <span
@@ -226,7 +228,7 @@ export function InterviewPrepPracticeWorkspace({ questions }: InterviewPrepPract
             </div>
 
             <h3 className="mt-3 text-xl font-semibold tracking-tight">{activeQuestion.title}</h3>
-            <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+            <p className="mt-3 max-h-32 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-muted-foreground sm:max-h-40">
               {activeQuestion.body}
             </p>
 

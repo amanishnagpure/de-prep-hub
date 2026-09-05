@@ -55,6 +55,7 @@ import { HomeSectionHeader } from "@/components/home/home-section-header";
 import { HomeLabNav } from "@/components/home/home-lab-nav";
 import { HomeProgressPanel, type LabProgressEntry } from "@/components/home/home-progress-panel";
 import { LabSummaryCard } from "@/components/home/lab-summary-card";
+import { SiteContainer } from "@/components/site-container";
 
 type TrackStat = { current: number; total: number; percent: number };
 
@@ -211,6 +212,43 @@ const ALL_LABS = [
   },
 ] as const;
 
+function zeroStat(total: number): TrackStat {
+  return { current: 0, total, percent: 0 };
+}
+
+function standardPlaceholder(stats: {
+  noteChapters: number;
+  practiceTotal: number;
+  interviewTotal: number;
+}): Record<string, TrackStat> {
+  return {
+    notes: zeroStat(stats.noteChapters),
+    practice: zeroStat(stats.practiceTotal),
+    interview: zeroStat(stats.interviewTotal),
+  };
+}
+
+const EMPTY_LAB_STATS: Record<string, Record<string, TrackStat>> = {
+  sql: {
+    notes: zeroStat(SQL_STATS.noteChapters),
+    practice: zeroStat(SQL_STATS.practiceTotal),
+    leetcode: zeroStat(SQL_STATS.leetcodeTotal),
+    interview: zeroStat(SQL_STATS.interviewTotal),
+  },
+  python: {
+    notes: zeroStat(PYTHON_STATS.noteChapters),
+    practice: zeroStat(PYTHON_STATS.practiceTotal),
+    coding: zeroStat(PYTHON_STATS.codingTotal),
+    interview: zeroStat(PYTHON_STATS.interviewTotal),
+  },
+  spark: standardPlaceholder(SPARK_STATS),
+  databricks: standardPlaceholder(DATABRICKS_STATS),
+  airflow: standardPlaceholder(AIRFLOW_STATS),
+  cloud: standardPlaceholder(CLOUD_STATS),
+  "system-design": standardPlaceholder(SYSTEM_DESIGN_STATS),
+  "interview-prep": standardPlaceholder(INTERVIEW_PREP_STATS),
+};
+
 function buildStandardStats(
   stats: { noteChapters: number; practiceTotal: number; interviewTotal: number },
   getNotes: (total: number) => { read: number; total: number; percent: number },
@@ -235,9 +273,7 @@ function labPercent(stats: Record<string, TrackStat>, tracks: readonly { key: st
 }
 
 export function HomeDashboard() {
-  const [labStats, setLabStats] = React.useState<Record<string, Record<string, TrackStat>>>(() =>
-    Object.fromEntries(ALL_LABS.map((lab) => [lab.key, lab.buildStats()]))
-  );
+  const [labStats, setLabStats] = React.useState(EMPTY_LAB_STATS);
 
   const refresh = React.useCallback(() => {
     setLabStats(Object.fromEntries(ALL_LABS.map((lab) => [lab.key, lab.buildStats()])));
@@ -265,7 +301,7 @@ export function HomeDashboard() {
   });
 
   return (
-    <section className="mx-auto max-w-6xl space-y-12 px-4 py-10 sm:px-6 sm:py-12">
+    <SiteContainer as="section" className="space-y-12 py-10 sm:py-12">
       <div>
         <HomeSectionHeader title="Sections" description="Eight tracks — pick one and go deep." />
         <HomeLabNav className="mt-6" />
@@ -297,6 +333,6 @@ export function HomeDashboard() {
           </aside>
         </div>
       </div>
-    </section>
+    </SiteContainer>
   );
 }

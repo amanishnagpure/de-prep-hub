@@ -12,6 +12,7 @@ import { TableOfContents } from "@/components/table-of-contents";
 import { ProgressToggle } from "@/components/progress-toggle";
 import { TopicNavigation } from "@/components/topic-navigation";
 import { TopicModules } from "@/components/topic-modules";
+import { SiteContainer } from "@/components/site-container";
 
 interface TopicPageProps {
   params: Promise<{ slug: string }>;
@@ -69,7 +70,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
     : `Topic ${String(topic.order).padStart(2, "0")}`;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+    <SiteContainer className="py-10 sm:py-14">
       <PageHeader
         title={topic.title}
         description={metaLabel}
@@ -94,6 +95,6 @@ export default async function TopicPage({ params }: TopicPageProps) {
       ) : null}
 
       <TopicNavigation prev={prev} next={next} />
-    </div>
+    </SiteContainer>
   );
 }

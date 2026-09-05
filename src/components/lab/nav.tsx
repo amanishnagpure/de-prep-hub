@@ -28,7 +28,7 @@ export function LabSidebarLink({
       className={cn(
         "flex items-center gap-3 rounded-lg text-sm transition-all duration-150",
         nested ? "px-3 py-2" : "px-3 py-2.5",
-        nested && "ml-5 border-l-2 border-border pl-4",
+        nested && !collapsed && "ml-5 border-l-2 border-border pl-4",
         active
           ? nested
             ? "border-l-primary font-medium text-primary"

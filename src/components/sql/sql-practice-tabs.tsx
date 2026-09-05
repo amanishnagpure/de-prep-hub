@@ -19,7 +19,7 @@ export function SqlPracticeTabs({ questions }: SqlPracticeTabsProps) {
   const [tab, setTab] = React.useState<PracticeTab>(initialTab);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="inline-flex rounded-xl border border-border bg-muted/30 p-1">
         {(
           [

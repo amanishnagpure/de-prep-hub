@@ -8,12 +8,11 @@ import {
   BookOpen,
   Brain,
   Database,
-  PanelLeftClose,
-  PanelLeftOpen,
   Trophy,
 } from "lucide-react";
 import { SQL_NOTES_SECTIONS, SQL_ROUTES } from "@/lib/sql";
 import { LabSidebarLink, LabMobileTab } from "@/components/lab/nav";
+import { LabSidebarShell, useLabSidebarCollapse } from "@/components/lab/sidebar-shell";
 import { cn } from "cn";
 
 type NavIcon = React.ComponentType<{ className?: string }>;
@@ -95,26 +94,53 @@ export function SqlSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const chapter = searchParams.get("chapter");
-  const [collapsed, setCollapsed] = React.useState(false);
+  const { collapsed, toggle } = useLabSidebarCollapse();
 
   const isChildActive = (child: NavChild) =>
     child.match ? child.match(pathname, chapter) : pathname === child.href;
 
-  return (
+  const mobileNav = (
     <>
-      <aside
-        className={cn(
-          "hidden shrink-0 border-r border-border bg-card transition-all duration-300 lg:block",
-          collapsed ? "w-[72px]" : "w-60"
-        )}
-      >
-        <div className="sticky top-20 flex h-[calc(100vh-6rem)] flex-col p-4">
-          {!collapsed && (
-            <p className="mb-6 text-xs font-medium text-muted-foreground">SQL</p>
-          )}
+      <LabMobileTab href={SQL_ROUTES.home} active={pathname === SQL_ROUTES.home}>
+                Overview
+              </LabMobileTab>
+              {SQL_NOTES_SECTIONS.map((section) => (
+                <Link
+                  key={section.id}
+                  href={`${SQL_ROUTES.notes}?chapter=${section.id}`}
+                  className={cn(
+                    "shrink-0 rounded-md px-3 py-2 text-sm transition-colors",
+                    pathname.startsWith(SQL_ROUTES.notes) && chapter === section.id
+                      ? "bg-muted font-medium text-foreground"
+                      : "bg-muted/50 text-muted-foreground"
+                  )}
+                >
+                  {section.label}
+                </Link>
+              ))}
+              <LabMobileTab href={SQL_ROUTES.practice} active={pathname.startsWith(SQL_ROUTES.practice)}>
+                Practice
+              </LabMobileTab>
+              <LabMobileTab href={SQL_ROUTES.leetcode} active={pathname.startsWith(SQL_ROUTES.leetcode)}>
+                LeetCode
+              </LabMobileTab>
+              <LabMobileTab href={SQL_ROUTES.interview} active={pathname.startsWith(SQL_ROUTES.interview)}>
+                Interview
+              </LabMobileTab>
+              <LabMobileTab href={SQL_ROUTES.mock} active={pathname.startsWith(SQL_ROUTES.mock)}>
+                Mock
+              </LabMobileTab>
+    </>
+  );
 
-          <nav className="space-y-1 overflow-y-auto">
-            {NAV.map((group) => {
+  return (
+    <LabSidebarShell
+      collapsed={collapsed}
+      onToggleCollapse={toggle}
+      mobileNav={mobileNav}
+      header={<p className="text-xs font-medium text-muted-foreground">SQL</p>}
+    >
+      {NAV.map((group) => {
               const groupActive = group.match?.(pathname) ?? false;
               const Icon = group.icon;
 
@@ -144,50 +170,6 @@ export function SqlSidebar() {
                 </div>
               );
             })}
-          </nav>
-
-          <button
-            type="button"
-            onClick={() => setCollapsed((value) => !value)}
-            className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl border border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-          >
-            {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
-            {!collapsed && "Collapse"}
-          </button>
-        </div>
-      </aside>
-
-      <nav className="flex gap-2 overflow-x-auto border-b border-border px-4 py-3 lg:hidden">
-        <LabMobileTab href={SQL_ROUTES.home} active={pathname === SQL_ROUTES.home}>
-          Overview
-        </LabMobileTab>
-        {SQL_NOTES_SECTIONS.map((section) => (
-          <Link
-            key={section.id}
-            href={`${SQL_ROUTES.notes}?chapter=${section.id}`}
-            className={cn(
-              "shrink-0 rounded-md px-3 py-2 text-sm transition-colors",
-              pathname.startsWith(SQL_ROUTES.notes) && chapter === section.id
-                ? "bg-muted font-medium text-foreground"
-                : "bg-muted/50 text-muted-foreground"
-            )}
-          >
-            {section.label}
-          </Link>
-        ))}
-        <LabMobileTab href={SQL_ROUTES.practice} active={pathname.startsWith(SQL_ROUTES.practice)}>
-          Practice
-        </LabMobileTab>
-        <LabMobileTab href={SQL_ROUTES.leetcode} active={pathname.startsWith(SQL_ROUTES.leetcode)}>
-          LeetCode
-        </LabMobileTab>
-        <LabMobileTab href={SQL_ROUTES.interview} active={pathname.startsWith(SQL_ROUTES.interview)}>
-          Interview
-        </LabMobileTab>
-        <LabMobileTab href={SQL_ROUTES.mock} active={pathname.startsWith(SQL_ROUTES.mock)}>
-          Mock
-        </LabMobileTab>
-      </nav>
-    </>
+    </LabSidebarShell>
   );
 }

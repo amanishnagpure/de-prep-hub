@@ -253,7 +253,12 @@ export function SqlMockInterview({ pools }: { pools: MockSessionPools }) {
               className="min-h-[120px] w-full resize-y rounded-xl border border-border bg-[oklch(0.12_0.02_250)] p-3 font-mono text-sm outline-none ring-violet-500/30 focus:ring-2"
               placeholder="Write your query here..."
             />
-            <SqlQueryRunner query={userSql} className="mt-3" />
+            <SqlQueryRunner
+              key={current.id}
+              resetKey={current.id}
+              query={userSql}
+              className="mt-3"
+            />
           </div>
         )}
 

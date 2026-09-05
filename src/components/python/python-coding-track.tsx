@@ -28,6 +28,7 @@ import { PythonEditor } from "@/components/python/python-editor";
 import { PythonCodeBlock } from "@/components/python/python-code-block";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
+import { usePracticeScrollToEditor } from "@/hooks/use-practice-scroll";
 
 type DifficultyFilter = "all" | PythonCodingDifficulty;
 type PatternFilter = "all" | PythonCodingPattern;
@@ -56,6 +57,7 @@ export function PythonCodingTrack({
   initialPattern,
   initialReview = false,
 }: PythonCodingTrackProps) {
+  usePracticeScrollToEditor();
   const [search, setSearch] = React.useState("");
   const [difficulty, setDifficulty] = React.useState<DifficultyFilter>("all");
   const [pattern, setPattern] = React.useState<PatternFilter>(
@@ -128,9 +130,9 @@ export function PythonCodingTrack({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="space-y-4 xl:max-h-[80vh] xl:overflow-y-auto">
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] lg:items-start">
+        <aside className="order-2 space-y-4 lg:order-1 lg:sticky lg:top-14 lg:max-h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain">
           <p className="text-sm text-muted-foreground">
             {stats.solved}/{stats.total} · {PYTHON_CODING_MUST_DO} must-do
           </p>
@@ -232,7 +234,7 @@ export function PythonCodingTrack({
         </aside>
 
         {active && (
-          <section className="panel p-5 sm:p-6">
+          <section id="practice-editor" className="panel order-1 p-5 sm:p-6 lg:order-2 lg:sticky lg:top-14 lg:self-start lg:max-h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="flex flex-wrap items-center gap-2">

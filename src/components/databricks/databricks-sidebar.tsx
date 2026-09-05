@@ -8,12 +8,11 @@ import {
   BookOpen,
   Brain,
   Layers,
-  PanelLeftClose,
-  PanelLeftOpen,
   Terminal,
 } from "lucide-react";
 import { DATABRICKS_NOTES_SECTIONS, DATABRICKS_ROUTES } from "@/lib/databricks";
 import { LabSidebarLink, LabMobileTab } from "@/components/lab/nav";
+import { LabSidebarShell, useLabSidebarCollapse } from "@/components/lab/sidebar-shell";
 import { cn } from "cn";
 
 type NavIcon = React.ComponentType<{ className?: string }>;
@@ -75,26 +74,47 @@ export function DatabricksSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const chapter = searchParams.get("chapter");
-  const [collapsed, setCollapsed] = React.useState(false);
+  const { collapsed, toggle } = useLabSidebarCollapse();
 
   const isChildActive = (child: NavChild) =>
     child.match ? child.match(pathname, chapter) : pathname === child.href;
 
-  return (
+  const mobileNav = (
     <>
-      <aside
-        className={cn(
-          "hidden shrink-0 border-r border-border bg-card transition-all duration-300 lg:block",
-          collapsed ? "w-[72px]" : "w-60"
-        )}
-      >
-        <div className="sticky top-20 flex h-[calc(100vh-6rem)] flex-col p-4">
-          {!collapsed && (
-            <p className="mb-6 text-xs font-medium text-muted-foreground">Databricks</p>
-          )}
+      <LabMobileTab href={DATABRICKS_ROUTES.home} active={pathname === DATABRICKS_ROUTES.home}>
+                Overview
+              </LabMobileTab>
+              {DATABRICKS_NOTES_SECTIONS.map((section) => (
+                <Link
+                  key={section.id}
+                  href={`${DATABRICKS_ROUTES.notes}?chapter=${section.id}`}
+                  className={cn(
+                    "shrink-0 rounded-md px-3 py-2 text-sm transition-colors",
+                    pathname.startsWith(DATABRICKS_ROUTES.notes) && chapter === section.id
+                      ? "bg-muted font-medium text-foreground"
+                      : "bg-muted/50 text-muted-foreground"
+                  )}
+                >
+                  {section.label}
+                </Link>
+              ))}
+              <LabMobileTab href={DATABRICKS_ROUTES.practice} active={pathname.startsWith(DATABRICKS_ROUTES.practice)}>
+                Practice
+              </LabMobileTab>
+              <LabMobileTab href={DATABRICKS_ROUTES.interview} active={pathname.startsWith(DATABRICKS_ROUTES.interview)}>
+                Interview
+              </LabMobileTab>
+    </>
+  );
 
-          <nav className="space-y-1 overflow-y-auto">
-            {NAV.map((group) => {
+  return (
+    <LabSidebarShell
+      collapsed={collapsed}
+      onToggleCollapse={toggle}
+      mobileNav={mobileNav}
+      header={<p className="text-xs font-medium text-muted-foreground">Databricks</p>}
+    >
+      {NAV.map((group) => {
               const groupActive = group.match?.(pathname) ?? false;
               const Icon = group.icon;
 
@@ -124,44 +144,6 @@ export function DatabricksSidebar() {
                 </div>
               );
             })}
-          </nav>
-
-          <button
-            type="button"
-            onClick={() => setCollapsed((value) => !value)}
-            className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl border border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-          >
-            {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
-            {!collapsed && "Collapse"}
-          </button>
-        </div>
-      </aside>
-
-      <nav className="flex gap-2 overflow-x-auto border-b border-border px-4 py-3 lg:hidden">
-        <LabMobileTab href={DATABRICKS_ROUTES.home} active={pathname === DATABRICKS_ROUTES.home}>
-          Overview
-        </LabMobileTab>
-        {DATABRICKS_NOTES_SECTIONS.map((section) => (
-          <Link
-            key={section.id}
-            href={`${DATABRICKS_ROUTES.notes}?chapter=${section.id}`}
-            className={cn(
-              "shrink-0 rounded-md px-3 py-2 text-sm transition-colors",
-              pathname.startsWith(DATABRICKS_ROUTES.notes) && chapter === section.id
-                ? "bg-muted font-medium text-foreground"
-                : "bg-muted/50 text-muted-foreground"
-            )}
-          >
-            {section.label}
-          </Link>
-        ))}
-        <LabMobileTab href={DATABRICKS_ROUTES.practice} active={pathname.startsWith(DATABRICKS_ROUTES.practice)}>
-          Practice
-        </LabMobileTab>
-        <LabMobileTab href={DATABRICKS_ROUTES.interview} active={pathname.startsWith(DATABRICKS_ROUTES.interview)}>
-          Interview
-        </LabMobileTab>
-      </nav>
-    </>
+    </LabSidebarShell>
   );
 }

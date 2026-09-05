@@ -22,7 +22,7 @@ async function getDatabase(): Promise<Database> {
       const { SQL_PLAYGROUND_INIT } = await import("@/data/sql-playground-seed");
 
       const SQL = await initSqlJs({
-        locateFile: (file) => `https://sql.js.org/dist/${file}`,
+        locateFile: (file) => `/wasm/${file}`,
       });
 
       const db = new SQL.Database();

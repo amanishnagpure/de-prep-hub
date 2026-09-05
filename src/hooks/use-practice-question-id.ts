@@ -22,10 +22,25 @@ export function usePracticeQuestionId(
   );
 
   const [selectedId, setSelectedId] = React.useState(() => resolveId(parsedId));
+  const skipMobileScroll = React.useRef(true);
 
   React.useEffect(() => {
     setSelectedId(resolveId(parsedId));
   }, [parsedId, resolveId]);
+
+  React.useEffect(() => {
+    if (skipMobileScroll.current) {
+      skipMobileScroll.current = false;
+      return;
+    }
+    if (typeof window === "undefined" || window.innerWidth >= 1024) return;
+
+    const editor = document.getElementById("practice-editor");
+    if (!editor) return;
+
+    const top = editor.getBoundingClientRect().top + window.scrollY - 56 - 12;
+    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+  }, [selectedId]);
 
   return [selectedId, setSelectedId];
 }

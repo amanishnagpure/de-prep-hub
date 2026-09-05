@@ -15,7 +15,7 @@ export default function InterviewPrepPracticePage() {
   return (
     <>
       <InterviewPrepVisitTracker label="STAR Drills" />
-      <h1 className="mb-6 text-2xl font-bold tracking-tight">STAR Drills</h1>
+      <h1 className="sr-only">STAR Drills</h1>
       <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
         <InterviewPrepPracticeWorkspace questions={questions} />
       </Suspense>

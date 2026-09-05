@@ -7,6 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { SQL_ROUTES } from "@/lib/sql";
 import { getSqlProgress, getSqlStreak } from "@/lib/sql-progress";
 import { cn } from "cn";
+import { SiteContainer } from "@/components/site-container";
 
 export function HomeHero() {
   const [streak, setStreak] = React.useState(0);
@@ -34,7 +35,7 @@ export function HomeHero() {
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.04] via-transparent to-transparent"
       />
-      <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+      <SiteContainer className="relative py-12 sm:py-16">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-xl">
             <p className="text-sm font-medium text-primary">Data engineering prep</p>
@@ -85,7 +86,7 @@ export function HomeHero() {
             </Link>
           </div>
         </div>
-      </div>
+      </SiteContainer>
     </section>
   );
 }

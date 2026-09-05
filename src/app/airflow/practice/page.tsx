@@ -15,7 +15,7 @@ export default function AirflowPracticePage() {
   return (
     <>
       <AirflowVisitTracker label="Airflow Practice" />
-      <h1 className="mb-6 text-2xl font-bold tracking-tight">Practice</h1>
+      <h1 className="sr-only">Practice</h1>
       <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
         <AirflowPracticeWorkspace questions={questions} />
       </Suspense>

@@ -83,7 +83,7 @@ export function SqlDialectBar() {
   if (!show) return null;
 
   return (
-    <div className="mb-6 space-y-3">
+    <div className="mb-3 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3">
         <SqlDialectToggle dialect={dialect} onChange={setDialect} />
         <button

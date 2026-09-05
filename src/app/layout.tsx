@@ -4,6 +4,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { SiteBackground } from "@/components/site-background";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeScript } from "@/components/theme-script";
 import { SearchProvider } from "@/components/search-dialog";
 import { getSearchIndex } from "@/lib/content";
 import "./globals.css";
@@ -44,6 +45,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} h-full`}
     >
+      <head>
+        <ThemeScript />
+      </head>
       <body className="min-h-full antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <SearchProvider items={searchItems}>

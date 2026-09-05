@@ -30,6 +30,7 @@ import { SqlCodeBlock } from "@/components/sql/sql-code-block";
 import { SqlQueryRunner } from "@/components/sql/sql-query-runner";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
+import { usePracticeScrollToEditor } from "@/hooks/use-practice-scroll";
 
 type TierFilter = "all" | SqlPracticeQuestion["tier"];
 type ViewMode = "browse" | "quiz";
@@ -52,6 +53,7 @@ interface SqlPracticeWorkspaceProps {
 }
 
 export function SqlPracticeWorkspace({ questions }: SqlPracticeWorkspaceProps) {
+  usePracticeScrollToEditor();
   const { dialect } = useSqlDialect();
   const [viewMode, setViewMode] = React.useState<ViewMode>("browse");
   const [tier, setTier] = React.useState<TierFilter>("all");
@@ -134,7 +136,7 @@ export function SqlPracticeWorkspace({ questions }: SqlPracticeWorkspaceProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm text-muted-foreground">
           {stats.solved}/{stats.total}
@@ -152,9 +154,9 @@ export function SqlPracticeWorkspace({ questions }: SqlPracticeWorkspaceProps) {
         )}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)_280px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(220px,260px)_minmax(0,1fr)_minmax(200px,240px)] lg:items-start">
         {viewMode === "browse" && (
-          <aside className="space-y-3 xl:max-h-[75vh] xl:overflow-y-auto">
+          <aside className="order-2 space-y-3 lg:order-1 lg:sticky lg:top-14 lg:max-h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -209,7 +211,7 @@ export function SqlPracticeWorkspace({ questions }: SqlPracticeWorkspaceProps) {
         )}
 
         {activeQuestion && (
-          <section className="panel p-5 sm:p-6">
+          <section id="practice-editor" className="panel order-1 p-5 sm:p-6 lg:order-2 lg:sticky lg:top-14 lg:self-start lg:max-h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-xs text-muted-foreground">#{activeQuestion.id}</span>
               <span
@@ -223,13 +225,18 @@ export function SqlPracticeWorkspace({ questions }: SqlPracticeWorkspaceProps) {
             </div>
 
             <h3 className="mt-3 text-xl font-semibold tracking-tight">{activeQuestion.title}</h3>
-            <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+            <p className="mt-3 max-h-32 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-muted-foreground sm:max-h-40">
               {activeQuestion.body}
             </p>
 
             <div className="mt-5">
               <SqlEditor value={userSql} onChange={setUserSql} height={200} />
-              <SqlQueryRunner query={userSql} className="mt-3" />
+              <SqlQueryRunner
+                key={activeQuestion.id}
+                resetKey={activeQuestion.id}
+                query={userSql}
+                className="mt-3"
+              />
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
@@ -311,7 +318,11 @@ export function SqlPracticeWorkspace({ questions }: SqlPracticeWorkspaceProps) {
           </section>
         )}
 
-        {activeQuestion && <SqlSchemaPanel tables={schemas} />}
+        {activeQuestion && (
+          <aside className="order-3 hidden min-w-0 lg:sticky lg:top-14 lg:block lg:max-h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain lg:self-start">
+            <SqlSchemaPanel tables={schemas} />
+          </aside>
+        )}
       </div>
     </div>
   );

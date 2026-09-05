@@ -15,7 +15,7 @@ export default function SparkPracticePage() {
   return (
     <>
       <SparkVisitTracker label="Spark Practice" />
-      <h1 className="mb-6 text-2xl font-bold tracking-tight">Coding Practice</h1>
+      <h1 className="sr-only">Coding Practice</h1>
       <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
         <SparkPracticeWorkspace questions={questions} />
       </Suspense>

@@ -3,6 +3,7 @@ import { TOPIC_LAB_SLUGS } from "@/lib/topic-labs";
 import { TopicCard } from "@/components/topic-card";
 import { ProgressCounter } from "@/components/progress-counter";
 import { HomeSectionHeader } from "@/components/home/home-section-header";
+import { SiteContainer } from "@/components/site-container";
 
 interface HomeTopicsSectionProps {
   topics: TopicMeta[];
@@ -16,7 +17,7 @@ export function HomeTopicsSection({ topics }: HomeTopicsSectionProps) {
 
   return (
     <section className="border-t border-border/60 bg-muted/20">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
+      <SiteContainer className="py-10 sm:py-12">
         <HomeSectionHeader
           title="Study topics"
           description={`${TOPIC_LAB_SLUGS.length} live labs — SQL and Python featured below, plus Spark, Databricks, Airflow, Cloud, System Design, and Interview Prep.`}
@@ -36,7 +37,7 @@ export function HomeTopicsSection({ topics }: HomeTopicsSectionProps) {
 
           <ProgressCounter totalTopics={topics.length} />
         </div>
-      </div>
+      </SiteContainer>
     </section>
   );
 }

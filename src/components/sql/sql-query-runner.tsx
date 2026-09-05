@@ -9,12 +9,20 @@ import { cn } from "cn";
 interface SqlQueryRunnerProps {
   query: string;
   className?: string;
+  /** Change when the active question/session changes to clear prior run output. */
+  resetKey?: string | number;
 }
 
-export function SqlQueryRunner({ query, className }: SqlQueryRunnerProps) {
+export function SqlQueryRunner({ query, className, resetKey }: SqlQueryRunnerProps) {
   const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState<SqlRunResult | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setLoading(false);
+    setResult(null);
+    setError(null);
+  }, [resetKey]);
 
   const run = async () => {
     setLoading(true);
