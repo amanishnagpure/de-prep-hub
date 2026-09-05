@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, Home, Map, Menu, X } from "lucide-react";
+import { CalendarDays, ChevronDown, Home, Map, Menu, X } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SearchTrigger } from "@/components/search-dialog";
@@ -17,6 +17,7 @@ function getTopicHref(slug: string): string {
 
 const primaryNav = [
   { href: "/", label: "Home", icon: Home, exact: true },
+  { href: "/schedule", label: "Schedule", icon: CalendarDays, exact: false },
   { href: "/roadmap", label: "Roadmap", icon: Map, exact: false },
 ];
 

@@ -54,6 +54,7 @@ import {
 import { HomeSectionHeader } from "@/components/home/home-section-header";
 import { HomeLabNav } from "@/components/home/home-lab-nav";
 import { HomeProgressPanel, type LabProgressEntry } from "@/components/home/home-progress-panel";
+import { ProgressBackupPanel } from "@/components/home/progress-backup-panel";
 import { LabSummaryCard } from "@/components/home/lab-summary-card";
 import { SiteContainer } from "@/components/site-container";
 
@@ -328,8 +329,9 @@ export function HomeDashboard() {
             ))}
           </div>
 
-          <aside className="lg:sticky lg:top-20 lg:self-start">
+          <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
             <HomeProgressPanel labs={progressEntries} />
+            <ProgressBackupPanel />
           </aside>
         </div>
       </div>
