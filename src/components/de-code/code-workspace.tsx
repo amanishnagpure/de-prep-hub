@@ -6,8 +6,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   Loader2,
   Play,
   RotateCcw,
@@ -42,7 +40,9 @@ import {
 import type { CodeProblem, CodeTrackId, ExperienceLevel, JudgeVerdict } from "@/lib/de-code/types";
 import { buildPythonStarter } from "@/lib/practice-platform/judge/pyodide-runtime";
 import { CodeProblemDescription, DeCodeRichText } from "@/components/de-code/code-problem-description";
+import { ChallengeVerdictPanel } from "@/components/de-code/challenge-verdict-panel";
 import { ResizableSplit } from "@/components/practice-platform/resizable-split";
+import { PlatformTabs } from "@/components/ui/platform-tabs";
 import { PythonEditor } from "@/components/python/python-editor";
 import { SparkEditor } from "@/components/spark/spark-editor";
 import { SqlEditor } from "@/components/sql/sql-editor";
@@ -74,7 +74,8 @@ export function CodeWorkspace({ track, topicId }: { track: CodeTrackId; topicId?
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const meta = CODE_TRACKS.find((t) => t.id === track);
-  const topics = React.useMemo(() => getActiveTopics(track), [track]  );
+  const topics = React.useMemo(() => getActiveTopics(track), [track]);
+  const isTopicMode = Boolean(topicId);
 
   const [topicFilter, setTopicFilter] = React.useState(topicId ?? "all");
   const [search, setSearch] = React.useState("");
@@ -105,13 +106,20 @@ export function CodeWorkspace({ track, topicId }: { track: CodeTrackId; topicId?
   const [verdict, setVerdict] = React.useState<JudgeVerdict | null>(null);
   const [running, setRunning] = React.useState(false);
   const [stats, setStats] = React.useState({ solved: 0, total: 0, percent: 0 });
+  const [mounted, setMounted] = React.useState(false);
+  const [progressVersion, setProgressVersion] = React.useState(0);
 
+  React.useEffect(() => setMounted(true), []);
+
+  const slugParam = searchParams.get("slug");
   const slug =
-    searchParams.get("slug") && getCodeProblem(track, searchParams.get("slug")!)
-      ? searchParams.get("slug")!
-      : (problems[0]?.slug ?? "");
+    slugParam && getCodeProblem(track, slugParam)
+      ? slugParam
+      : isTopicMode
+        ? ""
+        : (problems[0]?.slug ?? "");
 
-  const problem = getCodeProblem(track, slug) ?? problems[0];
+  const problem = slug ? getCodeProblem(track, slug) ?? problems[0] : undefined;
 
   const filtered = problems.filter((p) => {
     const okDiff = difficulty === "all" || p.difficulty === difficulty;
@@ -121,7 +129,7 @@ export function CodeWorkspace({ track, topicId }: { track: CodeTrackId; topicId?
       !search ||
       p.title.toLowerCase().includes(search.toLowerCase()) ||
       p.concepts.some((c) => c.includes(search.toLowerCase()));
-    const solved = isProblemSolved(p.id);
+    const solved = mounted && isProblemSolved(p.id);
     const okStatus =
       statusFilter === "all" ||
       (statusFilter === "solved" && solved) ||
@@ -134,6 +142,9 @@ export function CodeWorkspace({ track, topicId }: { track: CodeTrackId; topicId?
     params.set("slug", next);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     setMobilePanel("problem");
+    window.requestAnimationFrame(() => {
+      document.getElementById("code-problem-editor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
 
   const refresh = React.useCallback(() => {
@@ -149,9 +160,23 @@ export function CodeWorkspace({ track, topicId }: { track: CodeTrackId; topicId?
 
   React.useEffect(() => {
     refresh();
-    window.addEventListener("de-code-updated", refresh);
-    return () => window.removeEventListener("de-code-updated", refresh);
+    const onUpdate = () => {
+      refresh();
+      setProgressVersion((v) => v + 1);
+    };
+    window.addEventListener("de-code-updated", onUpdate);
+    return () => window.removeEventListener("de-code-updated", onUpdate);
   }, [refresh]);
+
+  React.useEffect(() => {
+    if (!isTopicMode || !slug) return;
+    setMobilePanel("problem");
+    const t = window.setTimeout(() => {
+      document.getElementById("code-problem-editor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+    return () => window.clearTimeout(t);
+  }, [isTopicMode, slug]);
+
 
   React.useEffect(() => {
     if (!problem) return;
@@ -210,14 +235,16 @@ export function CodeWorkspace({ track, topicId }: { track: CodeTrackId; topicId?
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [runJudge, running]);
 
+  const submissions = React.useMemo(
+    () => (problem ? getSubmissions(problem.id) : []),
+    [problem?.id, progressVersion]
+  );
+
+  if (isTopicMode && !slug) return null;
+
   if (!problem || !meta) return null;
 
-  const problemIndex = problems.findIndex((p) => p.slug === problem.slug);
-  const prevProblem = problemIndex > 0 ? problems[problemIndex - 1] : null;
-  const nextProblem = problemIndex < problems.length - 1 ? problems[problemIndex + 1] : null;
-  const submissions = getSubmissions(problem.id);
   const schemas = track === "sql" ? getDeCodeSqlSchemas(problem.slug) : [];
-  const expLabel = EXPERIENCE_LEVELS.find((e) => e.id === problem.experienceLevel);
 
   const panelTabs: Tab[] =
     problem.hints.length > 0
@@ -225,27 +252,22 @@ export function CodeWorkspace({ track, topicId }: { track: CodeTrackId; topicId?
       : ["description", "solution", "submissions"];
 
   const descriptionPanel = (
-    <section className="flex h-full min-h-0 flex-col">
-      <div className="flex flex-wrap border-b border-border text-sm">
-        {panelTabs.map((key) => (
-          <button key={key} type="button" onClick={() => setTab(key)} className={cn("px-4 py-2 capitalize", tab === key ? "border-b-2 border-primary font-medium text-primary" : "text-muted-foreground")}>
-            {key}
-          </button>
-        ))}
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 text-sm">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden">
+      <PlatformTabs
+        tabs={panelTabs.map((key) => ({ id: key, label: key }))}
+        active={tab}
+        onChange={(id) => setTab(id as Tab)}
+      />
+      <div className="min-h-0 flex-1 overflow-y-auto p-5">
         {tab === "description" && (
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              <span className={cn("lc-badge", DIFF[problem.difficulty])}>{problem.difficulty}</span>
-              <span className="rounded bg-primary/10 px-2 py-0.5 text-xs text-primary">{expLabel?.label}</span>
-              <span className="rounded bg-muted px-2 py-0.5 text-xs">{getTopicLabel(track, problem.topic)}</span>
-              <span className="rounded bg-muted px-2 py-0.5 text-xs">{getSubtopicLabel(track, problem.topic, problem.subtopic)}</span>
-              {problem.concepts.map((c) => (
-                <span key={c} className="rounded bg-muted px-2 py-0.5 text-xs">{c}</span>
-              ))}
+          <div className="space-y-5">
+            <div>
+              <p className="type-meta text-muted-foreground">
+                {getTopicLabel(track, problem.topic)} · {getSubtopicLabel(track, problem.topic, problem.subtopic)}
+              </p>
+              <h2 className="type-section mt-2 text-foreground">{problem.title}</h2>
             </div>
-            <h2 className="text-xl font-semibold">{problem.title}</h2>
+            <div className="platform-divider" />
                   <CodeProblemDescription problem={problem} />
           </div>
         )}
@@ -289,87 +311,113 @@ export function CodeWorkspace({ track, topicId }: { track: CodeTrackId; topicId?
   );
 
   const editorPanel = (
-    <section className="flex h-full min-h-0 flex-col">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Code</span>
-          <button type="button" onClick={() => { setCode(starterFor(problem)); setVerdict(null); }} className={cn(buttonVariants({ size: "xs", variant: "ghost" }), "gap-1")}>
-            <RotateCcw className="size-3" /> Reset
-          </button>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {prevProblem && (
-            <button type="button" onClick={() => selectSlug(prevProblem.slug)} className={cn(buttonVariants({ size: "xs", variant: "outline" }), "gap-1")}>
-              <ChevronLeft className="size-3" /> Prev
-            </button>
-          )}
-          {nextProblem && (
-            <button type="button" onClick={() => selectSlug(nextProblem.slug)} className={cn(buttonVariants({ size: "xs", variant: "outline" }), "gap-1")}>
-              Next <ChevronRight className="size-3" />
-            </button>
-          )}
+    <section className="grid h-full min-h-0 grid-rows-[auto_minmax(240px,1fr)_auto] overflow-hidden">
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2.5">
+        <span className="type-meta font-medium uppercase tracking-widest text-muted-foreground">
+          Editor
+        </span>
+        <span className="type-meta text-muted-foreground">{meta.label}</span>
+      </div>
+      <div className="min-h-0 overflow-hidden p-3">
+        {track === "sql" ? (
+          <SqlEditor value={code} onChange={setCode} height="100%" />
+        ) : track === "pyspark" ? (
+          <SparkEditor value={code} onChange={setCode} height="100%" />
+        ) : (
+          <PythonEditor value={code} onChange={setCode} height="100%" />
+        )}
+      </div>
+      <div className="flex min-h-0 max-h-[min(17rem,40vh)] flex-col overflow-hidden border-t border-border bg-background">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 px-3 py-2">
           <button type="button" disabled={running} onClick={() => runJudge("run")} className={cn(buttonVariants({ size: "sm", variant: "outline" }), "gap-1")}>
             {running ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />} Run
           </button>
           <button type="button" disabled={running} onClick={() => runJudge("submit")} className={cn(buttonVariants({ size: "sm" }), "gap-1")}>
             {running ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} Submit
           </button>
+          <button type="button" onClick={() => { setCode(starterFor(problem)); setVerdict(null); }} className={cn(buttonVariants({ size: "sm", variant: "ghost" }), "ml-auto gap-1")}>
+            <RotateCcw className="size-3.5" /> Reset
+          </button>
         </div>
-      </div>
-      <div className="min-h-[220px] flex-1">
-        {track === "sql" ? (
-          <SqlEditor value={code} onChange={setCode} height={320} />
-        ) : track === "pyspark" ? (
-          <SparkEditor value={code} onChange={setCode} height={320} />
-        ) : (
-          <PythonEditor value={code} onChange={setCode} height={320} />
-        )}
-      </div>
-      <div className="max-h-40 overflow-y-auto border-t border-border p-3 text-xs">
-        {!verdict && <p className="text-muted-foreground">Run on sample DB · Submit compares result · ⌘/Ctrl+Enter · ⇧+Enter submit</p>}
-        {verdict && (
-          <div className="space-y-2">
-            <p className={cn("font-semibold", verdict.status === "accepted" ? "text-lc-easy" : "text-lc-hard")}>
-              {statusLabel(verdict.status)}{verdict.message ? ` — ${verdict.message}` : ""}
+        <div className="min-h-0 flex-1 overflow-y-auto border-t border-border px-3 py-2">
+          {!verdict && (
+            <p className="text-xs text-muted-foreground">
+              Run on sample DB · Submit compares result · ⌘/Ctrl+Enter · ⇧+Enter submit
             </p>
-            {verdict.cases.map((c) => (
-              <div key={c.testCaseId} className="rounded-md border border-border bg-muted/20 p-2">
-                <p>{c.pass ? "✓" : "✗"} Case {c.testCaseId}</p>
-                {c.error && <p className="text-lc-hard">{c.error}</p>}
-              </div>
-            ))}
-          </div>
-        )}
+          )}
+          {verdict && <ChallengeVerdictPanel verdict={verdict} />}
+        </div>
       </div>
     </section>
   );
 
+  if (isTopicMode) {
+    return (
+      <div id="code-problem-editor" className="mt-4 shrink-0 scroll-mt-24">
+        <p className="mb-2 text-xs text-muted-foreground">
+          Drag the divider to resize problem statement vs code editor.
+        </p>
+        <div className="mb-2 flex shrink-0 gap-1 lg:hidden">
+          {(["problem", "code"] as const).map((panel) => (
+            <button
+              key={panel}
+              type="button"
+              onClick={() => setMobilePanel(panel)}
+              className={cn(
+                "flex-1 rounded-md px-2 py-1.5 text-xs capitalize",
+                mobilePanel === panel ? "bg-primary/15 text-primary" : "text-muted-foreground"
+              )}
+            >
+              {panel}
+            </button>
+          ))}
+        </div>
+        <div className="flex h-[min(560px,calc(100dvh-12rem))] min-h-[420px] flex-col overflow-hidden rounded-lg border border-border">
+          <div className="hidden min-h-0 min-w-0 flex-1 md:flex">
+            <ResizableSplit
+              key={slug}
+              className="h-full min-h-0 flex-1"
+              defaultSize={52}
+              minSize={30}
+              maxSize={70}
+              first={descriptionPanel}
+              second={editorPanel}
+            />
+          </div>
+          <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden md:hidden", mobilePanel === "code" ? "flex" : "hidden")}>
+            {editorPanel}
+          </div>
+          <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden md:hidden", mobilePanel === "problem" ? "flex" : "hidden")}>
+            {descriptionPanel}
+          </div>
+        </div>
+        {schemas.length > 0 && (
+          <div className="mt-3 rounded-lg border border-border p-3">
+            <SqlSchemaPanel tables={schemas} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col px-4 py-4">
-      <header className="mb-3 flex flex-wrap items-center gap-3 border-b border-border pb-3">
-        <Link href={CODE_SECTION.home} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary">
-          <ArrowLeft className="size-4" /> Code
+      <header className="mb-4 shrink-0 border-b border-border pb-4">
+        <Link href={CODE_SECTION.home} className="type-meta inline-flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground">
+          <ArrowLeft className="size-3.5" /> Practice
         </Link>
-        <span className="text-muted-foreground">/</span>
-        <Link href={`/code/${track}`} className="text-sm text-muted-foreground hover:text-primary">
-          {meta.label}
-        </Link>
-        {topicId && (
-          <>
-            <span className="text-muted-foreground">/</span>
-            <span className="text-sm font-medium">{getTopicLabel(track, topicId)}</span>
-          </>
-        )}
-        {!topicId && (
-          <>
-            <span className="text-muted-foreground">/</span>
-            <span className="text-sm text-muted-foreground">All problems</span>
-          </>
-        )}
-        <span className="ml-auto text-xs text-muted-foreground">{stats.solved}/{stats.total} accepted</span>
+        <div className="mt-3 flex flex-wrap items-baseline justify-between gap-3">
+          <div>
+            <h1 className="type-section text-foreground">{meta.label}</h1>
+            <p className="type-meta mt-1 text-muted-foreground">All problems</p>
+          </div>
+          <p className="type-meta tabular-nums text-muted-foreground">
+            {stats.solved}/{stats.total} accepted
+          </p>
+        </div>
       </header>
 
-      <div className="mb-2 flex gap-1 lg:hidden">
+      <div className="mb-2 flex shrink-0 gap-1 lg:hidden">
         {(["list", "problem", "code"] as const).map((panel) => (
           <button key={panel} type="button" onClick={() => setMobilePanel(panel)} className={cn("flex-1 rounded-md px-2 py-1.5 text-xs capitalize", mobilePanel === panel ? "bg-primary/15 text-primary" : "text-muted-foreground")}>
             {panel}
@@ -439,7 +487,7 @@ export function CodeWorkspace({ track, topicId }: { track: CodeTrackId; topicId?
               return (
               <button key={p.id} type="button" onClick={() => selectSlug(p.slug)} className={cn("lc-table-row w-full flex-col items-start gap-1 border-b border-border/40 px-3 py-2.5 text-left", p.slug === problem.slug && "bg-muted/60")}>
                 <div className="flex w-full items-start gap-2">
-                  {isProblemSolved(p.id) ? (
+                  {mounted && isProblemSolved(p.id) ? (
                     <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
                   ) : (
                     <span className={cn("lc-badge shrink-0 text-[10px]", DIFF[p.difficulty])}>{p.difficulty[0].toUpperCase()}</span>

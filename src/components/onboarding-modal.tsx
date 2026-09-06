@@ -52,7 +52,7 @@ export function OnboardingModal() {
         <ol className="space-y-2 text-sm text-muted-foreground">
           <li>1. Read SQL Notes (Easy → Medium)</li>
           <li>2. Solve 25 practice problems</li>
-          <li>3. Mark 15 LeetCode must-do confident</li>
+          <li>3. Solve 25+ problems on Practice (/code)</li>
           <li>4. Run a 45-min mock before real interviews</li>
         </ol>
 

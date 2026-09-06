@@ -2,13 +2,15 @@
 
 import type { DeRelevance } from "@/lib/de-code/taxonomy";
 
+export type ProblemKind = "coding" | "de_challenge";
+
 export type CodeTrackId = "sql" | "python" | "pyspark" | "dsa";
 
 export type CodeDifficulty = "easy" | "medium" | "hard" | "expert";
 
 export type ExperienceLevel = "beginner" | "intermediate" | "advanced" | "expert";
 
-export type JudgeBackend = "pyodide" | "sql" | "compare" | "dmoj";
+export type JudgeBackend = "pyodide" | "sql" | "compare" | "pyspark" | "dmoj";
 
 export type SubmissionStatus =
   | "accepted"
@@ -16,6 +18,7 @@ export type SubmissionStatus =
   | "runtime_error"
   | "compilation_error"
   | "time_limit_exceeded"
+  | "memory_limit_exceeded"
   | "pending";
 
 export type CodeTestCase = {
@@ -29,6 +32,8 @@ export type CodeTestCase = {
 };
 
 export type CodeProblem = {
+  /** Implicit "coding" for catalog problems */
+  problemKind?: ProblemKind;
   id: string;
   slug: string;
   track: CodeTrackId;
@@ -73,7 +78,15 @@ export type JudgeCaseResult = {
   expectedOutput: string;
   actualOutput?: string;
   error?: string;
+  purpose?: string;
+  tests?: string[];
+  isHidden?: boolean;
   runtimeMs?: number;
+  metrics?: {
+    inputRows?: number;
+    outputRows?: number;
+    expectedOutputRows?: number;
+  };
 };
 
 export type JudgeVerdict = {
@@ -83,11 +96,19 @@ export type JudgeVerdict = {
   cases: JudgeCaseResult[];
   message?: string;
   runtimeMs?: number;
+  metrics?: {
+    runtimeMs?: number;
+    coldStartMs?: number;
+    workerReused?: boolean;
+    inputRows?: number;
+    outputRows?: number;
+  };
 };
 
 export type CodeSubmission = {
   id: string;
   problemId: string;
+  problemKind?: ProblemKind;
   track: CodeTrackId;
   slug: string;
   language: string;
@@ -96,5 +117,7 @@ export type CodeSubmission = {
   passed: number;
   total: number;
   runtimeMs?: number;
+  failedConcepts?: string[];
+  verdictMessage?: string;
   createdAt: string;
 };

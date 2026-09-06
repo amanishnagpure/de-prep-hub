@@ -1,7 +1,12 @@
 import type { CodeProblem, JudgeVerdict } from "@/lib/de-code/types";
+import type {
+  ChallengeExecutionLanguage,
+  DEChallengeProblem,
+} from "@/lib/de-code/challenge-types";
 import { runCompareJudge } from "@/lib/practice-platform/judge/compare-judge";
 import { submitViaDmoj } from "@/lib/practice-platform/judge/dmoj-client";
 import { runPyodideJudge } from "@/lib/practice-platform/judge/pyodide-judge";
+import { runPySparkJudge } from "@/lib/practice-platform/judge/pyspark-judge";
 import { runSqlJudge } from "@/lib/practice-platform/judge/sql-judge";
 import type { PlatformProblem } from "@/lib/practice-platform/types";
 
@@ -46,6 +51,7 @@ export async function judgeCodeSubmission(
       return runPyodideJudge(adapted, code, mode);
     case "sql":
       return runSqlJudge(adapted, code, mode);
+    case "pyspark":
     case "compare":
       return runCompareJudge(adapted, code);
     default:
@@ -77,4 +83,38 @@ export async function judgeFromApi(
   }
 
   return judgeCodeSubmission(problem, code, mode);
+}
+
+export async function judgeChallengeFromApi(
+  challenge: DEChallengeProblem,
+  code: string,
+  mode: JudgeMode,
+  language: ChallengeExecutionLanguage
+): Promise<JudgeVerdict> {
+  try {
+    const res = await fetch("/api/code/judge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        problemId: challenge.id,
+        code,
+        mode,
+        executionLanguage: language,
+      }),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as JudgeVerdict | { error?: string };
+      if ("status" in data) return data;
+    }
+  } catch {
+    // server unavailable
+  }
+
+  return {
+    status: "runtime_error",
+    passed: 0,
+    total: 0,
+    cases: [],
+    message: "Judge server unavailable — ensure the app is running and try again.",
+  };
 }

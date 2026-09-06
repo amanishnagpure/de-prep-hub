@@ -9,7 +9,7 @@ export type JudgeMode = "run" | "submit";
 /**
  * Judge layer — swap backends without changing the UI.
  *
- * Today: client-side Pyodide (Python/DSA), sql.js + compare (SQL), token compare (Spark).
+ * Today: client-side Pyodide (Python/DSA), sql.js (SQL), PySpark sandbox (Spark), token compare (fallback).
  * Production: set DMOJ_JUDGE_URL to forward submissions to DMOJ judge-server.
  */
 export async function judgeSubmission(
@@ -25,6 +25,7 @@ export async function judgeSubmission(
       return runPyodideJudge(problem, code, mode);
     case "sql":
       return runSqlJudge(problem, code, mode);
+    case "pyspark":
     case "compare":
       return runCompareJudge(problem, code);
     default:

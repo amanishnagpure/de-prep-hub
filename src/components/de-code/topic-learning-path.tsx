@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { CheckCircle2, Circle } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { CheckCircle2, ChevronRight, Circle } from "lucide-react";
 import { getCodeProblems } from "@/lib/de-code/problem-bank";
 import { isProblemSolved } from "@/lib/de-code/progress";
 import type { CodeTrackId } from "@/lib/de-code/types";
@@ -23,13 +22,30 @@ export function TopicLearningPath({
   track: CodeTrackId;
   topicId: string;
 }) {
+  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeSlug = searchParams.get("slug");
   const problems = React.useMemo(() => getCodeProblems(track, topicId), [track, topicId]);
   const [mounted, setMounted] = React.useState(false);
+  const [progressVersion, setProgressVersion] = React.useState(0);
 
   React.useEffect(() => setMounted(true), []);
+
+  React.useEffect(() => {
+    const bump = () => setProgressVersion((v) => v + 1);
+    window.addEventListener("de-code-updated", bump);
+    return () => window.removeEventListener("de-code-updated", bump);
+  }, []);
+
+  const openProblem = (problemSlug: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("slug", problemSlug);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    window.requestAnimationFrame(() => {
+      document.getElementById("code-problem-editor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   if (problems.length === 0) return null;
 
@@ -39,18 +55,20 @@ export function TopicLearningPath({
         <h3 className="text-sm font-semibold">Learning path</h3>
         <p className="text-xs text-muted-foreground">Ordered by recommended progression</p>
       </div>
-      <ol className="mt-3 space-y-1">
+      <ol key={progressVersion} className="mt-3 space-y-1">
         {problems.map((p, i) => {
-          const href = `${pathname}?slug=${encodeURIComponent(p.slug)}`;
           const active = activeSlug === p.slug;
           const solved = mounted && isProblemSolved(p.id);
           return (
             <li key={p.id}>
-              <Link
-                href={href}
+              <button
+                type="button"
+                onClick={() => openProblem(p.slug)}
                 className={cn(
-                  "flex items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors hover:bg-muted/50",
-                  active && "bg-primary/10 ring-1 ring-primary/20"
+                  "flex w-full items-center gap-3 rounded-md border px-3 py-3 text-left text-sm transition-colors hover:bg-muted/50",
+                  active
+                    ? "border-primary/30 bg-primary/10 ring-1 ring-primary/20"
+                    : "border-transparent"
                 )}
               >
                 <span className="w-6 shrink-0 text-center text-xs text-muted-foreground">{i + 1}</span>
@@ -63,7 +81,11 @@ export function TopicLearningPath({
                 <span className={cn("shrink-0 text-[10px] uppercase", DIFF[p.difficulty] ?? "")}>
                   {p.difficulty}
                 </span>
-              </Link>
+                <span className="shrink-0 text-[10px] text-muted-foreground">
+                  {solved ? "Done" : "Todo"}
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+              </button>
             </li>
           );
         })}

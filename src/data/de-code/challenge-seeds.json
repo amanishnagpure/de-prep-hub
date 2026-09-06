@@ -1,0 +1,4507 @@
+{
+  "incremental-customer-pipeline": {
+    "outputTable": "customer_daily_summary",
+    "resultVar": "customer_daily_summary",
+    "pyspark": {
+      "referenceCode": "cust_w = Window.partitionBy(\"customer_id\").orderBy(\"name\")\ncustomers = (\n    customers_today\n    .withColumn(\"_rn\", row_number().over(cust_w))\n    .filter(col(\"_rn\") == 1)\n    .drop(\"_rn\")\n    .select(\"customer_id\", \"name\", \"city\")\n)\n\nord_w = Window.partitionBy(\"order_id\").orderBy(\"order_id\")\norders_dedup = (\n    orders\n    .withColumn(\"_rn\", row_number().over(ord_w))\n    .filter(col(\"_rn\") == 1)\n    .drop(\"_rn\")\n)\n\norder_stats = orders_dedup.groupBy(\"customer_id\").agg(\n    F.count(F.lit(1)).alias(\"order_count\"),\n    F.coalesce(F.sum(\"amount\"), F.lit(0.0)).alias(\"total_revenue\"),\n)\n\ncustomer_daily_summary = (\n    customers\n    .join(order_stats, \"customer_id\", \"left\")\n    .fillna(0, subset=[\"order_count\", \"total_revenue\"])\n)",
+      "fixtures": [
+        {
+          "id": "public",
+          "label": "Normal daily load",
+          "isHidden": false,
+          "tables": {
+            "customers_today": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Bangalore"
+              },
+              {
+                "customer_id": 103,
+                "name": "Carol",
+                "city": "Mumbai"
+              }
+            ],
+            "customers_yesterday": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Bangalore"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 500
+              },
+              {
+                "order_id": 2,
+                "customer_id": 101,
+                "amount": 300
+              },
+              {
+                "order_id": 3,
+                "customer_id": 103,
+                "amount": 700
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-duplicate-customers",
+          "label": "Duplicate customer rows",
+          "isHidden": true,
+          "tables": {
+            "customers_today": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              },
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Bangalore"
+              }
+            ],
+            "customers_yesterday": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Bangalore"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 500
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-no-orders",
+          "label": "Customer without orders",
+          "isHidden": true,
+          "tables": {
+            "customers_today": [
+              {
+                "customer_id": 104,
+                "name": "Dana",
+                "city": "Delhi"
+              }
+            ],
+            "customers_yesterday": [],
+            "orders": []
+          }
+        },
+        {
+          "id": "hidden-null-amount",
+          "label": "NULL order amount",
+          "isHidden": true,
+          "tables": {
+            "customers_today": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              }
+            ],
+            "customers_yesterday": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": null
+              },
+              {
+                "order_id": 2,
+                "customer_id": 101,
+                "amount": 200
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-duplicate-order",
+          "label": "Duplicate order_id",
+          "isHidden": true,
+          "tables": {
+            "customers_today": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              }
+            ],
+            "customers_yesterday": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 500
+              },
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 500
+              }
+            ]
+          }
+        }
+      ],
+      "comparison": {
+        "schema": true,
+        "columnOrder": false,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 20000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    },
+    "sql": {
+      "referenceQuery": "WITH deduped_customers AS (\n  SELECT customer_id, name, city\n  FROM (\n    SELECT customer_id, name, city,\n           ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY name) AS rn\n    FROM customers_today\n  ) WHERE rn = 1\n),\ndeduped_orders AS (\n  SELECT order_id, customer_id, amount\n  FROM (\n    SELECT order_id, customer_id, amount,\n           ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY order_id) AS rn\n    FROM orders\n  ) WHERE rn = 1\n),\norder_stats AS (\n  SELECT customer_id,\n         COUNT(*) AS order_count,\n         COALESCE(SUM(amount), 0) AS total_revenue\n  FROM deduped_orders\n  GROUP BY customer_id\n)\nSELECT c.customer_id, c.name, c.city,\n       COALESCE(o.order_count, 0) AS order_count,\n       COALESCE(o.total_revenue, 0) AS total_revenue\nFROM deduped_customers c\nLEFT JOIN order_stats o ON c.customer_id = o.customer_id;",
+      "fixtures": [
+        {
+          "id": "public",
+          "label": "Normal daily load",
+          "isHidden": false,
+          "tables": {
+            "customers_today": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Bangalore"
+              },
+              {
+                "customer_id": 103,
+                "name": "Carol",
+                "city": "Mumbai"
+              }
+            ],
+            "customers_yesterday": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Bangalore"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 500
+              },
+              {
+                "order_id": 2,
+                "customer_id": 101,
+                "amount": 300
+              },
+              {
+                "order_id": 3,
+                "customer_id": 103,
+                "amount": 700
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-duplicate-customers",
+          "label": "Duplicate customer rows",
+          "isHidden": true,
+          "tables": {
+            "customers_today": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              },
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Bangalore"
+              }
+            ],
+            "customers_yesterday": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Bangalore"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 500
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-no-orders",
+          "label": "Customer without orders",
+          "isHidden": true,
+          "tables": {
+            "customers_today": [
+              {
+                "customer_id": 104,
+                "name": "Dana",
+                "city": "Delhi"
+              }
+            ],
+            "customers_yesterday": [],
+            "orders": []
+          }
+        },
+        {
+          "id": "hidden-null-amount",
+          "label": "NULL order amount",
+          "isHidden": true,
+          "tables": {
+            "customers_today": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              }
+            ],
+            "customers_yesterday": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": null
+              },
+              {
+                "order_id": 2,
+                "customer_id": 101,
+                "amount": 200
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-duplicate-order",
+          "label": "Duplicate order_id",
+          "isHidden": true,
+          "tables": {
+            "customers_today": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              }
+            ],
+            "customers_yesterday": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 500
+              },
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 500
+              }
+            ]
+          }
+        }
+      ],
+      "tables": [
+        {
+          "label": "customers_today",
+          "description": "Today's customer master snapshot",
+          "columns": [
+            {
+              "name": "customer_id",
+              "type": "INT",
+              "key": "PK"
+            },
+            {
+              "name": "name",
+              "type": "TEXT"
+            },
+            {
+              "name": "city",
+              "type": "TEXT"
+            }
+          ]
+        },
+        {
+          "label": "customers_yesterday",
+          "description": "Yesterday's customer snapshot",
+          "columns": [
+            {
+              "name": "customer_id",
+              "type": "INT",
+              "key": "PK"
+            },
+            {
+              "name": "name",
+              "type": "TEXT"
+            },
+            {
+              "name": "city",
+              "type": "TEXT"
+            }
+          ]
+        },
+        {
+          "label": "orders",
+          "description": "Order transactions",
+          "columns": [
+            {
+              "name": "order_id",
+              "type": "INT",
+              "key": "PK"
+            },
+            {
+              "name": "customer_id",
+              "type": "INT"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE"
+            }
+          ]
+        }
+      ],
+      "comparison": {
+        "schema": true,
+        "columnOrder": false,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 20000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    },
+    "adversarial": {
+      "pyspark": "customer_daily_summary = customers_today.join(orders, \"customer_id\").groupBy(\"customer_id\", \"name\", \"city\").agg(\n    F.count(\"order_id\").alias(\"order_count\"),\n    F.sum(\"amount\").alias(\"total_revenue\")\n)",
+      "sql": "WITH deduped_customers AS (\n  SELECT customer_id, name, city FROM customers_today\n),\norder_stats AS (\n  SELECT customer_id, COUNT(*) AS order_count, SUM(amount) AS total_revenue FROM orders GROUP BY customer_id\n)\nSELECT c.customer_id, c.name, c.city, COALESCE(o.order_count, 0) AS order_count, COALESCE(o.total_revenue, 0) AS total_revenue\nFROM deduped_customers c INNER JOIN order_stats o ON c.customer_id = o.customer_id;"
+    }
+  },
+  "scd2-customer-dimension": {
+    "outputTable": "customer_dimension",
+    "resultVar": "customer_dimension",
+    "pyspark": {
+      "referenceCode": "as_of = pipeline_config.collect()[0][\"as_of_date\"]\n\ncw = Window.partitionBy(\"customer_id\").orderBy(\"name\", \"city\")\ncurrent = (\n    customers_current\n    .withColumn(\"_rn\", row_number().over(cw))\n    .filter(col(\"_rn\") == 1)\n    .drop(\"_rn\")\n)\n\nactive = customers_previous.filter(col(\"current_flag\") == 1)\n\nchanged = current.alias(\"c\").join(active.alias(\"a\"), \"customer_id\", \"left\").filter(\n    col(\"a.customer_id\").isNull()\n    | (F.coalesce(col(\"c.name\"), F.lit(\"\")) != F.coalesce(col(\"a.name\"), F.lit(\"\")))\n    | (F.coalesce(col(\"c.city\"), F.lit(\"\")) != F.coalesce(col(\"a.city\"), F.lit(\"\")))\n).select(col(\"c.customer_id\").alias(\"customer_id\"))\n\nhistory = customers_previous.filter(col(\"current_flag\") == 0).select(\n    col(\"customer_id\").cast(\"int\"),\n    col(\"name\").cast(\"string\"),\n    col(\"city\").cast(\"string\"),\n    col(\"effective_from\").cast(\"string\"),\n    col(\"effective_to\").cast(\"string\"),\n    col(\"current_flag\").cast(\"int\"),\n)\n\nexpired = active.join(changed, \"customer_id\").select(\n    col(\"customer_id\").cast(\"int\"),\n    col(\"name\").cast(\"string\"),\n    col(\"city\").cast(\"string\"),\n    col(\"effective_from\").cast(\"string\"),\n    F.lit(as_of).cast(\"string\").alias(\"effective_to\"),\n    F.lit(0).cast(\"int\").alias(\"current_flag\"),\n)\n\nunchanged_active = active.join(changed, \"customer_id\", \"left_anti\").select(\n    col(\"customer_id\").cast(\"int\"),\n    col(\"name\").cast(\"string\"),\n    col(\"city\").cast(\"string\"),\n    col(\"effective_from\").cast(\"string\"),\n    col(\"effective_to\").cast(\"string\"),\n    col(\"current_flag\").cast(\"int\"),\n)\n\nnew_rows = current.join(changed, \"customer_id\").select(\n    col(\"customer_id\").cast(\"int\"),\n    col(\"name\").cast(\"string\"),\n    col(\"city\").cast(\"string\"),\n    F.lit(as_of).cast(\"string\").alias(\"effective_from\"),\n    F.lit(None).cast(\"string\").alias(\"effective_to\"),\n    F.lit(1).cast(\"int\").alias(\"current_flag\"),\n)\n\ncustomer_dimension = history.unionByName(expired).unionByName(unchanged_active).unionByName(new_rows)",
+      "fixtures": [
+        {
+          "id": "public",
+          "label": "Attribute change (city update)",
+          "isHidden": false,
+          "tables": {
+            "pipeline_config": [
+              {
+                "as_of_date": "2026-01-02"
+              }
+            ],
+            "customers_previous": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai",
+                "effective_from": "2026-01-01",
+                "effective_to": null,
+                "current_flag": 1
+              }
+            ],
+            "customers_current": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Bangalore"
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-new-customer",
+          "label": "New customer",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "as_of_date": "2026-01-01"
+              }
+            ],
+            "customers_previous": [],
+            "customers_current": [
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Delhi"
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-no-change",
+          "label": "No attribute change",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "as_of_date": "2026-01-02"
+              }
+            ],
+            "customers_previous": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai",
+                "effective_from": "2026-01-01",
+                "effective_to": null,
+                "current_flag": 1
+              }
+            ],
+            "customers_current": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-multiple-changes",
+          "label": "Mixed new, changed, unchanged",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "as_of_date": "2026-01-03"
+              }
+            ],
+            "customers_previous": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai",
+                "effective_from": "2026-01-01",
+                "effective_to": null,
+                "current_flag": 1
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Delhi",
+                "effective_from": "2026-01-01",
+                "effective_to": null,
+                "current_flag": 1
+              }
+            ],
+            "customers_current": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Bangalore"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Delhi"
+              },
+              {
+                "customer_id": 103,
+                "name": "Carol",
+                "city": "Mumbai"
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-duplicate-source",
+          "label": "Duplicate source records",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "as_of_date": "2026-01-02"
+              }
+            ],
+            "customers_previous": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai",
+                "effective_from": "2026-01-01",
+                "effective_to": null,
+                "current_flag": 1
+              }
+            ],
+            "customers_current": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Bangalore"
+              },
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Bangalore"
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-null-attribute",
+          "label": "NULL attribute in source",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "as_of_date": "2026-01-02"
+              }
+            ],
+            "customers_previous": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai",
+                "effective_from": "2026-01-01",
+                "effective_to": null,
+                "current_flag": 1
+              }
+            ],
+            "customers_current": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": null
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-multiple-customers",
+          "label": "Historical rows preserved",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "as_of_date": "2026-01-02"
+              }
+            ],
+            "customers_previous": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Mumbai",
+                "effective_from": "2025-12-01",
+                "effective_to": "2026-01-01",
+                "current_flag": 0
+              },
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai",
+                "effective_from": "2026-01-01",
+                "effective_to": null,
+                "current_flag": 1
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Delhi",
+                "effective_from": "2026-01-01",
+                "effective_to": null,
+                "current_flag": 1
+              }
+            ],
+            "customers_current": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Bangalore"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Delhi"
+              }
+            ]
+          }
+        }
+      ],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 120000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    },
+    "sql": {
+      "referenceQuery": "WITH cfg AS (\n  SELECT as_of_date FROM pipeline_config LIMIT 1\n),\ndeduped_current AS (\n  SELECT customer_id, name, city\n  FROM (\n    SELECT customer_id, name, city,\n           ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY name, city) AS rn\n    FROM customers_current\n  ) t WHERE rn = 1\n),\nactive_dim AS (\n  SELECT customer_id, name, city, effective_from, effective_to, current_flag\n  FROM customers_previous\n  WHERE current_flag = 1\n),\nchanges AS (\n  SELECT dc.customer_id, dc.name, dc.city, cfg.as_of_date\n  FROM deduped_current dc\n  CROSS JOIN cfg\n  LEFT JOIN active_dim ad ON dc.customer_id = ad.customer_id\n  WHERE ad.customer_id IS NULL\n     OR IFNULL(dc.name, '') != IFNULL(ad.name, '')\n     OR IFNULL(dc.city, '') != IFNULL(ad.city, '')\n),\nhistory AS (\n  SELECT customer_id, name, city, effective_from, effective_to, current_flag\n  FROM customers_previous\n  WHERE current_flag = 0\n),\nexpired AS (\n  SELECT p.customer_id, p.name, p.city, p.effective_from, cfg.as_of_date AS effective_to, 0 AS current_flag\n  FROM customers_previous p\n  CROSS JOIN cfg\n  INNER JOIN changes c ON p.customer_id = c.customer_id\n  WHERE p.current_flag = 1\n),\nunchanged_active AS (\n  SELECT p.customer_id, p.name, p.city, p.effective_from, p.effective_to, p.current_flag\n  FROM customers_previous p\n  WHERE p.current_flag = 1\n    AND p.customer_id NOT IN (SELECT customer_id FROM changes)\n),\nnew_rows AS (\n  SELECT c.customer_id, c.name, c.city, c.as_of_date AS effective_from, NULL AS effective_to, 1 AS current_flag\n  FROM changes c\n)\nSELECT customer_id, name, city, effective_from, effective_to, current_flag FROM history\nUNION ALL\nSELECT customer_id, name, city, effective_from, effective_to, current_flag FROM expired\nUNION ALL\nSELECT customer_id, name, city, effective_from, effective_to, current_flag FROM unchanged_active\nUNION ALL\nSELECT customer_id, name, city, effective_from, effective_to, current_flag FROM new_rows;",
+      "fixtures": [
+        {
+          "id": "public",
+          "label": "Attribute change (city update)",
+          "isHidden": false,
+          "tables": {
+            "pipeline_config": [
+              {
+                "as_of_date": "2026-01-02"
+              }
+            ],
+            "customers_previous": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai",
+                "effective_from": "2026-01-01",
+                "effective_to": null,
+                "current_flag": 1
+              }
+            ],
+            "customers_current": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Bangalore"
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-new-customer",
+          "label": "New customer",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "as_of_date": "2026-01-01"
+              }
+            ],
+            "customers_previous": [],
+            "customers_current": [
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Delhi"
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-no-change",
+          "label": "No attribute change",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "as_of_date": "2026-01-02"
+              }
+            ],
+            "customers_previous": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai",
+                "effective_from": "2026-01-01",
+                "effective_to": null,
+                "current_flag": 1
+              }
+            ],
+            "customers_current": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai"
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-multiple-changes",
+          "label": "Mixed new, changed, unchanged",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "as_of_date": "2026-01-03"
+              }
+            ],
+            "customers_previous": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai",
+                "effective_from": "2026-01-01",
+                "effective_to": null,
+                "current_flag": 1
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Delhi",
+                "effective_from": "2026-01-01",
+                "effective_to": null,
+                "current_flag": 1
+              }
+            ],
+            "customers_current": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Bangalore"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Delhi"
+              },
+              {
+                "customer_id": 103,
+                "name": "Carol",
+                "city": "Mumbai"
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-duplicate-source",
+          "label": "Duplicate source records",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "as_of_date": "2026-01-02"
+              }
+            ],
+            "customers_previous": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai",
+                "effective_from": "2026-01-01",
+                "effective_to": null,
+                "current_flag": 1
+              }
+            ],
+            "customers_current": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Bangalore"
+              },
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Bangalore"
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-null-attribute",
+          "label": "NULL attribute in source",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "as_of_date": "2026-01-02"
+              }
+            ],
+            "customers_previous": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai",
+                "effective_from": "2026-01-01",
+                "effective_to": null,
+                "current_flag": 1
+              }
+            ],
+            "customers_current": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": null
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden-multiple-customers",
+          "label": "Historical rows preserved",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "as_of_date": "2026-01-02"
+              }
+            ],
+            "customers_previous": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Mumbai",
+                "effective_from": "2025-12-01",
+                "effective_to": "2026-01-01",
+                "current_flag": 0
+              },
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Chennai",
+                "effective_from": "2026-01-01",
+                "effective_to": null,
+                "current_flag": 1
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Delhi",
+                "effective_from": "2026-01-01",
+                "effective_to": null,
+                "current_flag": 1
+              }
+            ],
+            "customers_current": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "city": "Bangalore"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "city": "Delhi"
+              }
+            ]
+          }
+        }
+      ],
+      "tables": [
+        {
+          "label": "pipeline_config",
+          "description": "Batch load metadata",
+          "columns": [
+            {
+              "name": "as_of_date",
+              "type": "TEXT"
+            }
+          ]
+        },
+        {
+          "label": "customers_previous",
+          "description": "Existing SCD Type 2 dimension",
+          "columns": [
+            {
+              "name": "customer_id",
+              "type": "INT",
+              "key": "PK"
+            },
+            {
+              "name": "name",
+              "type": "TEXT"
+            },
+            {
+              "name": "city",
+              "type": "TEXT"
+            },
+            {
+              "name": "effective_from",
+              "type": "TEXT"
+            },
+            {
+              "name": "effective_to",
+              "type": "TEXT"
+            },
+            {
+              "name": "current_flag",
+              "type": "INT"
+            }
+          ]
+        },
+        {
+          "label": "customers_current",
+          "description": "Today's customer source snapshot",
+          "columns": [
+            {
+              "name": "customer_id",
+              "type": "INT",
+              "key": "PK"
+            },
+            {
+              "name": "name",
+              "type": "TEXT"
+            },
+            {
+              "name": "city",
+              "type": "TEXT"
+            }
+          ]
+        }
+      ],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 120000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    },
+    "adversarial": {
+      "pyspark": "# Missing expire step — overwrites dimension with source only\ncustomer_dimension = customers_current.select(\n    col(\"customer_id\"),\n    col(\"name\"),\n    col(\"city\"),\n    F.lit(\"2026-01-01\").alias(\"effective_from\"),\n    F.lit(None).cast(\"string\").alias(\"effective_to\"),\n    F.lit(1).alias(\"current_flag\"),\n)",
+      "sql": "SELECT customer_id, name, city, '2026-01-01' AS effective_from, NULL AS effective_to, 1 AS current_flag FROM customers_current"
+    }
+  },
+  "cdc-order-pipeline": {
+    "outputTable": "orders_current",
+    "resultVar": "orders_current",
+    "pyspark": {
+      "referenceCode": "ew = Window.partitionBy(\"event_id\").orderBy(\"event_timestamp\", \"event_id\")\ndeduped = (\n    orders_cdc_events\n    .withColumn(\"_rn\", row_number().over(ew))\n    .filter(col(\"_rn\") == 1)\n    .drop(\"_rn\")\n)\n\nordered = deduped.withColumn(\n    \"seq\", row_number().over(Window.orderBy(\"event_timestamp\", \"event_id\"))\n)\n\nlw = Window.partitionBy(\"order_id\").orderBy(col(\"seq\").desc())\nlast_ev = (\n    ordered\n    .withColumn(\"_rn\", row_number().over(lw))\n    .filter(col(\"_rn\") == 1)\n    .drop(\"_rn\")\n)\n\ntouched = deduped.select(\"order_id\").distinct()\n\nfrom_events = last_ev.filter(col(\"operation\").isin([\"I\", \"U\"])).select(\n    col(\"order_id\").cast(\"int\"),\n    col(\"customer_id\").cast(\"int\"),\n    col(\"amount\").cast(\"double\"),\n    col(\"status\").cast(\"string\"),\n)\n\nsnapshot_remaining = orders_snapshot.join(touched, \"order_id\", \"left_anti\").select(\n    col(\"order_id\").cast(\"int\"),\n    col(\"customer_id\").cast(\"int\"),\n    col(\"amount\").cast(\"double\"),\n    col(\"status\").cast(\"string\"),\n)\n\norders_current = snapshot_remaining.unionByName(from_events)",
+      "fixtures": [
+        {
+          "id": "public",
+          "label": "Normal insert, update, and new order",
+          "isHidden": false,
+          "tables": {
+            "orders_snapshot": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 500,
+                "status": "NEW"
+              }
+            ],
+            "orders_cdc_events": [
+              {
+                "event_id": "e1",
+                "order_id": 1,
+                "operation": "U",
+                "event_timestamp": "2026-01-02T10:00:00",
+                "customer_id": 101,
+                "amount": 600,
+                "status": "PAID"
+              },
+              {
+                "event_id": "e2",
+                "order_id": 2,
+                "operation": "I",
+                "event_timestamp": "2026-01-02T11:00:00",
+                "customer_id": 102,
+                "amount": 300,
+                "status": "NEW"
+              }
+            ]
+          },
+          "purpose": "basic-cdc-operations",
+          "tests": [
+            "insert",
+            "update",
+            "snapshot-merge"
+          ]
+        },
+        {
+          "id": "hidden-multiple-updates",
+          "label": "Multiple updates for same order",
+          "isHidden": true,
+          "tables": {
+            "orders_snapshot": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 100,
+                "status": "NEW"
+              }
+            ],
+            "orders_cdc_events": [
+              {
+                "event_id": "e1",
+                "order_id": 1,
+                "operation": "U",
+                "event_timestamp": "2026-01-02T09:00:00",
+                "customer_id": 101,
+                "amount": 200,
+                "status": "PAID"
+              },
+              {
+                "event_id": "e2",
+                "order_id": 1,
+                "operation": "U",
+                "event_timestamp": "2026-01-02T10:00:00",
+                "customer_id": 101,
+                "amount": 300,
+                "status": "SHIPPED"
+              }
+            ]
+          },
+          "purpose": "multiple-updates-same-order",
+          "tests": [
+            "update",
+            "event-ordering"
+          ]
+        },
+        {
+          "id": "hidden-delete",
+          "label": "Delete event removes order",
+          "isHidden": true,
+          "tables": {
+            "orders_snapshot": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 500,
+                "status": "PAID"
+              }
+            ],
+            "orders_cdc_events": [
+              {
+                "event_id": "e1",
+                "order_id": 1,
+                "operation": "D",
+                "event_timestamp": "2026-01-02T12:00:00",
+                "customer_id": 101,
+                "amount": null,
+                "status": null
+              }
+            ]
+          },
+          "purpose": "delete-event",
+          "tests": [
+            "delete",
+            "snapshot-merge"
+          ]
+        },
+        {
+          "id": "hidden-duplicate-event",
+          "label": "Duplicate CDC event id",
+          "isHidden": true,
+          "tables": {
+            "orders_snapshot": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 100,
+                "status": "NEW"
+              }
+            ],
+            "orders_cdc_events": [
+              {
+                "event_id": "e1",
+                "order_id": 1,
+                "operation": "U",
+                "event_timestamp": "2026-01-02T10:00:00",
+                "customer_id": 101,
+                "amount": 200,
+                "status": "PAID"
+              },
+              {
+                "event_id": "e1",
+                "order_id": 1,
+                "operation": "U",
+                "event_timestamp": "2026-01-02T10:00:00",
+                "customer_id": 101,
+                "amount": 999,
+                "status": "BAD"
+              }
+            ]
+          },
+          "purpose": "duplicate-cdc-event",
+          "tests": [
+            "idempotency",
+            "deduplication"
+          ]
+        },
+        {
+          "id": "hidden-out-of-order",
+          "label": "Out-of-order event timestamps",
+          "isHidden": true,
+          "tables": {
+            "orders_snapshot": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 100,
+                "status": "NEW"
+              }
+            ],
+            "orders_cdc_events": [
+              {
+                "event_id": "e2",
+                "order_id": 1,
+                "operation": "U",
+                "event_timestamp": "2026-01-02T11:00:00",
+                "customer_id": 101,
+                "amount": 300,
+                "status": "SHIPPED"
+              },
+              {
+                "event_id": "e1",
+                "order_id": 1,
+                "operation": "U",
+                "event_timestamp": "2026-01-02T09:00:00",
+                "customer_id": 101,
+                "amount": 200,
+                "status": "PAID"
+              }
+            ]
+          },
+          "purpose": "out-of-order-events",
+          "tests": [
+            "event-ordering",
+            "update"
+          ]
+        },
+        {
+          "id": "hidden-insert-update-delete",
+          "label": "Insert, update, then delete lifecycle",
+          "isHidden": true,
+          "tables": {
+            "orders_snapshot": [],
+            "orders_cdc_events": [
+              {
+                "event_id": "e1",
+                "order_id": 5,
+                "operation": "I",
+                "event_timestamp": "2026-01-01T08:00:00",
+                "customer_id": 105,
+                "amount": 150,
+                "status": "NEW"
+              },
+              {
+                "event_id": "e2",
+                "order_id": 5,
+                "operation": "U",
+                "event_timestamp": "2026-01-01T09:00:00",
+                "customer_id": 105,
+                "amount": 175,
+                "status": "PAID"
+              },
+              {
+                "event_id": "e3",
+                "order_id": 5,
+                "operation": "D",
+                "event_timestamp": "2026-01-01T10:00:00",
+                "customer_id": 105,
+                "amount": null,
+                "status": null
+              }
+            ]
+          },
+          "purpose": "insert-update-delete-lifecycle",
+          "tests": [
+            "insert",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "id": "hidden-update-unseen",
+          "label": "Update for order not in snapshot",
+          "isHidden": true,
+          "tables": {
+            "orders_snapshot": [],
+            "orders_cdc_events": [
+              {
+                "event_id": "e1",
+                "order_id": 9,
+                "operation": "U",
+                "event_timestamp": "2026-01-02T10:00:00",
+                "customer_id": 109,
+                "amount": 420,
+                "status": "PAID"
+              }
+            ]
+          },
+          "purpose": "update-unseen-order",
+          "tests": [
+            "upsert",
+            "update"
+          ]
+        }
+      ],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 120000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    },
+    "sql": {
+      "referenceQuery": "WITH deduped_events AS (\n  SELECT event_id, order_id, operation, event_timestamp, customer_id, amount, status\n  FROM (\n    SELECT *,\n           ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY event_timestamp, event_id) AS rn\n    FROM orders_cdc_events\n  ) WHERE rn = 1\n),\nordered AS (\n  SELECT *,\n         ROW_NUMBER() OVER (ORDER BY event_timestamp, event_id) AS seq\n  FROM deduped_events\n),\nlast_event AS (\n  SELECT order_id, operation, customer_id, amount, status,\n         ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY seq DESC) AS rn\n  FROM ordered\n),\nfinal_event AS (\n  SELECT order_id, operation, customer_id, amount, status\n  FROM last_event WHERE rn = 1\n),\ntouched AS (\n  SELECT DISTINCT order_id FROM deduped_events\n),\nfrom_events AS (\n  SELECT order_id, customer_id, amount, status\n  FROM final_event\n  WHERE operation IN ('I', 'U')\n),\nsnapshot_remaining AS (\n  SELECT s.order_id, s.customer_id, s.amount, s.status\n  FROM orders_snapshot s\n  WHERE s.order_id NOT IN (SELECT order_id FROM touched)\n)\nSELECT order_id, customer_id, amount, status FROM snapshot_remaining\nUNION ALL\nSELECT order_id, customer_id, amount, status FROM from_events;",
+      "fixtures": [
+        {
+          "id": "public",
+          "label": "Normal insert, update, and new order",
+          "isHidden": false,
+          "tables": {
+            "orders_snapshot": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 500,
+                "status": "NEW"
+              }
+            ],
+            "orders_cdc_events": [
+              {
+                "event_id": "e1",
+                "order_id": 1,
+                "operation": "U",
+                "event_timestamp": "2026-01-02T10:00:00",
+                "customer_id": 101,
+                "amount": 600,
+                "status": "PAID"
+              },
+              {
+                "event_id": "e2",
+                "order_id": 2,
+                "operation": "I",
+                "event_timestamp": "2026-01-02T11:00:00",
+                "customer_id": 102,
+                "amount": 300,
+                "status": "NEW"
+              }
+            ]
+          },
+          "purpose": "basic-cdc-operations",
+          "tests": [
+            "insert",
+            "update",
+            "snapshot-merge"
+          ]
+        },
+        {
+          "id": "hidden-multiple-updates",
+          "label": "Multiple updates for same order",
+          "isHidden": true,
+          "tables": {
+            "orders_snapshot": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 100,
+                "status": "NEW"
+              }
+            ],
+            "orders_cdc_events": [
+              {
+                "event_id": "e1",
+                "order_id": 1,
+                "operation": "U",
+                "event_timestamp": "2026-01-02T09:00:00",
+                "customer_id": 101,
+                "amount": 200,
+                "status": "PAID"
+              },
+              {
+                "event_id": "e2",
+                "order_id": 1,
+                "operation": "U",
+                "event_timestamp": "2026-01-02T10:00:00",
+                "customer_id": 101,
+                "amount": 300,
+                "status": "SHIPPED"
+              }
+            ]
+          },
+          "purpose": "multiple-updates-same-order",
+          "tests": [
+            "update",
+            "event-ordering"
+          ]
+        },
+        {
+          "id": "hidden-delete",
+          "label": "Delete event removes order",
+          "isHidden": true,
+          "tables": {
+            "orders_snapshot": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 500,
+                "status": "PAID"
+              }
+            ],
+            "orders_cdc_events": [
+              {
+                "event_id": "e1",
+                "order_id": 1,
+                "operation": "D",
+                "event_timestamp": "2026-01-02T12:00:00",
+                "customer_id": 101,
+                "amount": null,
+                "status": null
+              }
+            ]
+          },
+          "purpose": "delete-event",
+          "tests": [
+            "delete",
+            "snapshot-merge"
+          ]
+        },
+        {
+          "id": "hidden-duplicate-event",
+          "label": "Duplicate CDC event id",
+          "isHidden": true,
+          "tables": {
+            "orders_snapshot": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 100,
+                "status": "NEW"
+              }
+            ],
+            "orders_cdc_events": [
+              {
+                "event_id": "e1",
+                "order_id": 1,
+                "operation": "U",
+                "event_timestamp": "2026-01-02T10:00:00",
+                "customer_id": 101,
+                "amount": 200,
+                "status": "PAID"
+              },
+              {
+                "event_id": "e1",
+                "order_id": 1,
+                "operation": "U",
+                "event_timestamp": "2026-01-02T10:00:00",
+                "customer_id": 101,
+                "amount": 999,
+                "status": "BAD"
+              }
+            ]
+          },
+          "purpose": "duplicate-cdc-event",
+          "tests": [
+            "idempotency",
+            "deduplication"
+          ]
+        },
+        {
+          "id": "hidden-out-of-order",
+          "label": "Out-of-order event timestamps",
+          "isHidden": true,
+          "tables": {
+            "orders_snapshot": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "amount": 100,
+                "status": "NEW"
+              }
+            ],
+            "orders_cdc_events": [
+              {
+                "event_id": "e2",
+                "order_id": 1,
+                "operation": "U",
+                "event_timestamp": "2026-01-02T11:00:00",
+                "customer_id": 101,
+                "amount": 300,
+                "status": "SHIPPED"
+              },
+              {
+                "event_id": "e1",
+                "order_id": 1,
+                "operation": "U",
+                "event_timestamp": "2026-01-02T09:00:00",
+                "customer_id": 101,
+                "amount": 200,
+                "status": "PAID"
+              }
+            ]
+          },
+          "purpose": "out-of-order-events",
+          "tests": [
+            "event-ordering",
+            "update"
+          ]
+        },
+        {
+          "id": "hidden-insert-update-delete",
+          "label": "Insert, update, then delete lifecycle",
+          "isHidden": true,
+          "tables": {
+            "orders_snapshot": [],
+            "orders_cdc_events": [
+              {
+                "event_id": "e1",
+                "order_id": 5,
+                "operation": "I",
+                "event_timestamp": "2026-01-01T08:00:00",
+                "customer_id": 105,
+                "amount": 150,
+                "status": "NEW"
+              },
+              {
+                "event_id": "e2",
+                "order_id": 5,
+                "operation": "U",
+                "event_timestamp": "2026-01-01T09:00:00",
+                "customer_id": 105,
+                "amount": 175,
+                "status": "PAID"
+              },
+              {
+                "event_id": "e3",
+                "order_id": 5,
+                "operation": "D",
+                "event_timestamp": "2026-01-01T10:00:00",
+                "customer_id": 105,
+                "amount": null,
+                "status": null
+              }
+            ]
+          },
+          "purpose": "insert-update-delete-lifecycle",
+          "tests": [
+            "insert",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "id": "hidden-update-unseen",
+          "label": "Update for order not in snapshot",
+          "isHidden": true,
+          "tables": {
+            "orders_snapshot": [],
+            "orders_cdc_events": [
+              {
+                "event_id": "e1",
+                "order_id": 9,
+                "operation": "U",
+                "event_timestamp": "2026-01-02T10:00:00",
+                "customer_id": 109,
+                "amount": 420,
+                "status": "PAID"
+              }
+            ]
+          },
+          "purpose": "update-unseen-order",
+          "tests": [
+            "upsert",
+            "update"
+          ]
+        }
+      ],
+      "tables": [
+        {
+          "label": "orders_snapshot",
+          "description": "Baseline orders before applying CDC events",
+          "columns": [
+            {
+              "name": "order_id",
+              "type": "INT",
+              "key": "PK"
+            },
+            {
+              "name": "customer_id",
+              "type": "INT"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE"
+            },
+            {
+              "name": "status",
+              "type": "TEXT"
+            }
+          ]
+        },
+        {
+          "label": "orders_cdc_events",
+          "description": "Change data capture event stream (I/U/D)",
+          "columns": [
+            {
+              "name": "event_id",
+              "type": "TEXT",
+              "key": "PK"
+            },
+            {
+              "name": "order_id",
+              "type": "INT"
+            },
+            {
+              "name": "operation",
+              "type": "TEXT"
+            },
+            {
+              "name": "event_timestamp",
+              "type": "TEXT"
+            },
+            {
+              "name": "customer_id",
+              "type": "INT"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE"
+            },
+            {
+              "name": "status",
+              "type": "TEXT"
+            }
+          ]
+        }
+      ],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 120000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    },
+    "adversarial": {
+      "pyspark": "orders_current = orders_snapshot.unionByName(\n    orders_cdc_events.filter(col(\"operation\").isin([\"I\", \"U\"])).select(\n        \"order_id\", \"customer_id\", \"amount\", \"status\"\n    )\n).dropDuplicates([\"order_id\"])",
+      "sql": "SELECT order_id, customer_id, amount, status FROM orders_snapshot\nUNION\nSELECT order_id, customer_id, amount, status FROM orders_cdc_events WHERE operation IN ('I', 'U')"
+    }
+  },
+  "data-quality-pipeline": {
+    "outputTable": "quality_results",
+    "resultVar": "quality_results",
+    "pyspark": {
+      "referenceCode": "null_customer = customers.filter(col(\"customer_id\").isNull()).count()\ndup_customer = customers.count() - customers.select(\"customer_id\").distinct().count()\norphan_order = (\n    orders.alias(\"o\")\n    .join(customers.alias(\"c\"), col(\"o.customer_id\") == col(\"c.customer_id\"), \"left\")\n    .filter(col(\"o.customer_id\").isNotNull() & col(\"c.customer_id\").isNull())\n    .count()\n)\ninvalid_status = orders.filter(~col(\"status\").isin([\"NEW\", \"PAID\", \"SHIPPED\", \"CANCELLED\"])).count()\nnegative_payment = payments.filter(col(\"amount\") < 0).count()\nnull_pay_order = payments.filter(col(\"order_id\").isNull()).count()\ndup_payment = payments.count() - payments.select(\"payment_id\").distinct().count()\n\ndef rule_row(rule_id, rule_name, violations):\n    return spark.createDataFrame(\n        [(rule_id, rule_name, int(violations), 1 if violations == 0 else 0)],\n        \"rule_id STRING, rule_name STRING, violation_count INT, passed INT\",\n    )\n\nquality_results = (\n    rule_row(\"null_customer_id\", \"NOT NULL customer_id\", null_customer)\n    .unionByName(rule_row(\"duplicate_customer\", \"Unique customer_id\", dup_customer))\n    .unionByName(rule_row(\"orphan_order\", \"Referential integrity orders.customer_id\", orphan_order))\n    .unionByName(rule_row(\"invalid_order_status\", \"Valid order status domain\", invalid_status))\n    .unionByName(rule_row(\"negative_payment\", \"Non-negative payment amount\", negative_payment))\n    .unionByName(rule_row(\"null_payment_order_id\", \"NOT NULL payments.order_id\", null_pay_order))\n    .unionByName(rule_row(\"duplicate_payment_id\", \"Unique payment_id\", dup_payment))\n)",
+      "fixtures": [
+        {
+          "id": "public",
+          "label": "Clean dataset — all checks pass",
+          "isHidden": false,
+          "tables": {
+            "customers": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "email": "alice@example.com",
+                "created_date": "2026-01-01"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "email": "bob@example.com",
+                "created_date": "2026-01-02"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID",
+                "order_date": "2026-01-05"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW",
+                "order_date": "2026-01-06"
+              }
+            ],
+            "payments": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500,
+                "payment_date": "2026-01-05"
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200,
+                "payment_date": "2026-01-06"
+              }
+            ]
+          },
+          "purpose": "baseline-quality-checks",
+          "tests": [
+            "validation",
+            "multi-table"
+          ]
+        },
+        {
+          "id": "hidden-null-customer-id",
+          "label": "NULL customer_id",
+          "isHidden": true,
+          "tables": {
+            "customers": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "email": "alice@example.com",
+                "created_date": "2026-01-01"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "email": "bob@example.com",
+                "created_date": "2026-01-02"
+              },
+              {
+                "customer_id": null,
+                "name": "Ghost",
+                "email": "ghost@example.com",
+                "created_date": "2026-01-03"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID",
+                "order_date": "2026-01-05"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW",
+                "order_date": "2026-01-06"
+              }
+            ],
+            "payments": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500,
+                "payment_date": "2026-01-05"
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200,
+                "payment_date": "2026-01-06"
+              }
+            ]
+          },
+          "purpose": "null-validation",
+          "tests": [
+            "not-null"
+          ]
+        },
+        {
+          "id": "hidden-duplicate-customer",
+          "label": "Duplicate customer_id",
+          "isHidden": true,
+          "tables": {
+            "customers": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "email": "alice@example.com",
+                "created_date": "2026-01-01"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "email": "bob@example.com",
+                "created_date": "2026-01-02"
+              },
+              {
+                "customer_id": 101,
+                "name": "Alice Duplicate",
+                "email": "dup@example.com",
+                "created_date": "2026-01-04"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID",
+                "order_date": "2026-01-05"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW",
+                "order_date": "2026-01-06"
+              }
+            ],
+            "payments": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500,
+                "payment_date": "2026-01-05"
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200,
+                "payment_date": "2026-01-06"
+              }
+            ]
+          },
+          "purpose": "duplicate-record",
+          "tests": [
+            "uniqueness",
+            "deduplication"
+          ]
+        },
+        {
+          "id": "hidden-orphan-order",
+          "label": "Order without matching customer",
+          "isHidden": true,
+          "tables": {
+            "customers": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "email": "alice@example.com",
+                "created_date": "2026-01-01"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "email": "bob@example.com",
+                "created_date": "2026-01-02"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID",
+                "order_date": "2026-01-05"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW",
+                "order_date": "2026-01-06"
+              },
+              {
+                "order_id": 99,
+                "customer_id": 999,
+                "status": "NEW",
+                "order_date": "2026-01-07"
+              }
+            ],
+            "payments": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500,
+                "payment_date": "2026-01-05"
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200,
+                "payment_date": "2026-01-06"
+              }
+            ]
+          },
+          "purpose": "referential-integrity",
+          "tests": [
+            "foreign-key",
+            "referential-integrity"
+          ]
+        },
+        {
+          "id": "hidden-invalid-status",
+          "label": "Invalid order status value",
+          "isHidden": true,
+          "tables": {
+            "customers": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "email": "alice@example.com",
+                "created_date": "2026-01-01"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "email": "bob@example.com",
+                "created_date": "2026-01-02"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID",
+                "order_date": "2026-01-05"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW",
+                "order_date": "2026-01-06"
+              },
+              {
+                "order_id": 3,
+                "customer_id": 101,
+                "status": "INVALID",
+                "order_date": "2026-01-08"
+              }
+            ],
+            "payments": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500,
+                "payment_date": "2026-01-05"
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200,
+                "payment_date": "2026-01-06"
+              }
+            ]
+          },
+          "purpose": "domain-validation",
+          "tests": [
+            "allowed-values"
+          ]
+        },
+        {
+          "id": "hidden-negative-payment",
+          "label": "Negative payment amount",
+          "isHidden": true,
+          "tables": {
+            "customers": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "email": "alice@example.com",
+                "created_date": "2026-01-01"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "email": "bob@example.com",
+                "created_date": "2026-01-02"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID",
+                "order_date": "2026-01-05"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW",
+                "order_date": "2026-01-06"
+              }
+            ],
+            "payments": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500,
+                "payment_date": "2026-01-05"
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200,
+                "payment_date": "2026-01-06"
+              },
+              {
+                "payment_id": 3,
+                "order_id": 1,
+                "amount": -50,
+                "payment_date": "2026-01-09"
+              }
+            ]
+          },
+          "purpose": "range-validation",
+          "tests": [
+            "value-range"
+          ]
+        }
+      ],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 90000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    },
+    "sql": {
+      "referenceQuery": "SELECT 'null_customer_id' AS rule_id,\n       'NOT NULL customer_id' AS rule_name,\n       (SELECT COUNT(*) FROM customers WHERE customer_id IS NULL) AS violation_count,\n       CASE WHEN (SELECT COUNT(*) FROM customers WHERE customer_id IS NULL) = 0 THEN 1 ELSE 0 END AS passed\nUNION ALL\nSELECT 'duplicate_customer',\n       'Unique customer_id',\n       (SELECT COUNT(*) - COUNT(DISTINCT customer_id) FROM customers),\n       CASE WHEN (SELECT COUNT(*) FROM customers) = (SELECT COUNT(DISTINCT customer_id) FROM customers) THEN 1 ELSE 0 END\nUNION ALL\nSELECT 'orphan_order',\n       'Referential integrity orders.customer_id',\n       (SELECT COUNT(*) FROM orders o\n        LEFT JOIN customers c ON o.customer_id = c.customer_id\n        WHERE o.customer_id IS NOT NULL AND c.customer_id IS NULL),\n       CASE WHEN (SELECT COUNT(*) FROM orders o\n                  LEFT JOIN customers c ON o.customer_id = c.customer_id\n                  WHERE o.customer_id IS NOT NULL AND c.customer_id IS NULL) = 0 THEN 1 ELSE 0 END\nUNION ALL\nSELECT 'invalid_order_status',\n       'Valid order status domain',\n       (SELECT COUNT(*) FROM orders WHERE status NOT IN ('NEW', 'PAID', 'SHIPPED', 'CANCELLED')),\n       CASE WHEN (SELECT COUNT(*) FROM orders WHERE status NOT IN ('NEW', 'PAID', 'SHIPPED', 'CANCELLED')) = 0 THEN 1 ELSE 0 END\nUNION ALL\nSELECT 'negative_payment',\n       'Non-negative payment amount',\n       (SELECT COUNT(*) FROM payments WHERE amount < 0),\n       CASE WHEN (SELECT COUNT(*) FROM payments WHERE amount < 0) = 0 THEN 1 ELSE 0 END\nUNION ALL\nSELECT 'null_payment_order_id',\n       'NOT NULL payments.order_id',\n       (SELECT COUNT(*) FROM payments WHERE order_id IS NULL),\n       CASE WHEN (SELECT COUNT(*) FROM payments WHERE order_id IS NULL) = 0 THEN 1 ELSE 0 END\nUNION ALL\nSELECT 'duplicate_payment_id',\n       'Unique payment_id',\n       (SELECT COUNT(*) - COUNT(DISTINCT payment_id) FROM payments),\n       CASE WHEN (SELECT COUNT(*) FROM payments) = (SELECT COUNT(DISTINCT payment_id) FROM payments) THEN 1 ELSE 0 END;",
+      "fixtures": [
+        {
+          "id": "public",
+          "label": "Clean dataset — all checks pass",
+          "isHidden": false,
+          "tables": {
+            "customers": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "email": "alice@example.com",
+                "created_date": "2026-01-01"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "email": "bob@example.com",
+                "created_date": "2026-01-02"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID",
+                "order_date": "2026-01-05"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW",
+                "order_date": "2026-01-06"
+              }
+            ],
+            "payments": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500,
+                "payment_date": "2026-01-05"
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200,
+                "payment_date": "2026-01-06"
+              }
+            ]
+          },
+          "purpose": "baseline-quality-checks",
+          "tests": [
+            "validation",
+            "multi-table"
+          ]
+        },
+        {
+          "id": "hidden-null-customer-id",
+          "label": "NULL customer_id",
+          "isHidden": true,
+          "tables": {
+            "customers": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "email": "alice@example.com",
+                "created_date": "2026-01-01"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "email": "bob@example.com",
+                "created_date": "2026-01-02"
+              },
+              {
+                "customer_id": null,
+                "name": "Ghost",
+                "email": "ghost@example.com",
+                "created_date": "2026-01-03"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID",
+                "order_date": "2026-01-05"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW",
+                "order_date": "2026-01-06"
+              }
+            ],
+            "payments": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500,
+                "payment_date": "2026-01-05"
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200,
+                "payment_date": "2026-01-06"
+              }
+            ]
+          },
+          "purpose": "null-validation",
+          "tests": [
+            "not-null"
+          ]
+        },
+        {
+          "id": "hidden-duplicate-customer",
+          "label": "Duplicate customer_id",
+          "isHidden": true,
+          "tables": {
+            "customers": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "email": "alice@example.com",
+                "created_date": "2026-01-01"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "email": "bob@example.com",
+                "created_date": "2026-01-02"
+              },
+              {
+                "customer_id": 101,
+                "name": "Alice Duplicate",
+                "email": "dup@example.com",
+                "created_date": "2026-01-04"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID",
+                "order_date": "2026-01-05"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW",
+                "order_date": "2026-01-06"
+              }
+            ],
+            "payments": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500,
+                "payment_date": "2026-01-05"
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200,
+                "payment_date": "2026-01-06"
+              }
+            ]
+          },
+          "purpose": "duplicate-record",
+          "tests": [
+            "uniqueness",
+            "deduplication"
+          ]
+        },
+        {
+          "id": "hidden-orphan-order",
+          "label": "Order without matching customer",
+          "isHidden": true,
+          "tables": {
+            "customers": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "email": "alice@example.com",
+                "created_date": "2026-01-01"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "email": "bob@example.com",
+                "created_date": "2026-01-02"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID",
+                "order_date": "2026-01-05"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW",
+                "order_date": "2026-01-06"
+              },
+              {
+                "order_id": 99,
+                "customer_id": 999,
+                "status": "NEW",
+                "order_date": "2026-01-07"
+              }
+            ],
+            "payments": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500,
+                "payment_date": "2026-01-05"
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200,
+                "payment_date": "2026-01-06"
+              }
+            ]
+          },
+          "purpose": "referential-integrity",
+          "tests": [
+            "foreign-key",
+            "referential-integrity"
+          ]
+        },
+        {
+          "id": "hidden-invalid-status",
+          "label": "Invalid order status value",
+          "isHidden": true,
+          "tables": {
+            "customers": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "email": "alice@example.com",
+                "created_date": "2026-01-01"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "email": "bob@example.com",
+                "created_date": "2026-01-02"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID",
+                "order_date": "2026-01-05"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW",
+                "order_date": "2026-01-06"
+              },
+              {
+                "order_id": 3,
+                "customer_id": 101,
+                "status": "INVALID",
+                "order_date": "2026-01-08"
+              }
+            ],
+            "payments": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500,
+                "payment_date": "2026-01-05"
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200,
+                "payment_date": "2026-01-06"
+              }
+            ]
+          },
+          "purpose": "domain-validation",
+          "tests": [
+            "allowed-values"
+          ]
+        },
+        {
+          "id": "hidden-negative-payment",
+          "label": "Negative payment amount",
+          "isHidden": true,
+          "tables": {
+            "customers": [
+              {
+                "customer_id": 101,
+                "name": "Alice",
+                "email": "alice@example.com",
+                "created_date": "2026-01-01"
+              },
+              {
+                "customer_id": 102,
+                "name": "Bob",
+                "email": "bob@example.com",
+                "created_date": "2026-01-02"
+              }
+            ],
+            "orders": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID",
+                "order_date": "2026-01-05"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW",
+                "order_date": "2026-01-06"
+              }
+            ],
+            "payments": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500,
+                "payment_date": "2026-01-05"
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200,
+                "payment_date": "2026-01-06"
+              },
+              {
+                "payment_id": 3,
+                "order_id": 1,
+                "amount": -50,
+                "payment_date": "2026-01-09"
+              }
+            ]
+          },
+          "purpose": "range-validation",
+          "tests": [
+            "value-range"
+          ]
+        }
+      ],
+      "tables": [
+        {
+          "label": "customers",
+          "description": "Customer master records",
+          "columns": [
+            {
+              "name": "customer_id",
+              "type": "INT",
+              "key": "PK"
+            },
+            {
+              "name": "name",
+              "type": "TEXT"
+            },
+            {
+              "name": "email",
+              "type": "TEXT"
+            },
+            {
+              "name": "created_date",
+              "type": "TEXT"
+            }
+          ]
+        },
+        {
+          "label": "orders",
+          "description": "Customer orders",
+          "columns": [
+            {
+              "name": "order_id",
+              "type": "INT",
+              "key": "PK"
+            },
+            {
+              "name": "customer_id",
+              "type": "INT"
+            },
+            {
+              "name": "status",
+              "type": "TEXT"
+            },
+            {
+              "name": "order_date",
+              "type": "TEXT"
+            }
+          ]
+        },
+        {
+          "label": "payments",
+          "description": "Order payments",
+          "columns": [
+            {
+              "name": "payment_id",
+              "type": "INT",
+              "key": "PK"
+            },
+            {
+              "name": "order_id",
+              "type": "INT"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE"
+            },
+            {
+              "name": "payment_date",
+              "type": "TEXT"
+            }
+          ]
+        }
+      ],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 90000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    },
+    "adversarial": {
+      "pyspark": "quality_results = spark.createDataFrame(\n    [\n        (\"null_customer_id\", \"NOT NULL customer_id\", 0, 1),\n        (\"duplicate_customer\", \"Unique customer_id\", 0, 1),\n        (\"orphan_order\", \"Referential integrity orders.customer_id\", 0, 1),\n        (\"invalid_order_status\", \"Valid order status domain\", 0, 1),\n        (\"negative_payment\", \"Non-negative payment amount\", 0, 1),\n        (\"null_payment_order_id\", \"NOT NULL payments.order_id\", 0, 1),\n        (\"duplicate_payment_id\", \"Unique payment_id\", 0, 1),\n    ],\n    \"rule_id STRING, rule_name STRING, violation_count INT, passed INT\",\n)",
+      "sql": "SELECT 'null_customer_id' AS rule_id, 'NOT NULL customer_id' AS rule_name, 0 AS violation_count, 1 AS passed\nUNION ALL SELECT 'duplicate_customer', 'Unique customer_id', 0, 1\nUNION ALL SELECT 'orphan_order', 'Referential integrity orders.customer_id', 0, 1\nUNION ALL SELECT 'invalid_order_status', 'Valid order status domain', 0, 1\nUNION ALL SELECT 'negative_payment', 'Non-negative payment amount', 0, 1\nUNION ALL SELECT 'null_payment_order_id', 'NOT NULL payments.order_id', 0, 1\nUNION ALL SELECT 'duplicate_payment_id', 'Unique payment_id', 0, 1"
+    }
+  },
+  "late-arriving-events": {
+    "outputTable": "entity_state",
+    "resultVar": "entity_state",
+    "pyspark": {
+      "referenceCode": "max_lateness = pipeline_config.collect()[0][\"max_lateness_minutes\"]\n\new = Window.partitionBy(\"event_id\").orderBy(\"event_timestamp\", \"event_id\")\ndeduped = (\n    events.withColumn(\"_rn\", row_number().over(ew))\n    .filter(col(\"_rn\") == 1)\n    .drop(\"_rn\")\n)\n\naccepted = deduped.filter(\n    (unix_timestamp(col(\"processing_timestamp\")) - unix_timestamp(col(\"event_timestamp\"))) / 60.0\n    <= max_lateness\n)\n\nlw = Window.partitionBy(\"entity_id\").orderBy(col(\"event_timestamp\").desc(), col(\"event_id\").desc())\nlatest = (\n    accepted.withColumn(\"_rn\", row_number().over(lw))\n    .filter(col(\"_rn\") == 1)\n    .drop(\"_rn\")\n    .select(\n        col(\"entity_id\").cast(\"int\"),\n        col(\"value\").cast(\"int\"),\n        col(\"event_timestamp\").cast(\"string\"),\n    )\n)\n\nsnapshot_only = (\n    state_snapshot.join(latest.select(\"entity_id\"), \"entity_id\", \"left_anti\")\n    .select(\n        col(\"entity_id\").cast(\"int\"),\n        col(\"value\").cast(\"int\"),\n        col(\"event_timestamp\").cast(\"string\"),\n    )\n)\n\nentity_state = snapshot_only.unionByName(latest)",
+      "fixtures": [
+        {
+          "id": "public",
+          "label": "In-order and out-of-order accepted events",
+          "isHidden": false,
+          "tables": {
+            "pipeline_config": [
+              {
+                "max_lateness_minutes": 60
+              }
+            ],
+            "state_snapshot": [
+              {
+                "entity_id": 1,
+                "value": 100,
+                "event_timestamp": "2026-01-01T10:00:00"
+              }
+            ],
+            "events": [
+              {
+                "event_id": "e1",
+                "entity_id": 1,
+                "value": 110,
+                "event_timestamp": "2026-01-01T11:00:00",
+                "processing_timestamp": "2026-01-01T11:05:00"
+              },
+              {
+                "event_id": "e2",
+                "entity_id": 1,
+                "value": 105,
+                "event_timestamp": "2026-01-01T10:30:00",
+                "processing_timestamp": "2026-01-01T11:10:00"
+              }
+            ]
+          },
+          "purpose": "event-time-merge",
+          "tests": [
+            "event-time",
+            "event-ordering"
+          ]
+        },
+        {
+          "id": "hidden-out-of-order",
+          "label": "Processing order differs from event time",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "max_lateness_minutes": 60
+              }
+            ],
+            "state_snapshot": [
+              {
+                "entity_id": 2,
+                "value": 50,
+                "event_timestamp": "2026-01-01T08:00:00"
+              }
+            ],
+            "events": [
+              {
+                "event_id": "a",
+                "entity_id": 2,
+                "value": 80,
+                "event_timestamp": "2026-01-01T09:00:00",
+                "processing_timestamp": "2026-01-01T10:00:00"
+              },
+              {
+                "event_id": "b",
+                "entity_id": 2,
+                "value": 70,
+                "event_timestamp": "2026-01-01T08:30:00",
+                "processing_timestamp": "2026-01-01T10:05:00"
+              }
+            ]
+          },
+          "purpose": "out-of-order-events",
+          "tests": [
+            "event-ordering",
+            "event-time"
+          ]
+        },
+        {
+          "id": "hidden-late-event",
+          "label": "Late but within lateness window",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "max_lateness_minutes": 60
+              }
+            ],
+            "state_snapshot": [
+              {
+                "entity_id": 3,
+                "value": 100,
+                "event_timestamp": "2026-01-01T09:00:00"
+              }
+            ],
+            "events": [
+              {
+                "event_id": "late1",
+                "entity_id": 3,
+                "value": 150,
+                "event_timestamp": "2026-01-01T09:30:00",
+                "processing_timestamp": "2026-01-01T10:15:00"
+              }
+            ]
+          },
+          "purpose": "late-event",
+          "tests": [
+            "event-time",
+            "lateness-handling"
+          ]
+        },
+        {
+          "id": "hidden-very-late-event",
+          "label": "Event exceeds lateness threshold",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "max_lateness_minutes": 60
+              }
+            ],
+            "state_snapshot": [
+              {
+                "entity_id": 4,
+                "value": 100,
+                "event_timestamp": "2026-01-01T09:00:00"
+              }
+            ],
+            "events": [
+              {
+                "event_id": "toolate",
+                "entity_id": 4,
+                "value": 999,
+                "event_timestamp": "2026-01-01T07:00:00",
+                "processing_timestamp": "2026-01-01T10:30:00"
+              }
+            ]
+          },
+          "purpose": "watermark-policy",
+          "tests": [
+            "lateness-handling",
+            "watermark"
+          ]
+        },
+        {
+          "id": "hidden-same-event-time",
+          "label": "Deterministic tie-break on event_id",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "max_lateness_minutes": 60
+              }
+            ],
+            "state_snapshot": [
+              {
+                "entity_id": 5,
+                "value": 10,
+                "event_timestamp": "2026-01-01T08:00:00"
+              }
+            ],
+            "events": [
+              {
+                "event_id": "a1",
+                "entity_id": 5,
+                "value": 100,
+                "event_timestamp": "2026-01-01T10:00:00",
+                "processing_timestamp": "2026-01-01T10:01:00"
+              },
+              {
+                "event_id": "b2",
+                "entity_id": 5,
+                "value": 200,
+                "event_timestamp": "2026-01-01T10:00:00",
+                "processing_timestamp": "2026-01-01T10:02:00"
+              }
+            ]
+          },
+          "purpose": "same-event-time",
+          "tests": [
+            "deterministic-ordering",
+            "event-time"
+          ]
+        },
+        {
+          "id": "hidden-duplicate-event",
+          "label": "Duplicate event_id in stream",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "max_lateness_minutes": 60
+              }
+            ],
+            "state_snapshot": [
+              {
+                "entity_id": 6,
+                "value": 40,
+                "event_timestamp": "2026-01-01T08:00:00"
+              }
+            ],
+            "events": [
+              {
+                "event_id": "dup",
+                "entity_id": 6,
+                "value": 90,
+                "event_timestamp": "2026-01-01T09:00:00",
+                "processing_timestamp": "2026-01-01T09:05:00"
+              },
+              {
+                "event_id": "dup",
+                "entity_id": 6,
+                "value": 999,
+                "event_timestamp": "2026-01-01T09:00:00",
+                "processing_timestamp": "2026-01-01T09:10:00"
+              }
+            ]
+          },
+          "purpose": "duplicate-event",
+          "tests": [
+            "idempotency",
+            "deduplication"
+          ]
+        },
+        {
+          "id": "hidden-late-update",
+          "label": "Late update corrects event-time state",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "max_lateness_minutes": 60
+              }
+            ],
+            "state_snapshot": [
+              {
+                "entity_id": 7,
+                "value": 100,
+                "event_timestamp": "2026-01-01T08:00:00"
+              }
+            ],
+            "events": [
+              {
+                "event_id": "u1",
+                "entity_id": 7,
+                "value": 120,
+                "event_timestamp": "2026-01-01T08:30:00",
+                "processing_timestamp": "2026-01-01T09:20:00"
+              },
+              {
+                "event_id": "u2",
+                "entity_id": 7,
+                "value": 130,
+                "event_timestamp": "2026-01-01T09:00:00",
+                "processing_timestamp": "2026-01-01T09:05:00"
+              }
+            ]
+          },
+          "purpose": "late-update",
+          "tests": [
+            "state-correction",
+            "event-time"
+          ]
+        }
+      ],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 120000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    },
+    "sql": {
+      "referenceQuery": "WITH cfg AS (\n  SELECT max_lateness_minutes FROM pipeline_config LIMIT 1\n),\ndeduped AS (\n  SELECT event_id, entity_id, value, event_timestamp, processing_timestamp\n  FROM (\n    SELECT *,\n           ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY event_timestamp, event_id) AS rn\n    FROM events\n  ) WHERE rn = 1\n),\naccepted AS (\n  SELECT d.*\n  FROM deduped d, cfg\n  WHERE (julianday(d.processing_timestamp) - julianday(d.event_timestamp)) * 24 * 60\n        <= cfg.max_lateness_minutes\n),\nranked AS (\n  SELECT entity_id, value, event_timestamp,\n         ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY event_timestamp DESC, event_id DESC) AS rn\n  FROM accepted\n),\nlatest AS (\n  SELECT entity_id, value, event_timestamp FROM ranked WHERE rn = 1\n),\nsnapshot_only AS (\n  SELECT s.entity_id, s.value, s.event_timestamp\n  FROM state_snapshot s\n  WHERE s.entity_id NOT IN (SELECT entity_id FROM latest)\n)\nSELECT entity_id, value, event_timestamp FROM snapshot_only\nUNION ALL\nSELECT entity_id, value, event_timestamp FROM latest;",
+      "fixtures": [
+        {
+          "id": "public",
+          "label": "In-order and out-of-order accepted events",
+          "isHidden": false,
+          "tables": {
+            "pipeline_config": [
+              {
+                "max_lateness_minutes": 60
+              }
+            ],
+            "state_snapshot": [
+              {
+                "entity_id": 1,
+                "value": 100,
+                "event_timestamp": "2026-01-01T10:00:00"
+              }
+            ],
+            "events": [
+              {
+                "event_id": "e1",
+                "entity_id": 1,
+                "value": 110,
+                "event_timestamp": "2026-01-01T11:00:00",
+                "processing_timestamp": "2026-01-01T11:05:00"
+              },
+              {
+                "event_id": "e2",
+                "entity_id": 1,
+                "value": 105,
+                "event_timestamp": "2026-01-01T10:30:00",
+                "processing_timestamp": "2026-01-01T11:10:00"
+              }
+            ]
+          },
+          "purpose": "event-time-merge",
+          "tests": [
+            "event-time",
+            "event-ordering"
+          ]
+        },
+        {
+          "id": "hidden-out-of-order",
+          "label": "Processing order differs from event time",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "max_lateness_minutes": 60
+              }
+            ],
+            "state_snapshot": [
+              {
+                "entity_id": 2,
+                "value": 50,
+                "event_timestamp": "2026-01-01T08:00:00"
+              }
+            ],
+            "events": [
+              {
+                "event_id": "a",
+                "entity_id": 2,
+                "value": 80,
+                "event_timestamp": "2026-01-01T09:00:00",
+                "processing_timestamp": "2026-01-01T10:00:00"
+              },
+              {
+                "event_id": "b",
+                "entity_id": 2,
+                "value": 70,
+                "event_timestamp": "2026-01-01T08:30:00",
+                "processing_timestamp": "2026-01-01T10:05:00"
+              }
+            ]
+          },
+          "purpose": "out-of-order-events",
+          "tests": [
+            "event-ordering",
+            "event-time"
+          ]
+        },
+        {
+          "id": "hidden-late-event",
+          "label": "Late but within lateness window",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "max_lateness_minutes": 60
+              }
+            ],
+            "state_snapshot": [
+              {
+                "entity_id": 3,
+                "value": 100,
+                "event_timestamp": "2026-01-01T09:00:00"
+              }
+            ],
+            "events": [
+              {
+                "event_id": "late1",
+                "entity_id": 3,
+                "value": 150,
+                "event_timestamp": "2026-01-01T09:30:00",
+                "processing_timestamp": "2026-01-01T10:15:00"
+              }
+            ]
+          },
+          "purpose": "late-event",
+          "tests": [
+            "event-time",
+            "lateness-handling"
+          ]
+        },
+        {
+          "id": "hidden-very-late-event",
+          "label": "Event exceeds lateness threshold",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "max_lateness_minutes": 60
+              }
+            ],
+            "state_snapshot": [
+              {
+                "entity_id": 4,
+                "value": 100,
+                "event_timestamp": "2026-01-01T09:00:00"
+              }
+            ],
+            "events": [
+              {
+                "event_id": "toolate",
+                "entity_id": 4,
+                "value": 999,
+                "event_timestamp": "2026-01-01T07:00:00",
+                "processing_timestamp": "2026-01-01T10:30:00"
+              }
+            ]
+          },
+          "purpose": "watermark-policy",
+          "tests": [
+            "lateness-handling",
+            "watermark"
+          ]
+        },
+        {
+          "id": "hidden-same-event-time",
+          "label": "Deterministic tie-break on event_id",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "max_lateness_minutes": 60
+              }
+            ],
+            "state_snapshot": [
+              {
+                "entity_id": 5,
+                "value": 10,
+                "event_timestamp": "2026-01-01T08:00:00"
+              }
+            ],
+            "events": [
+              {
+                "event_id": "a1",
+                "entity_id": 5,
+                "value": 100,
+                "event_timestamp": "2026-01-01T10:00:00",
+                "processing_timestamp": "2026-01-01T10:01:00"
+              },
+              {
+                "event_id": "b2",
+                "entity_id": 5,
+                "value": 200,
+                "event_timestamp": "2026-01-01T10:00:00",
+                "processing_timestamp": "2026-01-01T10:02:00"
+              }
+            ]
+          },
+          "purpose": "same-event-time",
+          "tests": [
+            "deterministic-ordering",
+            "event-time"
+          ]
+        },
+        {
+          "id": "hidden-duplicate-event",
+          "label": "Duplicate event_id in stream",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "max_lateness_minutes": 60
+              }
+            ],
+            "state_snapshot": [
+              {
+                "entity_id": 6,
+                "value": 40,
+                "event_timestamp": "2026-01-01T08:00:00"
+              }
+            ],
+            "events": [
+              {
+                "event_id": "dup",
+                "entity_id": 6,
+                "value": 90,
+                "event_timestamp": "2026-01-01T09:00:00",
+                "processing_timestamp": "2026-01-01T09:05:00"
+              },
+              {
+                "event_id": "dup",
+                "entity_id": 6,
+                "value": 999,
+                "event_timestamp": "2026-01-01T09:00:00",
+                "processing_timestamp": "2026-01-01T09:10:00"
+              }
+            ]
+          },
+          "purpose": "duplicate-event",
+          "tests": [
+            "idempotency",
+            "deduplication"
+          ]
+        },
+        {
+          "id": "hidden-late-update",
+          "label": "Late update corrects event-time state",
+          "isHidden": true,
+          "tables": {
+            "pipeline_config": [
+              {
+                "max_lateness_minutes": 60
+              }
+            ],
+            "state_snapshot": [
+              {
+                "entity_id": 7,
+                "value": 100,
+                "event_timestamp": "2026-01-01T08:00:00"
+              }
+            ],
+            "events": [
+              {
+                "event_id": "u1",
+                "entity_id": 7,
+                "value": 120,
+                "event_timestamp": "2026-01-01T08:30:00",
+                "processing_timestamp": "2026-01-01T09:20:00"
+              },
+              {
+                "event_id": "u2",
+                "entity_id": 7,
+                "value": 130,
+                "event_timestamp": "2026-01-01T09:00:00",
+                "processing_timestamp": "2026-01-01T09:05:00"
+              }
+            ]
+          },
+          "purpose": "late-update",
+          "tests": [
+            "state-correction",
+            "event-time"
+          ]
+        }
+      ],
+      "tables": [
+        {
+          "label": "pipeline_config",
+          "description": "Lateness policy (minutes between event time and processing time)",
+          "columns": [
+            {
+              "name": "max_lateness_minutes",
+              "type": "INT"
+            }
+          ]
+        },
+        {
+          "label": "state_snapshot",
+          "description": "Known entity state before applying the event batch",
+          "columns": [
+            {
+              "name": "entity_id",
+              "type": "INT",
+              "key": "PK"
+            },
+            {
+              "name": "value",
+              "type": "INT"
+            },
+            {
+              "name": "event_timestamp",
+              "type": "TEXT"
+            }
+          ]
+        },
+        {
+          "label": "events",
+          "description": "Event stream with event time and processing time",
+          "columns": [
+            {
+              "name": "event_id",
+              "type": "TEXT",
+              "key": "PK"
+            },
+            {
+              "name": "entity_id",
+              "type": "INT"
+            },
+            {
+              "name": "value",
+              "type": "INT"
+            },
+            {
+              "name": "event_timestamp",
+              "type": "TEXT"
+            },
+            {
+              "name": "processing_timestamp",
+              "type": "TEXT"
+            }
+          ]
+        }
+      ],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 120000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    },
+    "adversarial": {
+      "pyspark": "ew = Window.partitionBy(\"event_id\").orderBy(\"processing_timestamp\")\ndeduped = events.withColumn(\"_rn\", row_number().over(ew)).filter(col(\"_rn\") == 1).drop(\"_rn\")\n\nlw = Window.partitionBy(\"entity_id\").orderBy(col(\"processing_timestamp\").desc())\nlatest = (\n    deduped.withColumn(\"_rn\", row_number().over(lw))\n    .filter(col(\"_rn\") == 1)\n    .drop(\"_rn\")\n    .select(\n        col(\"entity_id\").cast(\"int\"),\n        col(\"value\").cast(\"int\"),\n        col(\"event_timestamp\").cast(\"string\"),\n    )\n)\n\nsnapshot_only = (\n    state_snapshot.join(latest.select(\"entity_id\"), \"entity_id\", \"left_anti\")\n    .select(\n        col(\"entity_id\").cast(\"int\"),\n        col(\"value\").cast(\"int\"),\n        col(\"event_timestamp\").cast(\"string\"),\n    )\n)\n\nentity_state = snapshot_only.unionByName(latest)",
+      "sql": "WITH cfg AS (\n  SELECT max_lateness_minutes FROM pipeline_config LIMIT 1\n),\ndeduped AS (\n  SELECT event_id, entity_id, value, event_timestamp, processing_timestamp\n  FROM (\n    SELECT *, ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY processing_timestamp) AS rn\n    FROM events\n  ) WHERE rn = 1\n),\nranked AS (\n  SELECT entity_id, value, event_timestamp,\n         ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY processing_timestamp DESC) AS rn\n  FROM deduped\n),\nlatest AS (\n  SELECT entity_id, value, event_timestamp FROM ranked WHERE rn = 1\n),\nsnapshot_only AS (\n  SELECT s.entity_id, s.value, s.event_timestamp\n  FROM state_snapshot s\n  WHERE s.entity_id NOT IN (SELECT entity_id FROM latest)\n)\nSELECT entity_id, value, event_timestamp FROM snapshot_only\nUNION ALL\nSELECT entity_id, value, event_timestamp FROM latest;"
+    }
+  },
+  "schema-evolution": {
+    "outputTable": "customer_events_normalized",
+    "resultVar": "customer_events_normalized",
+    "pyspark": {
+      "referenceCode": "v1_norm = customer_events_v1.select(\n    col(\"customer_id\").cast(\"int\"),\n    F.trim(col(\"name\")).alias(\"name\"),\n    F.trim(col(\"city\")).alias(\"city\"),\n    F.lit(None).cast(\"string\").alias(\"email\"),\n)\n\nv2_norm = customer_events_v2.select(\n    col(\"customer_id\").cast(\"int\"),\n    F.trim(col(\"name\")).alias(\"name\"),\n    F.trim(col(\"city\")).alias(\"city\"),\n    col(\"email\").cast(\"string\"),\n)\n\ncustomer_events_normalized = v1_norm.unionByName(v2_norm)",
+      "fixtures": [
+        {
+          "id": "public",
+          "label": "Merge v1-only rows into canonical schema (v2 batch empty)",
+          "isHidden": false,
+          "tables": {
+            "customer_events_v1": [
+              {
+                "customer_id": 1,
+                "name": "Alice",
+                "city": "NYC"
+              },
+              {
+                "customer_id": 2,
+                "name": "Bob",
+                "city": "LA"
+              }
+            ],
+            "customer_events_v2": []
+          },
+          "purpose": "basic-normalization",
+          "tests": [
+            "schema-evolution",
+            "nullable-default"
+          ]
+        },
+        {
+          "id": "hidden-missing-new-column",
+          "label": "v1 rows without email column in source",
+          "isHidden": true,
+          "tables": {
+            "customer_events_v1": [
+              {
+                "customer_id": 10,
+                "name": "Eve",
+                "city": "Boston"
+              },
+              {
+                "customer_id": 11,
+                "name": "Frank",
+                "city": "Denver"
+              }
+            ],
+            "customer_events_v2": []
+          },
+          "purpose": "missing-new-column",
+          "tests": [
+            "schema-evolution",
+            "backward-compatibility"
+          ]
+        },
+        {
+          "id": "hidden-added-column",
+          "label": "v2 introduces populated email",
+          "isHidden": true,
+          "tables": {
+            "customer_events_v1": [
+              {
+                "customer_id": 20,
+                "name": "Grace",
+                "city": "Austin"
+              }
+            ],
+            "customer_events_v2": [
+              {
+                "customer_id": 21,
+                "name": "Henry",
+                "city": "Seattle",
+                "email": "henry@example.com"
+              },
+              {
+                "customer_id": 22,
+                "name": "Ivy",
+                "city": "Miami",
+                "email": "ivy@example.com"
+              }
+            ]
+          },
+          "purpose": "added-column",
+          "tests": [
+            "additive-evolution",
+            "nullable-default"
+          ]
+        },
+        {
+          "id": "hidden-reordered-columns",
+          "label": "v2 source column order differs from v1",
+          "isHidden": true,
+          "tables": {
+            "customer_events_v1": [
+              {
+                "customer_id": 30,
+                "name": "Jack",
+                "city": "Portland"
+              }
+            ],
+            "customer_events_v2": [
+              {
+                "customer_id": 31,
+                "name": "Kate",
+                "city": "Chicago",
+                "email": "kate@example.com"
+              }
+            ]
+          },
+          "purpose": "reordered-columns",
+          "tests": [
+            "column-mapping",
+            "schema-evolution"
+          ]
+        },
+        {
+          "id": "hidden-nullable-change",
+          "label": "Explicit NULL email in v2 vs missing column in v1",
+          "isHidden": true,
+          "tables": {
+            "customer_events_v1": [
+              {
+                "customer_id": 40,
+                "name": "Leo",
+                "city": "Dallas"
+              }
+            ],
+            "customer_events_v2": [
+              {
+                "customer_id": 41,
+                "name": "Mia",
+                "city": "Phoenix",
+                "email": null
+              },
+              {
+                "customer_id": 42,
+                "name": "Noah",
+                "city": "Atlanta",
+                "email": "noah@example.com"
+              }
+            ]
+          },
+          "purpose": "nullable-change",
+          "tests": [
+            "null-handling",
+            "backward-compatibility"
+          ]
+        },
+        {
+          "id": "hidden-mixed-schema",
+          "label": "Both schema versions present in one batch",
+          "isHidden": true,
+          "tables": {
+            "customer_events_v1": [
+              {
+                "customer_id": 50,
+                "name": "Olivia",
+                "city": "Detroit"
+              },
+              {
+                "customer_id": 51,
+                "name": "Paul",
+                "city": "Minneapolis"
+              }
+            ],
+            "customer_events_v2": [
+              {
+                "customer_id": 52,
+                "name": "Quinn",
+                "city": "San Diego",
+                "email": "quinn@example.com"
+              },
+              {
+                "customer_id": 53,
+                "name": "Rita",
+                "city": "Tampa",
+                "email": null
+              }
+            ]
+          },
+          "purpose": "mixed-schema",
+          "tests": [
+            "normalization",
+            "schema-evolution"
+          ]
+        },
+        {
+          "id": "hidden-unexpected-column",
+          "label": "v2 carries forward-incompatible phone column",
+          "isHidden": true,
+          "tables": {
+            "customer_events_v1": [
+              {
+                "customer_id": 60,
+                "name": "Sam",
+                "city": "Vegas"
+              }
+            ],
+            "customer_events_v2": [
+              {
+                "customer_id": 61,
+                "name": "Tina",
+                "city": "Orlando",
+                "email": "tina@example.com",
+                "phone": "555-0100"
+              }
+            ]
+          },
+          "purpose": "unexpected-column",
+          "tests": [
+            "schema-enforcement",
+            "forward-compatibility"
+          ]
+        },
+        {
+          "id": "hidden-type-compatible-change",
+          "label": "Whitespace in v1 text fields needs normalization",
+          "isHidden": true,
+          "tables": {
+            "customer_events_v1": [
+              {
+                "customer_id": 70,
+                "name": "  Uma  ",
+                "city": "  Raleigh  "
+              },
+              {
+                "customer_id": 71,
+                "name": "Victor",
+                "city": "Columbus"
+              }
+            ],
+            "customer_events_v2": [
+              {
+                "customer_id": 72,
+                "name": "Wendy",
+                "city": "Salt Lake",
+                "email": "wendy@example.com"
+              }
+            ]
+          },
+          "purpose": "type-compatible-change",
+          "tests": [
+            "casting",
+            "normalization"
+          ]
+        }
+      ],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 120000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    },
+    "sql": {
+      "referenceQuery": "SELECT\n  CAST(customer_id AS INTEGER) AS customer_id,\n  TRIM(name) AS name,\n  TRIM(city) AS city,\n  NULL AS email\nFROM customer_events_v1\nUNION ALL\nSELECT\n  CAST(customer_id AS INTEGER) AS customer_id,\n  TRIM(name) AS name,\n  TRIM(city) AS city,\n  email\nFROM customer_events_v2;",
+      "fixtures": [
+        {
+          "id": "public",
+          "label": "Merge v1-only rows into canonical schema (v2 batch empty)",
+          "isHidden": false,
+          "tables": {
+            "customer_events_v1": [
+              {
+                "customer_id": 1,
+                "name": "Alice",
+                "city": "NYC"
+              },
+              {
+                "customer_id": 2,
+                "name": "Bob",
+                "city": "LA"
+              }
+            ],
+            "customer_events_v2": []
+          },
+          "purpose": "basic-normalization",
+          "tests": [
+            "schema-evolution",
+            "nullable-default"
+          ]
+        },
+        {
+          "id": "hidden-missing-new-column",
+          "label": "v1 rows without email column in source",
+          "isHidden": true,
+          "tables": {
+            "customer_events_v1": [
+              {
+                "customer_id": 10,
+                "name": "Eve",
+                "city": "Boston"
+              },
+              {
+                "customer_id": 11,
+                "name": "Frank",
+                "city": "Denver"
+              }
+            ],
+            "customer_events_v2": []
+          },
+          "purpose": "missing-new-column",
+          "tests": [
+            "schema-evolution",
+            "backward-compatibility"
+          ]
+        },
+        {
+          "id": "hidden-added-column",
+          "label": "v2 introduces populated email",
+          "isHidden": true,
+          "tables": {
+            "customer_events_v1": [
+              {
+                "customer_id": 20,
+                "name": "Grace",
+                "city": "Austin"
+              }
+            ],
+            "customer_events_v2": [
+              {
+                "customer_id": 21,
+                "name": "Henry",
+                "city": "Seattle",
+                "email": "henry@example.com"
+              },
+              {
+                "customer_id": 22,
+                "name": "Ivy",
+                "city": "Miami",
+                "email": "ivy@example.com"
+              }
+            ]
+          },
+          "purpose": "added-column",
+          "tests": [
+            "additive-evolution",
+            "nullable-default"
+          ]
+        },
+        {
+          "id": "hidden-reordered-columns",
+          "label": "v2 source column order differs from v1",
+          "isHidden": true,
+          "tables": {
+            "customer_events_v1": [
+              {
+                "customer_id": 30,
+                "name": "Jack",
+                "city": "Portland"
+              }
+            ],
+            "customer_events_v2": [
+              {
+                "customer_id": 31,
+                "name": "Kate",
+                "city": "Chicago",
+                "email": "kate@example.com"
+              }
+            ]
+          },
+          "purpose": "reordered-columns",
+          "tests": [
+            "column-mapping",
+            "schema-evolution"
+          ]
+        },
+        {
+          "id": "hidden-nullable-change",
+          "label": "Explicit NULL email in v2 vs missing column in v1",
+          "isHidden": true,
+          "tables": {
+            "customer_events_v1": [
+              {
+                "customer_id": 40,
+                "name": "Leo",
+                "city": "Dallas"
+              }
+            ],
+            "customer_events_v2": [
+              {
+                "customer_id": 41,
+                "name": "Mia",
+                "city": "Phoenix",
+                "email": null
+              },
+              {
+                "customer_id": 42,
+                "name": "Noah",
+                "city": "Atlanta",
+                "email": "noah@example.com"
+              }
+            ]
+          },
+          "purpose": "nullable-change",
+          "tests": [
+            "null-handling",
+            "backward-compatibility"
+          ]
+        },
+        {
+          "id": "hidden-mixed-schema",
+          "label": "Both schema versions present in one batch",
+          "isHidden": true,
+          "tables": {
+            "customer_events_v1": [
+              {
+                "customer_id": 50,
+                "name": "Olivia",
+                "city": "Detroit"
+              },
+              {
+                "customer_id": 51,
+                "name": "Paul",
+                "city": "Minneapolis"
+              }
+            ],
+            "customer_events_v2": [
+              {
+                "customer_id": 52,
+                "name": "Quinn",
+                "city": "San Diego",
+                "email": "quinn@example.com"
+              },
+              {
+                "customer_id": 53,
+                "name": "Rita",
+                "city": "Tampa",
+                "email": null
+              }
+            ]
+          },
+          "purpose": "mixed-schema",
+          "tests": [
+            "normalization",
+            "schema-evolution"
+          ]
+        },
+        {
+          "id": "hidden-unexpected-column",
+          "label": "v2 carries forward-incompatible phone column",
+          "isHidden": true,
+          "tables": {
+            "customer_events_v1": [
+              {
+                "customer_id": 60,
+                "name": "Sam",
+                "city": "Vegas"
+              }
+            ],
+            "customer_events_v2": [
+              {
+                "customer_id": 61,
+                "name": "Tina",
+                "city": "Orlando",
+                "email": "tina@example.com",
+                "phone": "555-0100"
+              }
+            ]
+          },
+          "purpose": "unexpected-column",
+          "tests": [
+            "schema-enforcement",
+            "forward-compatibility"
+          ]
+        },
+        {
+          "id": "hidden-type-compatible-change",
+          "label": "Whitespace in v1 text fields needs normalization",
+          "isHidden": true,
+          "tables": {
+            "customer_events_v1": [
+              {
+                "customer_id": 70,
+                "name": "  Uma  ",
+                "city": "  Raleigh  "
+              },
+              {
+                "customer_id": 71,
+                "name": "Victor",
+                "city": "Columbus"
+              }
+            ],
+            "customer_events_v2": [
+              {
+                "customer_id": 72,
+                "name": "Wendy",
+                "city": "Salt Lake",
+                "email": "wendy@example.com"
+              }
+            ]
+          },
+          "purpose": "type-compatible-change",
+          "tests": [
+            "casting",
+            "normalization"
+          ]
+        }
+      ],
+      "tables": [
+        {
+          "label": "customer_events_v1",
+          "description": "Legacy customer event feed (customer_id, name, city)",
+          "columns": [
+            {
+              "name": "customer_id",
+              "type": "INT",
+              "key": "PK"
+            },
+            {
+              "name": "name",
+              "type": "TEXT"
+            },
+            {
+              "name": "city",
+              "type": "TEXT"
+            }
+          ]
+        },
+        {
+          "label": "customer_events_v2",
+          "description": "Evolved feed — adds email; may include extra columns in some batches",
+          "columns": [
+            {
+              "name": "customer_id",
+              "type": "INT",
+              "key": "PK"
+            },
+            {
+              "name": "name",
+              "type": "TEXT"
+            },
+            {
+              "name": "city",
+              "type": "TEXT"
+            },
+            {
+              "name": "email",
+              "type": "TEXT"
+            },
+            {
+              "name": "phone",
+              "type": "TEXT"
+            }
+          ]
+        }
+      ],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 120000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    },
+    "adversarial": {
+      "pyspark": "v1e = customer_events_v1.withColumn(\"email\", F.lit(None).cast(\"string\"))\nv2_pos = customer_events_v2.select(\n    col(\"customer_id\"),\n    col(\"city\"),\n    col(\"name\"),\n    F.lit(None).cast(\"string\").alias(\"email\"),\n)\ncustomer_events_normalized = v1e.union(v2_pos)",
+      "sql": "SELECT customer_id, name, city, NULL AS email FROM customer_events_v1\nUNION ALL\nSELECT customer_id, city AS name, name AS city, NULL AS email FROM customer_events_v2;"
+    }
+  },
+  "pipeline-reconciliation": {
+    "outputTable": "reconciliation_results",
+    "resultVar": "reconciliation_results",
+    "pyspark": {
+      "referenceCode": "pay = payments_source.groupBy(\"order_id\").agg(F.sum(\"amount\").alias(\"source_amount\"))\ntgt = orders_target.groupBy(\"order_id\").agg(F.sum(\"amount\").alias(\"target_amount\"))\n\ncount_v = abs(orders_source.count() - orders_target.count())\n\nsrc_total = payments_source.agg(F.coalesce(F.sum(\"amount\"), F.lit(0.0))).collect()[0][0] or 0.0\ntgt_total = orders_target.agg(F.coalesce(F.sum(\"amount\"), F.lit(0.0))).collect()[0][0] or 0.0\namount_total_v = 0 if abs(float(src_total) - float(tgt_total)) <= 0.001 else 1\n\nmissing_v = orders_source.join(orders_target.select(\"order_id\").distinct(), \"order_id\", \"left_anti\").count()\n\nunexpected_v = (\n    orders_target.join(orders_source.select(\"order_id\").distinct(), \"order_id\", \"left_anti\")\n    .select(\"order_id\")\n    .distinct()\n    .count()\n)\n\namount_mismatch_v = (\n    pay.join(tgt, \"order_id\")\n    .filter(F.abs(col(\"source_amount\") - col(\"target_amount\")) > 0.001)\n    .count()\n)\n\ndup_tgt_v = orders_target.count() - orders_target.select(\"order_id\").distinct().count()\n\ndef rule_row(rule_id, rule_name, violations):\n    return spark.createDataFrame(\n        [(rule_id, rule_name, int(violations), 1 if violations == 0 else 0)],\n        \"rule_id STRING, rule_name STRING, violation_count INT, passed INT\",\n    )\n\nreconciliation_results = (\n    rule_row(\"source_target_count\", \"Record count reconciliation\", count_v)\n    .unionByName(rule_row(\"source_target_amount\", \"Total amount reconciliation\", amount_total_v))\n    .unionByName(rule_row(\"missing_target_records\", \"Source records absent in target\", missing_v))\n    .unionByName(rule_row(\"unexpected_target_records\", \"Target records absent in source\", unexpected_v))\n    .unionByName(rule_row(\"amount_mismatch\", \"Same ID, different amount\", amount_mismatch_v))\n    .unionByName(rule_row(\"duplicate_target_records\", \"Duplicate business keys in target\", dup_tgt_v))\n)",
+      "fixtures": [
+        {
+          "id": "public",
+          "label": "Fully reconciled source and target",
+          "isHidden": false,
+          "tables": {
+            "orders_source": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW"
+              }
+            ],
+            "payments_source": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200
+              }
+            ],
+            "orders_target": [
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 2,
+                "amount": 200
+              }
+            ]
+          },
+          "purpose": "baseline-reconciliation",
+          "tests": [
+            "reconciliation",
+            "record-count"
+          ]
+        },
+        {
+          "id": "hidden-count-mismatch",
+          "label": "Row counts differ without a missing order_id",
+          "isHidden": true,
+          "tables": {
+            "orders_source": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW"
+              }
+            ],
+            "payments_source": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200
+              }
+            ],
+            "orders_target": [
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 2,
+                "amount": 200
+              }
+            ]
+          },
+          "purpose": "count-mismatch",
+          "tests": [
+            "record-count",
+            "reconciliation"
+          ]
+        },
+        {
+          "id": "hidden-missing-record",
+          "label": "Source order absent from target",
+          "isHidden": true,
+          "tables": {
+            "orders_source": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW"
+              },
+              {
+                "order_id": 3,
+                "customer_id": 103,
+                "status": "PAID"
+              }
+            ],
+            "payments_source": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200
+              },
+              {
+                "payment_id": 3,
+                "order_id": 3,
+                "amount": 150
+              }
+            ],
+            "orders_target": [
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 2,
+                "amount": 200
+              }
+            ]
+          },
+          "purpose": "missing-record",
+          "tests": [
+            "completeness",
+            "reconciliation"
+          ]
+        },
+        {
+          "id": "hidden-unexpected-record",
+          "label": "Target order not present in source",
+          "isHidden": true,
+          "tables": {
+            "orders_source": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW"
+              }
+            ],
+            "payments_source": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200
+              }
+            ],
+            "orders_target": [
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 2,
+                "amount": 200
+              },
+              {
+                "order_id": 99,
+                "amount": 75
+              }
+            ]
+          },
+          "purpose": "unexpected-record",
+          "tests": [
+            "completeness",
+            "reconciliation"
+          ]
+        },
+        {
+          "id": "hidden-amount-mismatch",
+          "label": "Matching keys with different amounts",
+          "isHidden": true,
+          "tables": {
+            "orders_source": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW"
+              }
+            ],
+            "payments_source": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200
+              }
+            ],
+            "orders_target": [
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 2,
+                "amount": 250
+              }
+            ]
+          },
+          "purpose": "amount-mismatch",
+          "tests": [
+            "reconciliation",
+            "amount-consistency"
+          ]
+        },
+        {
+          "id": "hidden-duplicate-target",
+          "label": "Duplicate order_id rows in target",
+          "isHidden": true,
+          "tables": {
+            "orders_source": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW"
+              }
+            ],
+            "payments_source": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200
+              }
+            ],
+            "orders_target": [
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 2,
+                "amount": 200
+              }
+            ]
+          },
+          "purpose": "duplicate-target",
+          "tests": [
+            "uniqueness",
+            "reconciliation"
+          ]
+        },
+        {
+          "id": "hidden-multiple-mismatches",
+          "label": "Missing record, amount drift, and duplicate key",
+          "isHidden": true,
+          "tables": {
+            "orders_source": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW"
+              },
+              {
+                "order_id": 3,
+                "customer_id": 103,
+                "status": "SHIPPED"
+              }
+            ],
+            "payments_source": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200
+              },
+              {
+                "payment_id": 3,
+                "order_id": 3,
+                "amount": 300
+              }
+            ],
+            "orders_target": [
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 1,
+                "amount": 450
+              },
+              {
+                "order_id": 2,
+                "amount": 250
+              }
+            ]
+          },
+          "purpose": "multiple-mismatches",
+          "tests": [
+            "reconciliation",
+            "completeness",
+            "amount-consistency"
+          ]
+        }
+      ],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 90000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    },
+    "sql": {
+      "referenceQuery": "WITH pay AS (\n  SELECT order_id, SUM(amount) AS source_amount\n  FROM payments_source\n  GROUP BY order_id\n),\ntgt AS (\n  SELECT order_id, SUM(amount) AS target_amount\n  FROM orders_target\n  GROUP BY order_id\n),\namount_mismatches AS (\n  SELECT COUNT(*) AS cnt\n  FROM pay p\n  INNER JOIN tgt t ON p.order_id = t.order_id\n  WHERE ABS(p.source_amount - t.target_amount) > 0.001\n)\nSELECT 'source_target_count' AS rule_id,\n       'Record count reconciliation' AS rule_name,\n       ABS((SELECT COUNT(*) FROM orders_source) - (SELECT COUNT(*) FROM orders_target)) AS violation_count,\n       CASE WHEN (SELECT COUNT(*) FROM orders_source) = (SELECT COUNT(*) FROM orders_target) THEN 1 ELSE 0 END AS passed\nUNION ALL\nSELECT 'source_target_amount',\n       'Total amount reconciliation',\n       CASE\n         WHEN ABS(\n           COALESCE((SELECT SUM(amount) FROM payments_source), 0)\n           - COALESCE((SELECT SUM(amount) FROM orders_target), 0)\n         ) <= 0.001 THEN 0\n         ELSE 1\n       END,\n       CASE\n         WHEN ABS(\n           COALESCE((SELECT SUM(amount) FROM payments_source), 0)\n           - COALESCE((SELECT SUM(amount) FROM orders_target), 0)\n         ) <= 0.001 THEN 1\n         ELSE 0\n       END\nUNION ALL\nSELECT 'missing_target_records',\n       'Source records absent in target',\n       (SELECT COUNT(*) FROM orders_source s\n        WHERE NOT EXISTS (SELECT 1 FROM orders_target t WHERE t.order_id = s.order_id)),\n       CASE WHEN (SELECT COUNT(*) FROM orders_source s\n                  WHERE NOT EXISTS (SELECT 1 FROM orders_target t WHERE t.order_id = s.order_id)) = 0\n            THEN 1 ELSE 0 END\nUNION ALL\nSELECT 'unexpected_target_records',\n       'Target records absent in source',\n       (SELECT COUNT(DISTINCT t.order_id) FROM orders_target t\n        WHERE NOT EXISTS (SELECT 1 FROM orders_source s WHERE s.order_id = t.order_id)),\n       CASE WHEN (SELECT COUNT(DISTINCT t.order_id) FROM orders_target t\n                  WHERE NOT EXISTS (SELECT 1 FROM orders_source s WHERE s.order_id = t.order_id)) = 0\n            THEN 1 ELSE 0 END\nUNION ALL\nSELECT 'amount_mismatch',\n       'Same ID, different amount',\n       (SELECT cnt FROM amount_mismatches),\n       CASE WHEN (SELECT cnt FROM amount_mismatches) = 0 THEN 1 ELSE 0 END\nUNION ALL\nSELECT 'duplicate_target_records',\n       'Duplicate business keys in target',\n       (SELECT COUNT(*) - COUNT(DISTINCT order_id) FROM orders_target),\n       CASE WHEN (SELECT COUNT(*) FROM orders_target)\n                 = (SELECT COUNT(DISTINCT order_id) FROM orders_target)\n            THEN 1 ELSE 0 END;",
+      "fixtures": [
+        {
+          "id": "public",
+          "label": "Fully reconciled source and target",
+          "isHidden": false,
+          "tables": {
+            "orders_source": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW"
+              }
+            ],
+            "payments_source": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200
+              }
+            ],
+            "orders_target": [
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 2,
+                "amount": 200
+              }
+            ]
+          },
+          "purpose": "baseline-reconciliation",
+          "tests": [
+            "reconciliation",
+            "record-count"
+          ]
+        },
+        {
+          "id": "hidden-count-mismatch",
+          "label": "Row counts differ without a missing order_id",
+          "isHidden": true,
+          "tables": {
+            "orders_source": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW"
+              }
+            ],
+            "payments_source": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200
+              }
+            ],
+            "orders_target": [
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 2,
+                "amount": 200
+              }
+            ]
+          },
+          "purpose": "count-mismatch",
+          "tests": [
+            "record-count",
+            "reconciliation"
+          ]
+        },
+        {
+          "id": "hidden-missing-record",
+          "label": "Source order absent from target",
+          "isHidden": true,
+          "tables": {
+            "orders_source": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW"
+              },
+              {
+                "order_id": 3,
+                "customer_id": 103,
+                "status": "PAID"
+              }
+            ],
+            "payments_source": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200
+              },
+              {
+                "payment_id": 3,
+                "order_id": 3,
+                "amount": 150
+              }
+            ],
+            "orders_target": [
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 2,
+                "amount": 200
+              }
+            ]
+          },
+          "purpose": "missing-record",
+          "tests": [
+            "completeness",
+            "reconciliation"
+          ]
+        },
+        {
+          "id": "hidden-unexpected-record",
+          "label": "Target order not present in source",
+          "isHidden": true,
+          "tables": {
+            "orders_source": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW"
+              }
+            ],
+            "payments_source": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200
+              }
+            ],
+            "orders_target": [
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 2,
+                "amount": 200
+              },
+              {
+                "order_id": 99,
+                "amount": 75
+              }
+            ]
+          },
+          "purpose": "unexpected-record",
+          "tests": [
+            "completeness",
+            "reconciliation"
+          ]
+        },
+        {
+          "id": "hidden-amount-mismatch",
+          "label": "Matching keys with different amounts",
+          "isHidden": true,
+          "tables": {
+            "orders_source": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW"
+              }
+            ],
+            "payments_source": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200
+              }
+            ],
+            "orders_target": [
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 2,
+                "amount": 250
+              }
+            ]
+          },
+          "purpose": "amount-mismatch",
+          "tests": [
+            "reconciliation",
+            "amount-consistency"
+          ]
+        },
+        {
+          "id": "hidden-duplicate-target",
+          "label": "Duplicate order_id rows in target",
+          "isHidden": true,
+          "tables": {
+            "orders_source": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW"
+              }
+            ],
+            "payments_source": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200
+              }
+            ],
+            "orders_target": [
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 2,
+                "amount": 200
+              }
+            ]
+          },
+          "purpose": "duplicate-target",
+          "tests": [
+            "uniqueness",
+            "reconciliation"
+          ]
+        },
+        {
+          "id": "hidden-multiple-mismatches",
+          "label": "Missing record, amount drift, and duplicate key",
+          "isHidden": true,
+          "tables": {
+            "orders_source": [
+              {
+                "order_id": 1,
+                "customer_id": 101,
+                "status": "PAID"
+              },
+              {
+                "order_id": 2,
+                "customer_id": 102,
+                "status": "NEW"
+              },
+              {
+                "order_id": 3,
+                "customer_id": 103,
+                "status": "SHIPPED"
+              }
+            ],
+            "payments_source": [
+              {
+                "payment_id": 1,
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "payment_id": 2,
+                "order_id": 2,
+                "amount": 200
+              },
+              {
+                "payment_id": 3,
+                "order_id": 3,
+                "amount": 300
+              }
+            ],
+            "orders_target": [
+              {
+                "order_id": 1,
+                "amount": 500
+              },
+              {
+                "order_id": 1,
+                "amount": 450
+              },
+              {
+                "order_id": 2,
+                "amount": 250
+              }
+            ]
+          },
+          "purpose": "multiple-mismatches",
+          "tests": [
+            "reconciliation",
+            "completeness",
+            "amount-consistency"
+          ]
+        }
+      ],
+      "tables": [
+        {
+          "label": "orders_source",
+          "description": "Source-system order headers (authoritative order grain)",
+          "columns": [
+            {
+              "name": "order_id",
+              "type": "INT",
+              "key": "PK"
+            },
+            {
+              "name": "customer_id",
+              "type": "INT"
+            },
+            {
+              "name": "status",
+              "type": "TEXT"
+            }
+          ]
+        },
+        {
+          "label": "payments_source",
+          "description": "Source-system payments — authoritative order amounts",
+          "columns": [
+            {
+              "name": "payment_id",
+              "type": "INT",
+              "key": "PK"
+            },
+            {
+              "name": "order_id",
+              "type": "INT"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE"
+            }
+          ]
+        },
+        {
+          "label": "orders_target",
+          "description": "Downstream warehouse orders table under reconciliation",
+          "columns": [
+            {
+              "name": "order_id",
+              "type": "INT",
+              "key": "PK"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE"
+            }
+          ]
+        }
+      ],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 90000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    },
+    "adversarial": {
+      "pyspark": "count_v = abs(orders_source.count() - orders_target.count())\n\nmissing_v = orders_source.join(orders_target.select(\"order_id\").distinct(), \"order_id\", \"left_anti\").count()\n\nunexpected_v = (\n    orders_target.join(orders_source.select(\"order_id\").distinct(), \"order_id\", \"left_anti\")\n    .select(\"order_id\")\n    .distinct()\n    .count()\n)\n\ndef rule_row(rule_id, rule_name, violations):\n    return spark.createDataFrame(\n        [(rule_id, rule_name, int(violations), 1 if violations == 0 else 0)],\n        \"rule_id STRING, rule_name STRING, violation_count INT, passed INT\",\n    )\n\nreconciliation_results = (\n    rule_row(\"source_target_count\", \"Record count reconciliation\", count_v)\n    .unionByName(rule_row(\"source_target_amount\", \"Total amount reconciliation\", 0))\n    .unionByName(rule_row(\"missing_target_records\", \"Source records absent in target\", missing_v))\n    .unionByName(rule_row(\"unexpected_target_records\", \"Target records absent in source\", unexpected_v))\n    .unionByName(rule_row(\"amount_mismatch\", \"Same ID, different amount\", 0))\n    .unionByName(rule_row(\"duplicate_target_records\", \"Duplicate business keys in target\", 0))\n)",
+      "sql": "SELECT 'source_target_count' AS rule_id,\n       'Record count reconciliation' AS rule_name,\n       ABS((SELECT COUNT(*) FROM orders_source) - (SELECT COUNT(*) FROM orders_target)) AS violation_count,\n       CASE WHEN (SELECT COUNT(*) FROM orders_source) = (SELECT COUNT(*) FROM orders_target) THEN 1 ELSE 0 END AS passed\nUNION ALL\nSELECT 'source_target_amount', 'Total amount reconciliation', 0, 1\nUNION ALL\nSELECT 'missing_target_records',\n       'Source records absent in target',\n       (SELECT COUNT(*) FROM orders_source s\n        WHERE NOT EXISTS (SELECT 1 FROM orders_target t WHERE t.order_id = s.order_id)),\n       CASE WHEN (SELECT COUNT(*) FROM orders_source s\n                  WHERE NOT EXISTS (SELECT 1 FROM orders_target t WHERE t.order_id = s.order_id)) = 0\n            THEN 1 ELSE 0 END\nUNION ALL\nSELECT 'unexpected_target_records',\n       'Target records absent in source',\n       (SELECT COUNT(DISTINCT t.order_id) FROM orders_target t\n        WHERE NOT EXISTS (SELECT 1 FROM orders_source s WHERE s.order_id = t.order_id)),\n       CASE WHEN (SELECT COUNT(DISTINCT t.order_id) FROM orders_target t\n                  WHERE NOT EXISTS (SELECT 1 FROM orders_source s WHERE s.order_id = t.order_id)) = 0\n            THEN 1 ELSE 0 END\nUNION ALL\nSELECT 'amount_mismatch', 'Same ID, different amount', 0, 1\nUNION ALL\nSELECT 'duplicate_target_records',\n       'Duplicate business keys in target',\n       (SELECT COUNT(*) - COUNT(DISTINCT order_id) FROM orders_target),\n       CASE WHEN (SELECT COUNT(*) FROM orders_target)\n                 = (SELECT COUNT(DISTINCT order_id) FROM orders_target)\n            THEN 1 ELSE 0 END;"
+    }
+  }
+}

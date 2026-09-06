@@ -1,26 +1,15 @@
-import { LEETCODE_SQL_PATTERNS, getLeetCodeSqlProblems } from "@/lib/leetcode-sql";
 import { SQL_ROUTES } from "@/lib/sql";
 import { getSqlPracticeQuestions } from "@/lib/sql-practice";
-import {
-  getLeetCodeConfidence,
-  getSqlProgress,
-  isLeetCodeSolved,
-  isPracticeSolved,
-} from "@/lib/sql-progress";
+import { getSqlProgress, isPracticeSolved } from "@/lib/sql-progress";
 
 export interface WeakArea {
   id: string;
   label: string;
-  source: "leetcode" | "practice";
+  source: "practice";
   solved: number;
   total: number;
   percent: number;
   href: string;
-}
-
-function isLeetCodeDone(slug: string): boolean {
-  const confidence = getLeetCodeConfidence(slug);
-  return isLeetCodeSolved(slug) || confidence === "know";
 }
 
 function inferPracticeCategory(title: string, solution: string): string {
@@ -36,26 +25,6 @@ function inferPracticeCategory(title: string, solution: string): string {
 
 export function getWeakAreas(limit = 5): WeakArea[] {
   const areas: WeakArea[] = [];
-
-  const lcByPattern = new Map<string, { solved: number; total: number }>();
-  for (const problem of getLeetCodeSqlProblems()) {
-    const entry = lcByPattern.get(problem.pattern) ?? { solved: 0, total: 0 };
-    entry.total += 1;
-    if (isLeetCodeDone(problem.slug)) entry.solved += 1;
-    lcByPattern.set(problem.pattern, entry);
-  }
-
-  for (const [pattern, stats] of lcByPattern) {
-    areas.push({
-      id: `lc-${pattern}`,
-      label: LEETCODE_SQL_PATTERNS[pattern as keyof typeof LEETCODE_SQL_PATTERNS],
-      source: "leetcode",
-      solved: stats.solved,
-      total: stats.total,
-      percent: stats.total > 0 ? Math.round((stats.solved / stats.total) * 100) : 0,
-      href: `${SQL_ROUTES.leetcode}?pattern=${pattern}`,
-    });
-  }
 
   const practiceByCat = new Map<string, { solved: number; total: number }>();
   for (const problem of getSqlPracticeQuestions()) {
@@ -84,18 +53,14 @@ export function getWeakAreas(limit = 5): WeakArea[] {
     .slice(0, limit);
 }
 
-export function getReviewQueue(): { leetcode: number; interview: number } {
+export function getReviewQueue(): { interview: number } {
   const progress = getSqlProgress();
-  const lcReview = Object.values(progress.leetcodeConfidence).filter(
-    (c) => c === "unsure" || c === "dont"
-  ).length;
 
   const interviewReview = Object.values(progress.interviewConfidence).filter(
     (c) => c === "unsure" || c === "dont"
   ).length;
 
   return {
-    leetcode: lcReview,
     interview: interviewReview,
   };
 }

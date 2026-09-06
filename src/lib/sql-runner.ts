@@ -1,4 +1,5 @@
 import type { Database, SqlValue } from "sql.js";
+import { validateSqlQuery } from "@/lib/practice-platform/judge/sql-query-guard";
 
 export interface SqlRunResult {
   columns: string[];
@@ -41,14 +42,9 @@ export async function runPlaygroundQuery(
     return { error: "Write a SELECT query to run." };
   }
 
-  if (!/^\s*(SELECT|WITH|PRAGMA|EXPLAIN)\b/i.test(trimmed)) {
-    return {
-      error: "Only read-only queries are allowed (SELECT, WITH, EXPLAIN, PRAGMA).",
-    };
-  }
-
-  if (/(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|REPLACE|TRUNCATE)\b/i.test(trimmed)) {
-    return { error: "Data modification statements are disabled in the playground." };
+  const validationError = validateSqlQuery(trimmed, false, "playground");
+  if (validationError) {
+    return { error: validationError };
   }
 
   try {

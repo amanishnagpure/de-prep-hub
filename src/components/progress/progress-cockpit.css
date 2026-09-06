@@ -1,0 +1,186 @@
+/* Progress cockpit — uses platform District color grading + glass surfaces */
+.progress-cockpit {
+  --pc-text: var(--foreground);
+  --pc-muted: var(--muted-foreground);
+  --pc-faint: var(--platform-ink-muted);
+  --pc-border: var(--border);
+  --pc-surface: var(--muted);
+  --pc-unexplored: rgba(255, 255, 255, 0.1);
+  --pc-success: var(--platform-success);
+  min-height: calc(100dvh - 3rem);
+}
+
+.progress-cockpit .pc-card {
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  box-shadow: var(--elevation-sm);
+  transition:
+    border-color var(--motion-normal) var(--motion-ease),
+    box-shadow var(--motion-normal) var(--motion-ease);
+}
+
+.progress-cockpit .pc-card:hover {
+  border-color: rgba(168, 85, 247, 0.22);
+}
+
+.progress-cockpit .pc-surface {
+  border-radius: 0.875rem;
+  border: 1px solid var(--border);
+  background: var(--muted);
+}
+
+.progress-cockpit .pc-label {
+  font-size: var(--type-meta);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.progress-cockpit .pc-heading {
+  font-size: var(--type-page-title);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  color: var(--foreground);
+}
+
+.progress-cockpit .pc-subheading {
+  font-size: var(--type-body);
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+
+.progress-cockpit .pc-ring-track {
+  stroke: var(--platform-border);
+}
+
+.progress-cockpit .pc-ring-fill {
+  stroke: url(#progress-ring-gradient);
+  transition: stroke-dashoffset 0.6s var(--motion-ease);
+}
+
+.progress-cockpit .pc-depth-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: var(--platform-border);
+}
+
+.progress-cockpit .pc-depth-dot-filled {
+  background: var(--depth-accent, var(--platform-brand-violet));
+}
+
+.progress-cockpit .pc-pulse {
+  animation: pc-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes pc-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0 rgba(168, 85, 247, 0.45));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.55));
+  }
+}
+
+.progress-cockpit .pc-sparkline {
+  stroke: url(#progress-spark-gradient);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.progress-cockpit .pc-divider {
+  border-top: 1px solid var(--border);
+}
+
+.progress-cockpit .pc-milestone {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.progress-cockpit .pc-milestone-done {
+  color: var(--foreground);
+}
+
+.progress-cockpit .pc-milestone-index {
+  font-variant-numeric: tabular-nums;
+  color: var(--platform-ink-muted);
+  min-width: 1.5rem;
+}
+
+.progress-cockpit .pc-next-move {
+  border-color: rgba(168, 85, 247, 0.25);
+  background: linear-gradient(
+    135deg,
+    rgba(124, 58, 237, 0.08) 0%,
+    rgba(219, 39, 119, 0.05) 55%,
+    rgba(37, 99, 235, 0.06) 100%
+  );
+}
+
+.progress-cockpit .pc-strength-item {
+  color: var(--strength-accent, var(--foreground));
+}
+
+.progress-cockpit .pc-focus-item {
+  color: var(--focus-accent, var(--foreground));
+}
+
+.progress-cockpit .pc-cal {
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 1.75rem;
+  border-radius: 0.25rem;
+  border: 1px solid transparent;
+}
+
+.progress-cockpit .pc-cal-out {
+  visibility: hidden;
+}
+
+.progress-cockpit .pc-cal-0 {
+  background: var(--platform-border);
+}
+
+.progress-cockpit .pc-cal-1 {
+  background: rgba(139, 92, 246, 0.22);
+}
+
+.progress-cockpit .pc-cal-2 {
+  background: rgba(139, 92, 246, 0.42);
+}
+
+.progress-cockpit .pc-cal-3 {
+  background: rgba(139, 92, 246, 0.62);
+}
+
+.progress-cockpit .pc-cal-4 {
+  background: var(--platform-brand-violet);
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.35);
+}
+
+.progress-cockpit .pc-cal-today {
+  border-color: rgba(236, 72, 153, 0.55);
+}
+
+.progress-cockpit .pc-cal-compact {
+  max-width: 1.125rem;
+}
+
+.progress-cockpit .pc-monthly-sidebar {
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .progress-cockpit .pc-monthly-sidebar {
+    position: sticky;
+    top: 5rem;
+  }
+}

@@ -2,6 +2,7 @@ import type { Database, SqlValue } from "sql.js";
 import type { SqlRunError, SqlRunResult } from "@/lib/sql-runner";
 import { getDeCodeSqlSeed } from "@/data/de-code/sql-seeds";
 import { getSqlPracticeSeed } from "@/data/sql-practice-problem-seeds";
+import { validateSqlQuery } from "@/lib/practice-platform/judge/sql-query-guard";
 
 function resolveSeed(slug: string) {
   return getDeCodeSqlSeed(slug) ?? getSqlPracticeSeed(slug);
@@ -47,25 +48,7 @@ function createDatabase(initSql: string): Promise<Database> {
 }
 
 function validateQuery(query: string, allowMutations: boolean): string | null {
-  const trimmed = query.trim();
-  if (!trimmed) return "Write a SQL query first.";
-
-  if (allowMutations) {
-    if (!/^\s*(SELECT|WITH|DELETE|INSERT|UPDATE)\b/i.test(trimmed)) {
-      return "Only SQL statements are allowed (SELECT, WITH, DELETE, INSERT, UPDATE).";
-    }
-    return null;
-  }
-
-  if (!/^\s*(SELECT|WITH|EXPLAIN|PRAGMA)\b/i.test(trimmed)) {
-    return "Only read-only queries are allowed (SELECT, WITH, EXPLAIN). Submit DELETE problems with the required statement.";
-  }
-
-  if (/(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|REPLACE|TRUNCATE)\b/i.test(trimmed)) {
-    return "Data modification is disabled for this problem — use SELECT unless the problem requires DELETE.";
-  }
-
-  return null;
+  return validateSqlQuery(query, allowMutations);
 }
 
 export async function runPracticeQuery(

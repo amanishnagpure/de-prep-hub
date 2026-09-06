@@ -2,10 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { BookOpen, Brain, CheckCircle2, Code2, Flame, PlayCircle, Terminal, Trophy } from "lucide-react";
+import { BookOpen, Brain, CheckCircle2, Flame, PlayCircle, Terminal } from "lucide-react";
 import { PYTHON_CHAPTER_META, PYTHON_ROUTES, PYTHON_STATS } from "@/lib/python";
 import {
-  getCodingStats,
   getInterviewStats,
   getNotesStats,
   getPracticeStats,
@@ -22,7 +21,6 @@ import { cn } from "cn";
 const MODULES = [
   { href: PYTHON_ROUTES.notes, title: "Notes", icon: BookOpen },
   { href: PYTHON_ROUTES.practice, title: "Practice", icon: Terminal },
-  { href: PYTHON_ROUTES.coding, title: "Coding", icon: Trophy },
   { href: PYTHON_ROUTES.interview, title: "Interview", icon: Brain },
 ];
 
@@ -30,7 +28,6 @@ export function PythonDashboard() {
   const [streak, setStreak] = React.useState(0);
   const [notes, setNotes] = React.useState({ read: 0, total: 0, percent: 0 });
   const [practice, setPractice] = React.useState({ solved: 0, total: 0, percent: 0 });
-  const [coding, setCoding] = React.useState({ solved: 0, total: 0, percent: 0 });
   const [interview, setInterview] = React.useState({ know: 0, total: 0, percent: 0 });
   const [readChapters, setReadChapters] = React.useState<string[]>([]);
   const [lastVisited, setLastVisited] = React.useState<{ path: string; label: string } | null>(null);
@@ -41,7 +38,6 @@ export function PythonDashboard() {
     setStreak(getPythonStreak());
     setNotes(getNotesStats(PYTHON_STATS.noteChapters));
     setPractice(getPracticeStats(PYTHON_STATS.practiceTotal));
-    setCoding(getCodingStats(PYTHON_STATS.codingTotal));
     const interviewStats = getInterviewStats(PYTHON_STATS.interviewTotal);
     setInterview({
       know: interviewStats.know,
@@ -136,10 +132,9 @@ export function PythonDashboard() {
         {importMessage && <p className="mt-2 text-sm text-muted-foreground">{importMessage}</p>}
       </section>
 
-      <section className="grid gap-4 panel p-6 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 panel p-6 sm:grid-cols-2 xl:grid-cols-3">
         <PythonProgressRing percent={notes.percent} label="Notes" sublabel={`${notes.read}/${notes.total} chapters`} />
         <PythonProgressRing percent={practice.percent} label="Practice" sublabel={`${practice.solved}/${practice.total}`} />
-        <PythonProgressRing percent={coding.percent} label="Coding" sublabel={`${coding.solved}/${coding.total}`} />
         <PythonProgressRing percent={interview.percent} label="Interview" sublabel={`${interview.know}/${interview.total}`} />
       </section>
 
@@ -160,7 +155,7 @@ export function PythonDashboard() {
         </div>
       </section>
 
-      <section className="grid gap-2 sm:grid-cols-2">
+      <section className="grid gap-2 sm:grid-cols-3">
         {MODULES.map((module) => (
           <LabModuleLink
             key={module.href}
@@ -174,7 +169,7 @@ export function PythonDashboard() {
       <section className="panel p-6">
         <h2 className="text-sm font-medium">Suggested order</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Easy → Medium (pandas) → Advanced → Data Engineering → Patterns & Traps → practice → coding → flashcards
+          Easy → Medium (pandas) → Advanced → Data Engineering → Patterns & Traps → practice → flashcards
         </p>
       </section>
     </div>

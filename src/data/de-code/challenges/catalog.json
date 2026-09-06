@@ -1,0 +1,693 @@
+[
+  {
+    "problemKind": "de_challenge",
+    "challengeNumber": 1,
+    "id": "challenge/incremental-customer-pipeline",
+    "slug": "incremental-customer-pipeline",
+    "title": "Incremental Customer Pipeline",
+    "scenario": "You are building a daily customer summary table for an e-commerce analytics pipeline. Each morning you receive a snapshot of today's customer master data and yesterday's snapshot for change detection context. Order transactions arrive separately and must be aggregated per customer.",
+    "objective": "Produce a `customer_daily_summary` dataset with one row per customer from today's master data, including order metrics.",
+    "requirements": [
+      "Use today's customer data as the grain (one output row per customer_id)",
+      "Deduplicate duplicate customer records in customers_today",
+      "Left-join order aggregates so customers with no orders still appear",
+      "Count distinct orders per customer after deduplicating duplicate order_id rows",
+      "Treat NULL order amounts as zero in revenue totals",
+      "Output columns: customer_id, name, city, order_count, total_revenue"
+    ],
+    "skills": [
+      "Deduplication",
+      "Incremental Processing",
+      "Aggregation",
+      "NULL Handling",
+      "Left Join"
+    ],
+    "difficulty": "medium",
+    "experienceLevel": "advanced",
+    "taxonomyGroup": "etl",
+    "taxonomyTopic": "incremental",
+    "challengeCategory": "Incremental Processing",
+    "executionLanguages": ["sql", "pyspark"],
+    "defaultLanguage": "pyspark",
+    "inputTables": [
+      {
+        "label": "customers_today",
+        "description": "Today's customer master snapshot",
+        "columns": [
+          { "name": "customer_id", "type": "INT" },
+          { "name": "name", "type": "TEXT" },
+          { "name": "city", "type": "TEXT" }
+        ]
+      },
+      {
+        "label": "customers_yesterday",
+        "description": "Yesterday's snapshot (context for future incremental logic)",
+        "columns": [
+          { "name": "customer_id", "type": "INT" },
+          { "name": "name", "type": "TEXT" },
+          { "name": "city", "type": "TEXT" }
+        ]
+      },
+      {
+        "label": "orders",
+        "description": "Order transactions",
+        "columns": [
+          { "name": "order_id", "type": "INT" },
+          { "name": "customer_id", "type": "INT" },
+          { "name": "amount", "type": "DOUBLE" }
+        ]
+      }
+    ],
+    "outputTable": "customer_daily_summary",
+    "outputSchema": [
+      { "name": "customer_id", "type": "INT" },
+      { "name": "name", "type": "TEXT" },
+      { "name": "city", "type": "TEXT" },
+      { "name": "order_count", "type": "INT" },
+      { "name": "total_revenue", "type": "DOUBLE" }
+    ],
+    "starterCode": {
+      "pyspark": "# Build customer_daily_summary DataFrame from customers_today + orders\n# Assign your result to: customer_daily_summary\n",
+      "sql": "-- Write a SELECT query producing customer_daily_summary columns\nSELECT ",
+      "python": "# Python challenges coming soon\n"
+    },
+    "hints": [
+      "Deduplicate customers_today with ROW_NUMBER() partitioned by customer_id.",
+      "Deduplicate orders on order_id before aggregating.",
+      "Use a LEFT JOIN so customers without orders get order_count = 0.",
+      "COALESCE(SUM(amount), 0) handles NULL amounts in revenue."
+    ],
+    "timeLimitMs": 20000,
+    "memoryLimitMb": 512,
+    "seedSlug": "incremental-customer-pipeline",
+    "evaluation": {
+      "outputTables": ["customer_daily_summary"],
+      "comparison": {
+        "schema": true,
+        "columnOrder": false,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 20000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    }
+  },
+  {
+    "problemKind": "de_challenge",
+    "challengeNumber": 2,
+    "id": "challenge/scd2-customer-dimension",
+    "slug": "scd2-customer-dimension",
+    "title": "SCD Type 2 Customer Dimension",
+    "scenario": "Your warehouse stores customer attributes in a Type 2 slowly changing dimension. Each daily load compares the source snapshot against the current dimension row. When attributes change, expire the active row and insert a new version with updated effective dates.",
+    "objective": "Merge `customers_current` into the existing `customers_previous` dimension and produce an updated `customer_dimension` with full history.",
+    "requirements": [
+      "Read batch date from pipeline_config.as_of_date",
+      "Deduplicate customers_current before comparing to the active dimension",
+      "When attributes change: set effective_to = as_of_date and current_flag = 0 on the active row",
+      "Insert a new row with effective_from = as_of_date, effective_to = NULL, current_flag = 1",
+      "Preserve all historical rows (current_flag = 0) unchanged",
+      "Insert brand-new customers with effective_from = as_of_date",
+      "Handle NULL attribute values correctly in change detection",
+      "Output columns: customer_id, name, city, effective_from, effective_to, current_flag"
+    ],
+    "skills": [
+      "SCD Type 2",
+      "Dimension Modeling",
+      "Change Detection",
+      "Effective Dating",
+      "Historical Preservation",
+      "NULL Handling"
+    ],
+    "difficulty": "hard",
+    "experienceLevel": "advanced",
+    "taxonomyGroup": "data-warehousing",
+    "taxonomyTopic": "scd",
+    "challengeCategory": "SCD",
+    "executionLanguages": ["sql", "pyspark"],
+    "defaultLanguage": "pyspark",
+    "inputTables": [
+      {
+        "label": "pipeline_config",
+        "description": "Batch load metadata (as_of_date drives effective dates)",
+        "columns": [{ "name": "as_of_date", "type": "TEXT" }]
+      },
+      {
+        "label": "customers_previous",
+        "description": "Existing SCD Type 2 dimension (includes history)",
+        "columns": [
+          { "name": "customer_id", "type": "INT" },
+          { "name": "name", "type": "TEXT" },
+          { "name": "city", "type": "TEXT" },
+          { "name": "effective_from", "type": "TEXT" },
+          { "name": "effective_to", "type": "TEXT" },
+          { "name": "current_flag", "type": "INT" }
+        ]
+      },
+      {
+        "label": "customers_current",
+        "description": "Today's customer source snapshot",
+        "columns": [
+          { "name": "customer_id", "type": "INT" },
+          { "name": "name", "type": "TEXT" },
+          { "name": "city", "type": "TEXT" }
+        ]
+      }
+    ],
+    "outputTable": "customer_dimension",
+    "outputSchema": [
+      { "name": "customer_id", "type": "INT" },
+      { "name": "name", "type": "TEXT" },
+      { "name": "city", "type": "TEXT" },
+      { "name": "effective_from", "type": "TEXT" },
+      { "name": "effective_to", "type": "TEXT" },
+      { "name": "current_flag", "type": "INT" }
+    ],
+    "starterCode": {
+      "pyspark": "# Merge customers_current into customers_previous (SCD Type 2)\n# Assign your result to: customer_dimension\n",
+      "sql": "-- Write a SELECT producing the merged customer_dimension\nWITH ",
+      "python": "# Python challenges coming soon\n"
+    },
+    "hints": [
+      "Compare only the active row (current_flag = 1) against the deduped source.",
+      "Expire changed rows by setting effective_to = as_of_date and current_flag = 0.",
+      "Use IFNULL/COALESCE when comparing nullable attributes.",
+      "UNION ALL historical, expired, unchanged active, and new version rows."
+    ],
+    "timeLimitMs": 120000,
+    "memoryLimitMb": 512,
+    "seedSlug": "scd2-customer-dimension",
+    "evaluation": {
+      "outputTables": ["customer_dimension"],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 120000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    }
+  },
+  {
+    "problemKind": "de_challenge",
+    "challengeNumber": 3,
+    "id": "challenge/cdc-order-pipeline",
+    "slug": "cdc-order-pipeline",
+    "title": "CDC Order Pipeline",
+    "scenario": "An order management system publishes change events alongside a daily snapshot. Your pipeline must merge CDC events into a current-state orders table, handling inserts, updates, deletes, and messy real-world event streams.",
+    "objective": "Build `orders_current` by applying deduplicated, time-ordered CDC events on top of `orders_snapshot`.",
+    "requirements": [
+      "Start from orders_snapshot for orders with no CDC events",
+      "Deduplicate CDC events by event_id (keep earliest by event_timestamp, event_id)",
+      "Apply events in event_timestamp order (tie-break with event_id)",
+      "INSERT (I) and UPDATE (U) upsert the order row with event payload",
+      "DELETE (D) removes the order from the current state",
+      "Treat UPDATE for an unseen order as an upsert",
+      "Output columns: order_id, customer_id, amount, status"
+    ],
+    "skills": [
+      "CDC Merge",
+      "Insert / Update / Delete",
+      "Event Ordering",
+      "Idempotency",
+      "Upsert Semantics",
+      "Snapshot + Stream"
+    ],
+    "difficulty": "hard",
+    "experienceLevel": "advanced",
+    "taxonomyGroup": "cdc",
+    "taxonomyTopic": "cdc-merge",
+    "challengeCategory": "CDC",
+    "executionLanguages": ["sql", "pyspark"],
+    "defaultLanguage": "pyspark",
+    "inputTables": [
+      {
+        "label": "orders_snapshot",
+        "description": "Baseline orders before applying CDC",
+        "columns": [
+          { "name": "order_id", "type": "INT" },
+          { "name": "customer_id", "type": "INT" },
+          { "name": "amount", "type": "DOUBLE" },
+          { "name": "status", "type": "TEXT" }
+        ]
+      },
+      {
+        "label": "orders_cdc_events",
+        "description": "CDC stream — operation I/U/D with event metadata",
+        "columns": [
+          { "name": "event_id", "type": "TEXT" },
+          { "name": "order_id", "type": "INT" },
+          { "name": "operation", "type": "TEXT" },
+          { "name": "event_timestamp", "type": "TEXT" },
+          { "name": "customer_id", "type": "INT" },
+          { "name": "amount", "type": "DOUBLE" },
+          { "name": "status", "type": "TEXT" }
+        ]
+      }
+    ],
+    "outputTable": "orders_current",
+    "outputSchema": [
+      { "name": "order_id", "type": "INT" },
+      { "name": "customer_id", "type": "INT" },
+      { "name": "amount", "type": "DOUBLE" },
+      { "name": "status", "type": "TEXT" }
+    ],
+    "starterCode": {
+      "pyspark": "# Merge orders_cdc_events into orders_snapshot\n# Assign your result to: orders_current\n",
+      "sql": "-- Produce orders_current from snapshot + CDC events\nWITH ",
+      "python": "# Python challenges coming soon\n"
+    },
+    "hints": [
+      "Dedupe events with ROW_NUMBER() PARTITION BY event_id.",
+      "Order events by event_timestamp, then event_id before determining final state.",
+      "The last event per order_id determines whether the row survives a DELETE.",
+      "Orders only in snapshot and untouched by CDC stay as-is."
+    ],
+    "timeLimitMs": 120000,
+    "memoryLimitMb": 512,
+    "seedSlug": "cdc-order-pipeline",
+    "evaluation": {
+      "outputTables": ["orders_current"],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 120000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    }
+  },
+  {
+    "problemKind": "de_challenge",
+    "challengeNumber": 4,
+    "id": "challenge/data-quality-pipeline",
+    "slug": "data-quality-pipeline",
+    "title": "Data Quality Pipeline",
+    "scenario": "Before loading data into the warehouse, your team runs automated quality checks across customer, order, and payment datasets. Each rule produces a row in a quality results table with the violation count and pass/fail status.",
+    "objective": "Implement validation rules across `customers`, `orders`, and `payments`, and produce a `quality_results` summary with one row per rule.",
+    "requirements": [
+      "Output exactly one row per quality rule (7 rules total)",
+      "Rule columns: rule_id, rule_name, violation_count, passed (1 = no violations, 0 = failures)",
+      "null_customer_id — count customers where customer_id IS NULL",
+      "duplicate_customer — count extra rows beyond distinct customer_id",
+      "orphan_order — orders whose customer_id is missing from customers",
+      "invalid_order_status — orders where status not in NEW, PAID, SHIPPED, CANCELLED",
+      "negative_payment — payments where amount < 0",
+      "null_payment_order_id — payments where order_id IS NULL",
+      "duplicate_payment_id — count extra rows beyond distinct payment_id"
+    ],
+    "skills": [
+      "NOT NULL Validation",
+      "Uniqueness",
+      "Referential Integrity",
+      "Domain Validation",
+      "Range Validation",
+      "Multi-Table Checks",
+      "Quality Reporting"
+    ],
+    "difficulty": "hard",
+    "experienceLevel": "advanced",
+    "taxonomyGroup": "data-quality",
+    "taxonomyTopic": "validation",
+    "challengeCategory": "Data Quality",
+    "executionLanguages": ["sql", "pyspark"],
+    "defaultLanguage": "pyspark",
+    "inputTables": [
+      {
+        "label": "customers",
+        "description": "Customer master",
+        "columns": [
+          { "name": "customer_id", "type": "INT" },
+          { "name": "name", "type": "TEXT" },
+          { "name": "email", "type": "TEXT" },
+          { "name": "created_date", "type": "TEXT" }
+        ]
+      },
+      {
+        "label": "orders",
+        "description": "Orders linked to customers",
+        "columns": [
+          { "name": "order_id", "type": "INT" },
+          { "name": "customer_id", "type": "INT" },
+          { "name": "status", "type": "TEXT" },
+          { "name": "order_date", "type": "TEXT" }
+        ]
+      },
+      {
+        "label": "payments",
+        "description": "Payments linked to orders",
+        "columns": [
+          { "name": "payment_id", "type": "INT" },
+          { "name": "order_id", "type": "INT" },
+          { "name": "amount", "type": "DOUBLE" },
+          { "name": "payment_date", "type": "TEXT" }
+        ]
+      }
+    ],
+    "outputTable": "quality_results",
+    "outputSchema": [
+      { "name": "rule_id", "type": "TEXT" },
+      { "name": "rule_name", "type": "TEXT" },
+      { "name": "violation_count", "type": "INT" },
+      { "name": "passed", "type": "INT" }
+    ],
+    "starterCode": {
+      "pyspark": "# Run data quality checks across customers, orders, payments\n# Assign your result to: quality_results\n",
+      "sql": "-- Produce quality_results with rule_id, rule_name, violation_count, passed\nSELECT ",
+      "python": "# Python challenges coming soon\n"
+    },
+    "hints": [
+      "Use UNION ALL to combine one SELECT per rule in SQL.",
+      "passed = 1 when violation_count = 0, else 0.",
+      "Orphan orders: LEFT JOIN customers and count rows where customer is missing.",
+      "Duplicate detection: total row count minus COUNT(DISTINCT key)."
+    ],
+    "timeLimitMs": 90000,
+    "memoryLimitMb": 512,
+    "seedSlug": "data-quality-pipeline",
+    "evaluation": {
+      "outputTables": ["quality_results"],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 90000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    }
+  },
+  {
+    "problemKind": "de_challenge",
+    "challengeNumber": 5,
+    "id": "challenge/late-arriving-events",
+    "slug": "late-arriving-events",
+    "title": "Late Arriving Events",
+    "scenario": "An entity state pipeline ingests events with both event timestamps and processing timestamps. Events may arrive out of order, within the allowed lateness window, or too late to accept. Your job is to merge accepted events with the existing state snapshot using event-time semantics.",
+    "objective": "Produce `entity_state` — the latest accepted value per entity by event time, preserving snapshot rows for entities with no accepted events.",
+    "requirements": [
+      "Read max_lateness_minutes from pipeline_config",
+      "Deduplicate events by event_id (keep earliest by event_timestamp, event_id)",
+      "Accept events where (processing_timestamp − event_timestamp) ≤ max_lateness_minutes",
+      "Reject events that exceed the lateness threshold",
+      "For each entity, keep the event with the latest event_timestamp (tie-break with event_id DESC)",
+      "Merge accepted event state with state_snapshot for entities without accepted events",
+      "Output columns: entity_id, value, event_timestamp"
+    ],
+    "skills": [
+      "Event Time",
+      "Out-of-Order Events",
+      "Lateness / Watermark",
+      "Deterministic Ordering",
+      "Idempotency",
+      "State Correction"
+    ],
+    "difficulty": "hard",
+    "experienceLevel": "advanced",
+    "taxonomyGroup": "reliability",
+    "taxonomyTopic": "late-data",
+    "challengeCategory": "Late Data",
+    "executionLanguages": ["sql", "pyspark"],
+    "defaultLanguage": "pyspark",
+    "inputTables": [
+      {
+        "label": "pipeline_config",
+        "description": "Lateness policy (minutes between event time and processing time)",
+        "columns": [{ "name": "max_lateness_minutes", "type": "INT" }]
+      },
+      {
+        "label": "state_snapshot",
+        "description": "Known entity state before applying the event batch",
+        "columns": [
+          { "name": "entity_id", "type": "INT" },
+          { "name": "value", "type": "INT" },
+          { "name": "event_timestamp", "type": "TEXT" }
+        ]
+      },
+      {
+        "label": "events",
+        "description": "Event stream with event time and processing time",
+        "columns": [
+          { "name": "event_id", "type": "TEXT" },
+          { "name": "entity_id", "type": "INT" },
+          { "name": "value", "type": "INT" },
+          { "name": "event_timestamp", "type": "TEXT" },
+          { "name": "processing_timestamp", "type": "TEXT" }
+        ]
+      }
+    ],
+    "outputTable": "entity_state",
+    "outputSchema": [
+      { "name": "entity_id", "type": "INT" },
+      { "name": "value", "type": "INT" },
+      { "name": "event_timestamp", "type": "TEXT" }
+    ],
+    "starterCode": {
+      "pyspark": "# Merge events into state_snapshot using event-time semantics\n# Assign your result to: entity_state\n",
+      "sql": "-- Produce entity_state from state_snapshot + events\nWITH ",
+      "python": "# Python challenges coming soon\n"
+    },
+    "hints": [
+      "Lateness: compare processing_timestamp minus event_timestamp against max_lateness_minutes.",
+      "Dedupe event_id before applying lateness filter.",
+      "Rank accepted events by event_timestamp DESC, event_id DESC per entity_id.",
+      "Entities with no accepted events keep their snapshot row."
+    ],
+    "timeLimitMs": 120000,
+    "memoryLimitMb": 512,
+    "seedSlug": "late-arriving-events",
+    "evaluation": {
+      "outputTables": ["entity_state"],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 120000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    }
+  },
+  {
+    "problemKind": "de_challenge",
+    "challengeNumber": 6,
+    "id": "challenge/schema-evolution",
+    "slug": "schema-evolution",
+    "title": "Schema Evolution",
+    "scenario": "Your lakehouse ingests customer events from two pipeline versions. The legacy v1 feed carries customer_id, name, and city. The v2 feed adds email and occasionally extra columns. Downstream analytics requires a single canonical table regardless of source version.",
+    "objective": "Normalize `customer_events_v1` and `customer_events_v2` into `customer_events_normalized` with a stable schema: customer_id, name, city, email.",
+    "requirements": [
+      "Output columns: customer_id, name, city, email (in that order)",
+      "v1 rows must populate email as NULL (column absent in source)",
+      "v2 rows retain email values including explicit NULLs",
+      "Cast customer_id to a consistent integer type",
+      "Trim whitespace from name and city",
+      "Exclude forward-incompatible columns (e.g. phone) from the canonical output",
+      "Use schema-aware union — do not rely on positional column alignment across versions"
+    ],
+    "skills": [
+      "Schema Evolution",
+      "Backward Compatibility",
+      "Column Mapping",
+      "NULL / Default Handling",
+      "unionByName",
+      "Schema Enforcement",
+      "Type Casting"
+    ],
+    "difficulty": "hard",
+    "experienceLevel": "advanced",
+    "taxonomyGroup": "reliability",
+    "taxonomyTopic": "schema-evolution",
+    "challengeCategory": "Schema Evolution",
+    "executionLanguages": ["sql", "pyspark"],
+    "defaultLanguage": "pyspark",
+    "inputTables": [
+      {
+        "label": "customer_events_v1",
+        "description": "Legacy customer event feed (customer_id, name, city)",
+        "columns": [
+          { "name": "customer_id", "type": "INT" },
+          { "name": "name", "type": "TEXT" },
+          { "name": "city", "type": "TEXT" }
+        ]
+      },
+      {
+        "label": "customer_events_v2",
+        "description": "Evolved feed — adds email; may include extra columns in some batches",
+        "columns": [
+          { "name": "customer_id", "type": "INT" },
+          { "name": "name", "type": "TEXT" },
+          { "name": "city", "type": "TEXT" },
+          { "name": "email", "type": "TEXT" },
+          { "name": "phone", "type": "TEXT" }
+        ]
+      }
+    ],
+    "outputTable": "customer_events_normalized",
+    "outputSchema": [
+      { "name": "customer_id", "type": "INT" },
+      { "name": "name", "type": "TEXT" },
+      { "name": "city", "type": "TEXT" },
+      { "name": "email", "type": "TEXT" }
+    ],
+    "starterCode": {
+      "pyspark": "# Normalize customer_events_v1 + customer_events_v2 to a canonical schema\n# Assign your result to: customer_events_normalized\n",
+      "sql": "-- Produce customer_events_normalized from v1 and v2 sources\nSELECT ",
+      "python": "# Python challenges coming soon\n"
+    },
+    "hints": [
+      "Explicitly list canonical columns — never SELECT * across versions.",
+      "v1 branch: add NULL AS email before union.",
+      "PySpark: prefer unionByName after aligning both sides to the same column list.",
+      "Drop unexpected v2 columns by selecting only the four canonical fields.",
+      "TRIM text fields to handle minor formatting drift between versions."
+    ],
+    "timeLimitMs": 120000,
+    "memoryLimitMb": 512,
+    "seedSlug": "schema-evolution",
+    "evaluation": {
+      "outputTables": ["customer_events_normalized"],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 120000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    }
+  },
+  {
+    "problemKind": "de_challenge",
+    "challengeNumber": 7,
+    "id": "challenge/pipeline-reconciliation",
+    "slug": "pipeline-reconciliation",
+    "title": "Pipeline Reconciliation",
+    "scenario": "Your nightly pipeline loads `orders_target` from upstream source systems. Before sign-off, you must reconcile the warehouse table against `orders_source` and `payments_source` to prove completeness, uniqueness, and financial consistency.",
+    "objective": "Implement reconciliation checks and produce `reconciliation_results` with one row per rule, reporting violation counts and pass/fail status.",
+    "requirements": [
+      "Output exactly one row per reconciliation rule (6 rules total)",
+      "Rule columns: rule_id, rule_name, violation_count, passed (1 = no violations, 0 = failures)",
+      "source_target_count — row-count difference between orders_source and orders_target",
+      "source_target_amount — total payment amount vs total target amount (0 if within 0.001)",
+      "missing_target_records — source order_ids absent from target",
+      "unexpected_target_records — target order_ids absent from source",
+      "amount_mismatch — order_ids where payment totals differ from target amounts",
+      "duplicate_target_records — extra target rows beyond distinct order_id",
+      "Use payments_source as the authoritative amount for source-side comparisons"
+    ],
+    "skills": [
+      "Pipeline Reconciliation",
+      "Record Count Validation",
+      "Completeness",
+      "Financial Reconciliation",
+      "Anti-Join",
+      "Uniqueness",
+      "Multi-Table Validation"
+    ],
+    "difficulty": "hard",
+    "experienceLevel": "advanced",
+    "taxonomyGroup": "data-quality",
+    "taxonomyTopic": "reconciliation",
+    "challengeCategory": "Reconciliation",
+    "executionLanguages": ["sql", "pyspark"],
+    "defaultLanguage": "pyspark",
+    "inputTables": [
+      {
+        "label": "orders_source",
+        "description": "Source-system order headers (authoritative order grain)",
+        "columns": [
+          { "name": "order_id", "type": "INT" },
+          { "name": "customer_id", "type": "INT" },
+          { "name": "status", "type": "TEXT" }
+        ]
+      },
+      {
+        "label": "payments_source",
+        "description": "Source-system payments — authoritative order amounts",
+        "columns": [
+          { "name": "payment_id", "type": "INT" },
+          { "name": "order_id", "type": "INT" },
+          { "name": "amount", "type": "DOUBLE" }
+        ]
+      },
+      {
+        "label": "orders_target",
+        "description": "Downstream warehouse orders table under reconciliation",
+        "columns": [
+          { "name": "order_id", "type": "INT" },
+          { "name": "amount", "type": "DOUBLE" }
+        ]
+      }
+    ],
+    "outputTable": "reconciliation_results",
+    "outputSchema": [
+      { "name": "rule_id", "type": "TEXT" },
+      { "name": "rule_name", "type": "TEXT" },
+      { "name": "violation_count", "type": "INT" },
+      { "name": "passed", "type": "INT" }
+    ],
+    "starterCode": {
+      "pyspark": "# Reconcile orders_source + payments_source against orders_target\n# Assign your result to: reconciliation_results\n",
+      "sql": "-- Produce reconciliation_results with rule_id, rule_name, violation_count, passed\nSELECT ",
+      "python": "# Python challenges coming soon\n"
+    },
+    "hints": [
+      "Aggregate payments_source by order_id before comparing to orders_target amounts.",
+      "Use NOT EXISTS or left_anti joins for missing / unexpected record checks.",
+      "passed = 1 when violation_count = 0.",
+      "Duplicate detection: COUNT(*) - COUNT(DISTINCT order_id) on orders_target.",
+      "Union one SELECT per rule, mirroring the data-quality pattern."
+    ],
+    "timeLimitMs": 90000,
+    "memoryLimitMb": 512,
+    "seedSlug": "pipeline-reconciliation",
+    "evaluation": {
+      "outputTables": ["reconciliation_results"],
+      "comparison": {
+        "schema": true,
+        "columnOrder": true,
+        "rowOrder": false,
+        "allowExtraColumns": false,
+        "ignoreColumnCase": true
+      },
+      "limits": {
+        "timeLimitMs": 90000,
+        "maxInputRows": 5000,
+        "maxOutputRows": 10000,
+        "maxFixtureCount": 8
+      }
+    }
+  }
+]

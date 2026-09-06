@@ -9,7 +9,7 @@ import { cn } from "cn";
 
 export function SqlWeakAreas() {
   const [weakAreas, setWeakAreas] = React.useState<WeakArea[]>([]);
-  const [review, setReview] = React.useState({ leetcode: 0, interview: 0 });
+  const [review, setReview] = React.useState({ interview: 0 });
 
   const refresh = React.useCallback(() => {
     setWeakAreas(getWeakAreas(5));
@@ -22,7 +22,7 @@ export function SqlWeakAreas() {
     return () => window.removeEventListener("sql-progress-updated", refresh);
   }, [refresh]);
 
-  if (weakAreas.length === 0 && review.leetcode === 0 && review.interview === 0) {
+  if (weakAreas.length === 0 && review.interview === 0) {
     return null;
   }
 
@@ -31,15 +31,6 @@ export function SqlWeakAreas() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-bold">Weak areas</h2>
         <div className="flex flex-wrap gap-2">
-          {review.leetcode > 0 && (
-            <Link
-              href={`${SQL_ROUTES.leetcode}?review=1`}
-              className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-400 ring-1 ring-orange-500/20"
-            >
-              <RotateCcw className="size-3" />
-              LC ({review.leetcode})
-            </Link>
-          )}
           {review.interview > 0 && (
             <Link
               href={SQL_ROUTES.interview}

@@ -8,7 +8,6 @@ import {
   BookOpen,
   Brain,
   Database,
-  Trophy,
 } from "lucide-react";
 import { SQL_NOTES_SECTIONS, SQL_ROUTES } from "@/lib/sql";
 import { LabSidebarLink, LabMobileTab } from "@/components/lab/nav";
@@ -53,13 +52,6 @@ const NAV: NavGroup[] = [
     icon: Database,
     href: SQL_ROUTES.practice,
     match: (pathname) => pathname.startsWith(SQL_ROUTES.practice),
-  },
-  {
-    id: "leetcode",
-    label: "LeetCode",
-    icon: Trophy,
-    href: SQL_ROUTES.leetcode,
-    match: (pathname) => pathname.startsWith(SQL_ROUTES.leetcode),
   },
   {
     id: "interview",
@@ -120,9 +112,6 @@ export function SqlSidebar() {
               ))}
               <LabMobileTab href={SQL_ROUTES.practice} active={pathname.startsWith(SQL_ROUTES.practice)}>
                 Practice
-              </LabMobileTab>
-              <LabMobileTab href={SQL_ROUTES.leetcode} active={pathname.startsWith(SQL_ROUTES.leetcode)}>
-                LeetCode
               </LabMobileTab>
               <LabMobileTab href={SQL_ROUTES.interview} active={pathname.startsWith(SQL_ROUTES.interview)}>
                 Interview

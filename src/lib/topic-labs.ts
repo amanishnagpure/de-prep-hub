@@ -55,11 +55,11 @@ export function getTopicModuleHref(moduleSlug: string, parentSlug?: string): str
   if (!labHref) return `/topics/${moduleSlug}`;
 
   if (parentSlug === "sql") {
-    if (moduleSlug === "sql-leetcode") return "/sql/leetcode";
+    if (moduleSlug === "sql-leetcode") return "/code/sql";
     if (moduleSlug === "sql-mock") return "/sql/mock";
   }
   if (parentSlug === "python" && moduleSlug === "python-coding") {
-    return "/python/coding";
+    return "/code/python";
   }
   if (moduleSlug.endsWith("-notes")) return `${labHref}/notes`;
   if (moduleSlug.endsWith("-practice")) return `${labHref}/practice`;

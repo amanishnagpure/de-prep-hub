@@ -27,9 +27,13 @@ export default async function CodeTopicPage({ params }: PageProps<"/code/[track]
 
   return (
     <Suspense fallback={<div className="p-8 text-sm text-muted-foreground">Loading…</div>}>
-      <div className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col px-4 pt-4">
-        <TopicOverviewHeader track={track} topicId={topic} />
-        <TopicLearningPath track={track} topicId={topic} />
+      <div className="mx-auto w-full max-w-[1600px] px-4 pt-4 pb-4">
+        <div className="shrink-0">
+          <TopicOverviewHeader track={track} topicId={topic} />
+        </div>
+        <div className="shrink-0">
+          <TopicLearningPath track={track} topicId={topic} />
+        </div>
         <CodeWorkspace track={track} topicId={topic} />
       </div>
     </Suspense>

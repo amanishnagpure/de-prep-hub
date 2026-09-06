@@ -1,0 +1,25 @@
+export {
+  getProgressCockpitSnapshot,
+  depthDots,
+  type ProgressCockpitSnapshot,
+  type EngineeringProfile,
+  type SkillMapNodeState,
+  type NextMove,
+  type WeeklyActivity,
+  type MonthlyActivity,
+  type MonthlyActivityCell,
+  type MonthlyActiveDate,
+  type SkillMomentumRow,
+  type ChallengePerformance,
+  type EngineeringDna,
+  type RecentActivityItem,
+  type Milestone,
+  type SkillDepthRow,
+  type DepthLevel,
+} from "@/lib/de-code/progress-cockpit/compute";
+export {
+  SKILL_MAP_NODES,
+  SKILL_MAP_EDGES,
+  SKILL_NODE_CATEGORY,
+  type SkillMapNodeId,
+} from "@/lib/de-code/progress-cockpit/skill-taxonomy";

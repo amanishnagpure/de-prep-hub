@@ -1,11 +1,6 @@
 import { cn } from "cn";
 
-interface LogoProps {
-  className?: string;
-  size?: number;
-}
-
-export function Logo({ className, size = 32 }: LogoProps) {
+export function Logo({ className, size = 32 }: { className?: string; size?: number }) {
   return (
     <svg
       width={size}
@@ -16,12 +11,20 @@ export function Logo({ className, size = 32 }: LogoProps) {
       className={cn("shrink-0", className)}
       aria-hidden
     >
-      <rect x="4" y="4" width="24" height="24" rx="4" className="fill-primary/15" />
+      <defs>
+        <linearGradient id="de-logo-grad" x1="6" y1="6" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#8B5CF6" />
+          <stop offset="0.55" stopColor="#EC4899" />
+          <stop offset="1" stopColor="#3B82F6" />
+        </linearGradient>
+      </defs>
+      <rect x="4" y="4" width="24" height="24" rx="8" fill="url(#de-logo-grad)" />
       <path
-        d="M11 10v12M21 10v12M11 16h10"
-        className="stroke-primary"
-        strokeWidth="2"
+        d="M11 16h10M18 12l3 4-3 4"
+        stroke="white"
+        strokeWidth="1.5"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );

@@ -76,9 +76,7 @@ export function SqlDialectBar() {
     applyRouteDialect(pathname);
   }, [pathname]);
 
-  const show =
-    pathname.startsWith("/sql/practice") ||
-    pathname.startsWith("/sql/leetcode");
+  const show = pathname.startsWith("/sql/practice");
 
   if (!show) return null;
 

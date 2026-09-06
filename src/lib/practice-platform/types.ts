@@ -2,7 +2,7 @@ export type PracticeTrackId = "sql" | "spark" | "python" | "dsa";
 
 export type ProblemDifficulty = "easy" | "medium" | "hard";
 
-export type JudgeBackend = "pyodide" | "sql" | "compare" | "dmoj";
+export type JudgeBackend = "pyodide" | "sql" | "compare" | "pyspark" | "dmoj";
 
 export type SubmissionStatus =
   | "accepted"
@@ -10,6 +10,7 @@ export type SubmissionStatus =
   | "runtime_error"
   | "compilation_error"
   | "time_limit_exceeded"
+  | "memory_limit_exceeded"
   | "pending";
 
 export type PlatformTestCase = {
@@ -62,6 +63,13 @@ export type JudgeVerdict = {
   cases: JudgeCaseResult[];
   message?: string;
   runtimeMs?: number;
+  metrics?: {
+    runtimeMs?: number;
+    coldStartMs?: number;
+    workerReused?: boolean;
+    inputRows?: number;
+    outputRows?: number;
+  };
 };
 
 export type PlatformSubmission = {

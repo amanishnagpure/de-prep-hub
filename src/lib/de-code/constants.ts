@@ -2,8 +2,8 @@ import type { CodeTrackId, ExperienceLevel } from "@/lib/de-code/types";
 
 export const CODE_SECTION = {
   home: "/code",
-  label: "Code",
-  tagline: "LeetCode for Data Engineers",
+  label: "Practice",
+  tagline: "Focused exercises for Data Engineers",
 } as const;
 
 export const CODE_TRACKS = [
@@ -67,4 +67,13 @@ export function codeTrackPath(track: CodeTrackId): string {
 
 export function isCodeSectionRoute(pathname: string): boolean {
   return pathname === CODE_SECTION.home || pathname.startsWith(`${CODE_SECTION.home}/`);
+}
+
+export const CHALLENGE_SECTION = {
+  home: "/code/challenges",
+  label: "DE Challenges",
+} as const;
+
+export function challengePath(slug: string): string {
+  return `${CHALLENGE_SECTION.home}/${slug}`;
 }

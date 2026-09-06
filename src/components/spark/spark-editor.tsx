@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
+import { cn } from "cn";
 
 const Monaco = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
@@ -15,7 +16,7 @@ const Monaco = dynamic(() => import("@monaco-editor/react"), {
 interface SparkEditorProps {
   value: string;
   onChange: (value: string) => void;
-  height?: number;
+  height?: number | string;
   readOnly?: boolean;
   language?: "python" | "sql";
 }
@@ -27,8 +28,14 @@ export function SparkEditor({
   readOnly = false,
   language = "python",
 }: SparkEditorProps) {
+  const fill = height === "100%";
   return (
-    <div className="overflow-hidden rounded-xl border border-border ring-1 ring-orange-500/10">
+    <div
+      className={cn(
+        "overflow-hidden rounded-xl border border-border ring-1 ring-orange-500/10",
+        fill && "h-full min-h-0"
+      )}
+    >
       <Monaco
         height={height}
         language={language}

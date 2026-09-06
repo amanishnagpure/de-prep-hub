@@ -645,7 +645,7 @@ function buildPyspark() {
       constraints: ["Use PySpark DataFrame API"],
       examples: [],
       starterCode: "# PySpark\nfrom pyspark.sql import SparkSession\n",
-      judge: "compare",
+      judge: "pyspark",
       testCases: [{ id: "1", input: "code", expectedOutput: "reference", isHidden: true }],
       hints: ["Match column names from the prompt"],
       ...p,

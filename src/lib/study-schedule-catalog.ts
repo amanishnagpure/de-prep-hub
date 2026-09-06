@@ -8,12 +8,10 @@ import { SYSTEM_DESIGN_ROUTES, SYSTEM_DESIGN_STATS } from "@/lib/system-design";
 import { INTERVIEW_PREP_ROUTES, INTERVIEW_PREP_STATS } from "@/lib/interview-prep";
 import {
   getInterviewStats as getSqlInterviewStats,
-  getLeetCodeStats,
   getNotesStats as getSqlNotesStats,
   getPracticeStats as getSqlPracticeStats,
 } from "@/lib/sql-progress";
 import {
-  getCodingStats,
   getInterviewStats as getPythonInterviewStats,
   getNotesStats as getPythonNotesStats,
   getPracticeStats as getPythonPracticeStats,
@@ -87,17 +85,6 @@ export const STUDY_GOAL_TEMPLATES: StudyGoalTemplate[] = [
     practiceHref: (n) => `${SQL_ROUTES.practice}?id=${n}`,
   },
   {
-    id: "sql-leetcode",
-    labKey: "sql",
-    labLabel: "SQL",
-    title: "SQL LeetCode",
-    href: SQL_ROUTES.leetcode,
-    totalUnits: SQL_STATS.leetcodeTotal,
-    unitLabel: "problems",
-    chunkSize: 3,
-    getCompleted: () => getLeetCodeStats(SQL_STATS.leetcodeTotal).solved,
-  },
-  {
     id: "sql-interview",
     labKey: "sql",
     labLabel: "SQL",
@@ -130,17 +117,6 @@ export const STUDY_GOAL_TEMPLATES: StudyGoalTemplate[] = [
     chunkSize: 5,
     getCompleted: () => getPythonPracticeStats(PYTHON_STATS.practiceTotal).solved,
     practiceHref: (n) => `${PYTHON_ROUTES.practice}?id=${n}`,
-  },
-  {
-    id: "python-coding",
-    labKey: "python",
-    labLabel: "Python",
-    title: "Python Coding",
-    href: PYTHON_ROUTES.coding,
-    totalUnits: PYTHON_STATS.codingTotal,
-    unitLabel: "problems",
-    chunkSize: 2,
-    getCompleted: () => getCodingStats(PYTHON_STATS.codingTotal).solved,
   },
   {
     id: "python-interview",

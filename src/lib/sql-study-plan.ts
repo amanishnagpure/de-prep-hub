@@ -1,13 +1,9 @@
 import { SQL_ROUTES, SQL_STATS } from "@/lib/sql";
-import { LEETCODE_SQL_MUST_DO, getLeetCodeSqlProblems } from "@/lib/leetcode-sql";
 import {
   getInterviewStats,
-  getLeetCodeStats,
   getNotesStats,
   getPracticeStats,
   getSqlProgress,
-  isLeetCodeSolved,
-  getLeetCodeConfidence,
 } from "@/lib/sql-progress";
 import { getWeakAreas } from "@/lib/sql-weak-areas";
 
@@ -30,10 +26,6 @@ export function getStudyChecklist(): StudyChecklistItem[] {
   const practice = getPracticeStats(SQL_STATS.practiceTotal);
   const interview = getInterviewStats(SQL_STATS.interviewTotal);
 
-  const mustDoDone = getLeetCodeSqlProblems().filter(
-    (p) => p.mustDo && (isLeetCodeSolved(p.slug) || getLeetCodeConfidence(p.slug) === "know")
-  ).length;
-
   const mockDone = (progress.mockSessionsCompleted ?? 0) > 0;
 
   return [
@@ -50,13 +42,6 @@ export function getStudyChecklist(): StudyChecklistItem[] {
       href: SQL_ROUTES.practice,
       done: practice.solved >= 25,
       progress: `${practice.solved}/${practice.total}`,
-    },
-    {
-      id: "leetcode",
-      label: "LeetCode must-do",
-      href: SQL_ROUTES.leetcode,
-      done: mustDoDone >= 15,
-      progress: `${mustDoDone}/${LEETCODE_SQL_MUST_DO}`,
     },
     {
       id: "mock",

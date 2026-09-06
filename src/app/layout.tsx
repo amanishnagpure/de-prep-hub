@@ -21,10 +21,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "DE Prep Hub",
-    template: "%s | DE Prep Hub",
+  default: "DE Workspace",
+  template: "%s | DE Workspace",
   },
-  description: "Notes, drills, offer letters.",
+  description: "Professional training and assessment for Data Engineers.",
   icons: {
     icon: "/favicon.svg",
   },

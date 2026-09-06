@@ -197,14 +197,6 @@ export function getSearchIndex(): SearchItem[] {
 
   const sqlLabExtras: SearchItem[] = [
     {
-      slug: "sql-leetcode",
-      title: "LeetCode SQL Top 50",
-      description: "Curated LC problems",
-      order: 1.2,
-      content: "leetcode sql top 50 window functions join rank dense_rank",
-      type: "topic",
-    },
-    {
       slug: "sql-mock",
       title: "SQL Mock Interview",
       description: "45-minute session",
@@ -214,16 +206,7 @@ export function getSearchIndex(): SearchItem[] {
     },
   ];
 
-  const pythonLabExtras: SearchItem[] = [
-    {
-      slug: "python-coding",
-      title: "Python Coding Track",
-      description: "15 curated LC-style problems",
-      order: 2.2,
-      content: "leetcode python array hashmap sliding window two pointer",
-      type: "topic",
-    },
-  ];
+  const pythonLabExtras: SearchItem[] = [];
 
   const codeTracks: SearchItem[] = [
     {

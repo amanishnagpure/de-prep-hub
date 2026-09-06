@@ -9,7 +9,24 @@
     "start": "next start",
     "lint": "eslint",
     "seed:practice": "node scripts/seed-practice-platform.mjs",
-    "seed:code": "node scripts/seed-de-code.mjs"
+    "seed:code": "node scripts/seed-de-code.mjs",
+    "generate:pyspark-seeds": "node scripts/generate-pyspark-seeds.mjs",
+    "generate:sql-fixtures": "node scripts/generate-sql-multi-fixtures.mjs",
+    "judge:setup": "pip install -r requirements-judge.txt",
+    "test:pyspark-judge": "node scripts/test-pyspark-judge.mjs",
+    "test:sql-judge": "node scripts/test-sql-judge.mjs",
+    "test:sql-fixtures": "node scripts/test-sql-fixtures.mjs",
+    "generate:challenge-seeds": "node scripts/generate-challenge-seeds.mjs",
+    "test:de-challenge-001": "node scripts/test-de-challenge-001.mjs",
+    "test:de-challenges": "node scripts/test-de-challenges.mjs",
+    "test:judge-engine": "node scripts/test-judge-engine.mjs",
+    "test:security-pocs": "node scripts/test-security-pocs.mjs",
+    "test:security-pocs:hardened": "SECURITY_HARDENED=1 node scripts/test-security-pocs.mjs",
+    "test:pyspark-container": "node scripts/test-pyspark-container.mjs",
+    "judge:pyspark-image": "docker build -t de-code-pyspark-judge:latest scripts/judge/pyspark",
+    "start:local": "npm run build && npm start",
+    "smoke:local": "node scripts/smoke-test-local.mjs",
+    "smoke:browser": "node scripts/smoke-test-browser.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -44,6 +61,7 @@
     "@types/sql.js": "^1.4.11",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "playwright": "^1.49.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

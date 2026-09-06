@@ -6,7 +6,6 @@ import { BookOpen, Brain, CheckCircle2, Database, Flame, PlayCircle, Timer } fro
 import { SQL_CHAPTER_META, SQL_ROUTES, SQL_STATS } from "@/lib/sql";
 import {
   getInterviewStats,
-  getLeetCodeStats,
   getNotesStats,
   getPracticeStats,
   getSqlProgress,
@@ -34,7 +33,6 @@ export function SqlDashboard() {
   const [notes, setNotes] = React.useState({ read: 0, total: 0, percent: 0 });
   const [practice, setPractice] = React.useState({ solved: 0, total: 0, percent: 0 });
   const [interview, setInterview] = React.useState({ know: 0, reviewed: 0, total: 0, percent: 0 });
-  const [leetcode, setLeetcode] = React.useState({ solved: 0, total: 0, percent: 0 });
   const [readChapters, setReadChapters] = React.useState<string[]>([]);
   const [lastVisited, setLastVisited] = React.useState<{ path: string; label: string } | null>(null);
 
@@ -42,7 +40,6 @@ export function SqlDashboard() {
     setStreak(getSqlStreak());
     setNotes(getNotesStats(SQL_STATS.noteChapters));
     setPractice(getPracticeStats(SQL_STATS.practiceTotal));
-    setLeetcode(getLeetCodeStats(SQL_STATS.leetcodeTotal));
     const interviewStats = getInterviewStats(SQL_STATS.interviewTotal);
     setInterview({
       know: interviewStats.know,
@@ -101,10 +98,9 @@ export function SqlDashboard() {
         </div>
       </section>
 
-      <section className="grid gap-4 panel p-6 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 panel p-6 sm:grid-cols-2 xl:grid-cols-3">
         <SqlProgressRing percent={notes.percent} label="Notes" sublabel={`${notes.read}/${notes.total}`} />
         <SqlProgressRing percent={practice.percent} label="Practice" sublabel={`${practice.solved}/${practice.total}`} />
-        <SqlProgressRing percent={leetcode.percent} label="LeetCode" sublabel={`${leetcode.solved}/${leetcode.total}`} />
         <SqlProgressRing percent={interview.percent} label="Interview" sublabel={`${interview.know}/${interview.total}`} />
       </section>
 

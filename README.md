@@ -70,7 +70,19 @@ content/
 2. Import the repo at [vercel.com](https://vercel.com)
 3. Deploy — Vercel auto-detects Next.js
 
-No environment variables required for v1.
+No environment variables required for v1 (notes-only mode).
+
+## Code practice / Judge sandbox (P1.15)
+
+Server-side SQL and PySpark judging for `/code` and DE Challenges is documented in:
+
+**[docs/P1.15-sandbox-hardening.md](docs/P1.15-sandbox-hardening.md)**
+
+Production PySpark judging requires **both** `SECURITY_HARDENED=1` and `PYSPARK_JUDGE_CONTAINER=1`. Do not run production PySpark judging with the in-process host fallback.
+
+Before that: **[docs/P1.16-ui-redesign.md](docs/P1.16-ui-redesign.md)** — premium UI redesign (UI.1 foundation in progress).
+
+Performance challenge #008: **[docs/P1.16-performance-008.md](docs/P1.16-performance-008.md)** — after UI workspace redesign + Docker gate.
 
 ## Tech Stack
 

@@ -11,12 +11,10 @@ import { SYSTEM_DESIGN_ROUTES, SYSTEM_DESIGN_STATS } from "@/lib/system-design";
 import { INTERVIEW_PREP_ROUTES, INTERVIEW_PREP_STATS } from "@/lib/interview-prep";
 import {
   getInterviewStats as getSqlInterviewStats,
-  getLeetCodeStats,
   getNotesStats as getSqlNotesStats,
   getPracticeStats as getSqlPracticeStats,
 } from "@/lib/sql-progress";
 import {
-  getCodingStats,
   getInterviewStats as getPythonInterviewStats,
   getNotesStats as getPythonNotesStats,
   getPracticeStats as getPythonPracticeStats,
@@ -63,14 +61,12 @@ type TrackStat = { current: number; total: number; percent: number };
 const SQL_TRACKS = [
   { key: "notes", label: "Notes" },
   { key: "practice", label: "Practice" },
-  { key: "leetcode", label: "LeetCode" },
   { key: "interview", label: "Interview" },
 ] as const;
 
 const PYTHON_TRACKS = [
   { key: "notes", label: "Notes" },
   { key: "practice", label: "Practice" },
-  { key: "coding", label: "Coding" },
   { key: "interview", label: "Interview" },
 ] as const;
 
@@ -84,19 +80,17 @@ const ALL_LABS = [
   {
     key: "sql",
     title: "SQL Lab",
-    description: "Notes, 150 practice, LeetCode, mock interviews",
+    description: "Notes, drills, mock interviews",
     href: SQL_ROUTES.home,
     event: "sql-progress-updated",
     tracks: SQL_TRACKS,
     buildStats: () => {
       const notes = getSqlNotesStats(SQL_STATS.noteChapters);
       const practice = getSqlPracticeStats(SQL_STATS.practiceTotal);
-      const leetcode = getLeetCodeStats(SQL_STATS.leetcodeTotal);
       const interview = getSqlInterviewStats(SQL_STATS.interviewTotal);
       return {
         notes: { current: notes.read, total: notes.total, percent: notes.percent },
         practice: { current: practice.solved, total: practice.total, percent: practice.percent },
-        leetcode: { current: leetcode.solved, total: leetcode.total, percent: leetcode.percent },
         interview: { current: interview.know, total: interview.total, percent: interview.percent },
       };
     },
@@ -106,19 +100,17 @@ const ALL_LABS = [
   {
     key: "python",
     title: "Python Lab",
-    description: "pandas, pipelines, coding track, flashcards",
+    description: "pandas, pipelines, flashcards",
     href: PYTHON_ROUTES.home,
     event: "python-progress-updated",
     tracks: PYTHON_TRACKS,
     buildStats: () => {
       const notes = getPythonNotesStats(PYTHON_STATS.noteChapters);
       const practice = getPythonPracticeStats(PYTHON_STATS.practiceTotal);
-      const coding = getCodingStats(PYTHON_STATS.codingTotal);
       const interview = getPythonInterviewStats(PYTHON_STATS.interviewTotal);
       return {
         notes: { current: notes.read, total: notes.total, percent: notes.percent },
         practice: { current: practice.solved, total: practice.total, percent: practice.percent },
-        coding: { current: coding.solved, total: coding.total, percent: coding.percent },
         interview: { current: interview.know, total: interview.total, percent: interview.percent },
       };
     },
@@ -233,13 +225,11 @@ const EMPTY_LAB_STATS: Record<string, Record<string, TrackStat>> = {
   sql: {
     notes: zeroStat(SQL_STATS.noteChapters),
     practice: zeroStat(SQL_STATS.practiceTotal),
-    leetcode: zeroStat(SQL_STATS.leetcodeTotal),
     interview: zeroStat(SQL_STATS.interviewTotal),
   },
   python: {
     notes: zeroStat(PYTHON_STATS.noteChapters),
     practice: zeroStat(PYTHON_STATS.practiceTotal),
-    coding: zeroStat(PYTHON_STATS.codingTotal),
     interview: zeroStat(PYTHON_STATS.interviewTotal),
   },
   spark: standardPlaceholder(SPARK_STATS),

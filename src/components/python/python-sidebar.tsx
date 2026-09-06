@@ -7,9 +7,7 @@ import {
   BarChart3,
   BookOpen,
   Brain,
-  Code2,
   Terminal,
-  Trophy,
 } from "lucide-react";
 import { PYTHON_NOTES_SECTIONS, PYTHON_ROUTES } from "@/lib/python";
 import { LabSidebarLink, LabMobileTab } from "@/components/lab/nav";
@@ -54,13 +52,6 @@ const NAV: NavGroup[] = [
     icon: Terminal,
     href: PYTHON_ROUTES.practice,
     match: (pathname) => pathname.startsWith(PYTHON_ROUTES.practice),
-  },
-  {
-    id: "coding",
-    label: "Coding",
-    icon: Trophy,
-    href: PYTHON_ROUTES.coding,
-    match: (pathname) => pathname.startsWith(PYTHON_ROUTES.coding),
   },
   {
     id: "interview",
@@ -108,9 +99,6 @@ export function PythonSidebar() {
               ))}
               <LabMobileTab href={PYTHON_ROUTES.practice} active={pathname.startsWith(PYTHON_ROUTES.practice)}>
                 Practice
-              </LabMobileTab>
-              <LabMobileTab href={PYTHON_ROUTES.coding} active={pathname.startsWith(PYTHON_ROUTES.coding)}>
-                Coding
               </LabMobileTab>
               <LabMobileTab href={PYTHON_ROUTES.interview} active={pathname.startsWith(PYTHON_ROUTES.interview)}>
                 Interview

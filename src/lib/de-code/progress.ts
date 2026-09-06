@@ -50,6 +50,26 @@ export function saveCode(track: CodeTrackId, slug: string, code: string) {
   localStorage.setItem(CODE_KEY, JSON.stringify(map));
 }
 
+export function getSavedChallengeCode(
+  slug: string,
+  language: string
+): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const map = JSON.parse(localStorage.getItem(CODE_KEY) ?? "{}") as Record<string, string>;
+    return map[`challenge:${slug}:${language}`] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveChallengeCode(slug: string, language: string, code: string) {
+  if (typeof window === "undefined") return;
+  const map = JSON.parse(localStorage.getItem(CODE_KEY) ?? "{}") as Record<string, string>;
+  map[`challenge:${slug}:${language}`] = code;
+  localStorage.setItem(CODE_KEY, JSON.stringify(map));
+}
+
 export function isProblemSolved(problemId: string): boolean {
   return readStore().solved.includes(problemId);
 }
@@ -72,6 +92,18 @@ export function recordSubmission(submission: Omit<CodeSubmission, "id" | "create
 
 export function getSubmissions(problemId: string): CodeSubmission[] {
   return readStore().submissions.filter((s) => s.problemId === problemId);
+}
+
+export function getMostRecentSubmission(): CodeSubmission | undefined {
+  return readStore().submissions[0];
+}
+
+export function getAllSubmissions(): CodeSubmission[] {
+  return readStore().submissions;
+}
+
+export function getSolvedProblemIds(): string[] {
+  return readStore().solved;
 }
 
 export function getTrackStats(track: CodeTrackId, total: number) {

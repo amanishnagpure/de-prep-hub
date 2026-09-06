@@ -1,0 +1,2 @@
+# Judge sandbox dependencies (server-side only)
+pyspark==3.5.4

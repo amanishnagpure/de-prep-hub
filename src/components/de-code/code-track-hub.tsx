@@ -42,17 +42,19 @@ export function CodeTrackHub({ track }: { track: CodeTrackId }) {
   }, [mounted, topics, track]);
 
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+    <div className="hub-page mx-auto w-full max-w-5xl flex-1 px-4 py-8">
       <Link
         href={CODE_SECTION.home}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" /> Code
       </Link>
 
       <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">Practice</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Practice
+          </p>
           <h1 className="mt-1 text-3xl font-semibold">{meta.label}</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{meta.description}</p>
         </div>
@@ -60,7 +62,7 @@ export function CodeTrackHub({ track }: { track: CodeTrackId }) {
           <p className="font-medium">{allProblems.length} problems</p>
           <p className="text-muted-foreground">{topics.length} topics</p>
           {mounted && (
-            <p className="mt-1 text-primary">
+            <p className="mt-1 text-foreground">
               {trackStats.solved}/{trackStats.total} completed
             </p>
           )}
@@ -76,11 +78,11 @@ export function CodeTrackHub({ track }: { track: CodeTrackId }) {
             <Link
               key={topic.id}
               href={codeTopicPath(track, topic.id)}
-              className="panel group flex flex-col p-5 transition-colors hover:bg-muted/40"
+              className="panel group flex flex-col p-5 transition-colors hover:bg-muted/30"
             >
               <div className="flex items-start justify-between gap-2">
-                <h2 className="text-lg font-semibold group-hover:text-primary">{topic.label}</h2>
-                <ArrowUpRight className="size-4 shrink-0 text-muted-foreground group-hover:text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">{topic.label}</h2>
+                <ArrowUpRight className="size-4 shrink-0 text-muted-foreground/70 transition-opacity group-hover:opacity-100" />
               </div>
               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{topic.description}</p>
               <p className="mt-3 font-mono text-xs text-muted-foreground">
@@ -96,7 +98,7 @@ export function CodeTrackHub({ track }: { track: CodeTrackId }) {
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                     <div
-                      className={cn("h-full rounded-full bg-primary transition-all")}
+                      className={cn("h-full rounded-full bg-muted-foreground/35 transition-all")}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -114,7 +116,7 @@ export function CodeTrackHub({ track }: { track: CodeTrackId }) {
       <div className="mt-8">
         <Link
           href={`${codeTrackPath(track)}/all`}
-          className="text-sm text-muted-foreground hover:text-primary"
+          className="text-sm text-muted-foreground hover:text-foreground"
         >
           Browse all {meta.label} problems →
         </Link>
@@ -182,7 +184,10 @@ export function TopicProgressBar({
         </span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+        <div
+          className="h-full rounded-full bg-muted-foreground/35 transition-all"
+          style={{ width: `${pct}%` }}
+        />
       </div>
     </div>
   );
@@ -195,7 +200,7 @@ export function TopicOverviewHeader({
   track: CodeTrackId;
   topicId: string;
 }) {
-  const problems = getCodeProblems(track, topicId);
+  const problems = React.useMemo(() => getCodeProblems(track, topicId), [track, topicId]);
   const topicMeta = getActiveTopics(track).find((t) => t.id === topicId);
   const breakdown = {
     easy: problems.filter((p) => p.difficulty === "easy").length,
@@ -207,12 +212,14 @@ export function TopicOverviewHeader({
   const [stats, setStats] = React.useState({ solved: 0, total: problems.length, percent: 0 });
 
   React.useEffect(() => {
-    const refresh = () =>
-      setStats(getTopicStats(track, problems.map((p) => p.id)));
+    const refresh = () => {
+      const ids = getCodeProblems(track, topicId).map((p) => p.id);
+      setStats(getTopicStats(track, ids));
+    };
     refresh();
     window.addEventListener("de-code-updated", refresh);
     return () => window.removeEventListener("de-code-updated", refresh);
-  }, [problems, track]);
+  }, [track, topicId]);
 
   if (!topicMeta) return null;
 
@@ -243,7 +250,7 @@ export function TopicOverviewHeader({
           <div className="mt-2 flex flex-wrap gap-1.5">
             {concepts.map((c) => (
               <span key={c} className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-xs">
-                <CheckCircle2 className="size-3 text-primary/70" />
+                <CheckCircle2 className="size-3 text-muted-foreground/70" />
                 {c}
               </span>
             ))}
