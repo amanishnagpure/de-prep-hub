@@ -12,6 +12,7 @@ import {
   Search,
 } from "lucide-react";
 import type { SystemDesignPracticeQuestion } from "@/lib/system-design-practice";
+import { LC_TIER_BADGE } from "@/lib/lc-styles";
 import { pickRandomQuestions, QUIZ_SIZE } from "@/lib/system-design-practice";
 import { SYSTEM_DESIGN_PRACTICE_CATEGORIES } from "@/lib/system-design";
 import {
@@ -41,11 +42,7 @@ const tierLabels: Record<TierFilter, string> = {
   hard: "Hard",
 };
 
-const tierBadge: Record<SystemDesignPracticeQuestion["tier"], string> = {
-  basic: "bg-emerald-500/10 text-primary ring-emerald-500/20",
-  medium: "bg-muted font-medium text-foreground ring-violet-500/20",
-  hard: "bg-rose-500/10 text-rose-400 ring-rose-500/20",
-};
+const tierBadge = LC_TIER_BADGE;
 
 interface SystemDesignPracticeWorkspaceProps {
   questions: SystemDesignPracticeQuestion[];
@@ -135,7 +132,7 @@ export function SystemDesignPracticeWorkspace({ questions }: SystemDesignPractic
 
       <div className="grid gap-4 lg:grid-cols-[minmax(220px,260px)_minmax(0,1fr)] lg:items-start">
         {viewMode === "browse" && (
-          <aside className="order-2 space-y-3 lg:order-1 lg:sticky lg:top-14 lg:max-h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain">
+          <aside className="order-2 space-y-3 lg:order-1 lg:sticky lg:top-12 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -207,12 +204,12 @@ export function SystemDesignPracticeWorkspace({ questions }: SystemDesignPractic
         )}
 
         {activeQuestion && (
-          <section id="practice-editor" className="panel order-1 p-5 sm:p-6 lg:order-2 lg:sticky lg:top-14 lg:self-start lg:max-h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain">
+          <section id="practice-editor" className="panel order-1 p-5 sm:p-6 lg:order-2 lg:sticky lg:top-12 lg:self-start lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-xs text-muted-foreground">#{activeQuestion.id}</span>
               <span
                 className={cn(
-                  "rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase ring-1",
+                  "lc-badge",
                   tierBadge[activeQuestion.tier]
                 )}
               >

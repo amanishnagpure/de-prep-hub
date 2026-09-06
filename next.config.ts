@@ -24,6 +24,9 @@ const nextConfig: NextConfig = {
       { source: "/topics/interview-practice", destination: "/interview-prep/practice", permanent: true },
       { source: "/topics/interview-flashcards", destination: "/interview-prep/interview", permanent: true },
       { source: "/sql/playground", destination: "/sql/practice?tab=playground", permanent: false },
+      { source: "/practice/spark", destination: "/code/pyspark", permanent: true },
+      { source: "/practice/:track", destination: "/code/:track", permanent: true },
+      { source: "/practice", destination: "/code", permanent: true },
     ];
   },
 };

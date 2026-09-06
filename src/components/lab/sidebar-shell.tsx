@@ -51,7 +51,7 @@ export function LabSidebarShell({
   return (
     <div className="w-full shrink-0 lg:w-auto lg:self-stretch">
       <nav
-        className="flex gap-2 overflow-x-auto border-b border-border bg-card/90 py-2.5 backdrop-blur-sm lg:hidden"
+        className="flex gap-2 overflow-x-auto border-b border-border bg-sidebar py-2 lg:hidden"
         aria-label="Lab sections"
       >
         {mobileNav}
@@ -59,13 +59,13 @@ export function LabSidebarShell({
 
       <aside
         className={cn(
-          "hidden shrink-0 border-border bg-card/80 lg:sticky lg:top-14 lg:z-20 lg:block lg:border-r",
-          "lg:max-h-[calc(100dvh-3.5rem)]",
+          "hidden shrink-0 border-border bg-sidebar lg:sticky lg:top-12 lg:z-20 lg:block lg:border-r",
+          "lg:max-h-[calc(100dvh-3rem)]",
           "transition-[width] duration-200 ease-out",
           collapsed ? "lg:w-[4.5rem]" : "lg:w-56 xl:w-60"
         )}
       >
-        <div className="flex h-full max-h-[calc(100dvh-3.5rem)] flex-col p-3">
+        <div className="flex h-full max-h-[calc(100dvh-3rem)] flex-col p-2">
           {header ? (
             <div className={cn("mb-2 shrink-0", collapsed && "mb-0 flex justify-center")}>
               {!collapsed ? header : null}
@@ -82,7 +82,7 @@ export function LabSidebarShell({
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-expanded={!collapsed}
             className={cn(
-              "mt-3 inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-border py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground",
+              "mt-2 inline-flex shrink-0 items-center justify-center gap-2 rounded-md border border-border py-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
               collapsed ? "w-full px-0" : "w-full px-3"
             )}
           >

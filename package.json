@@ -7,7 +7,9 @@
     "build": "node scripts/copy-sql-wasm.mjs && next build",
     "postinstall": "node scripts/copy-sql-wasm.mjs",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:practice": "node scripts/seed-practice-platform.mjs",
+    "seed:code": "node scripts/seed-de-code.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

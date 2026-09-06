@@ -50,12 +50,16 @@ interface PythonCodingTrackProps {
   problems: ReturnType<typeof getPythonCodingProblems>;
   initialPattern?: string;
   initialReview?: boolean;
+  selectedSlug?: string;
+  onSelectSlug?: (slug: string) => void;
 }
 
 export function PythonCodingTrack({
   problems,
   initialPattern,
   initialReview = false,
+  selectedSlug: selectedSlugProp,
+  onSelectSlug,
 }: PythonCodingTrackProps) {
   usePracticeScrollToEditor();
   const [search, setSearch] = React.useState("");
@@ -68,7 +72,27 @@ export function PythonCodingTrack({
   const [mustDoFilter, setMustDoFilter] = React.useState<MustDoFilter>(
     initialReview ? "needs-review" : "all"
   );
-  const [selectedSlug, setSelectedSlug] = React.useState(problems[0]?.slug ?? "");
+  const [internalSlug, setInternalSlug] = React.useState(problems[0]?.slug ?? "");
+  const selectedSlug = selectedSlugProp ?? internalSlug;
+
+  const selectSlug = React.useCallback(
+    (slug: string) => {
+      onSelectSlug?.(slug);
+      if (selectedSlugProp === undefined) {
+        setInternalSlug(slug);
+      }
+    },
+    [onSelectSlug, selectedSlugProp]
+  );
+
+  React.useEffect(() => {
+    if (selectedSlugProp && problems.some((problem) => problem.slug === selectedSlugProp)) {
+      return;
+    }
+    if (selectedSlugProp === undefined && problems[0]?.slug) {
+      setInternalSlug(problems[0].slug);
+    }
+  }, [problems, selectedSlugProp]);
   const [userCode, setUserCode] = React.useState("");
   const [showSolution, setShowSolution] = React.useState(false);
   const [solvedSlugs, setSolvedSlugs] = React.useState<string[]>([]);
@@ -132,7 +156,7 @@ export function PythonCodingTrack({
   return (
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] lg:items-start">
-        <aside className="order-2 space-y-4 lg:order-1 lg:sticky lg:top-14 lg:max-h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain">
+        <aside className="order-2 space-y-4 lg:order-1 lg:sticky lg:top-12 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain">
           <p className="text-sm text-muted-foreground">
             {stats.solved}/{stats.total} · {PYTHON_CODING_MUST_DO} must-do
           </p>
@@ -207,7 +231,7 @@ export function PythonCodingTrack({
               <button
                 key={problem.slug}
                 type="button"
-                onClick={() => setSelectedSlug(problem.slug)}
+                onClick={() => selectSlug(problem.slug)}
                 className={cn(
                   "flex w-full items-start gap-2 rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
                   selectedSlug === problem.slug
@@ -234,7 +258,7 @@ export function PythonCodingTrack({
         </aside>
 
         {active && (
-          <section id="practice-editor" className="panel order-1 p-5 sm:p-6 lg:order-2 lg:sticky lg:top-14 lg:self-start lg:max-h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain">
+          <section id="practice-editor" className="panel order-1 p-5 sm:p-6 lg:order-2 lg:sticky lg:top-12 lg:self-start lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="flex flex-wrap items-center gap-2">

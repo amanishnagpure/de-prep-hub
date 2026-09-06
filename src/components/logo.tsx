@@ -16,22 +16,13 @@ export function Logo({ className, size = 32 }: LogoProps) {
       className={cn("shrink-0", className)}
       aria-hidden
     >
-      <rect
-        x="3"
-        y="3"
-        width="26"
-        height="26"
-        rx="7"
-        className="fill-primary/12 stroke-primary/25"
-        strokeWidth="1.25"
-      />
+      <rect x="4" y="4" width="24" height="24" rx="4" className="fill-primary/15" />
       <path
-        d="M9 11h14M9 16h11M9 21h14"
+        d="M11 10v12M21 10v12M11 16h10"
         className="stroke-primary"
-        strokeWidth="1.75"
+        strokeWidth="2"
         strokeLinecap="round"
       />
-      <circle cx="22" cy="16" r="3.5" className="fill-primary/20 stroke-primary" strokeWidth="1.25" />
     </svg>
   );
 }

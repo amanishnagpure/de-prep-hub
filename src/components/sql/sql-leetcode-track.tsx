@@ -170,7 +170,7 @@ export function SqlLeetCodeTrack({
   return (
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] lg:items-start">
-        <aside className="order-2 space-y-4 lg:order-1 lg:sticky lg:top-14 lg:max-h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain">
+        <aside className="order-2 space-y-4 lg:order-1 lg:sticky lg:top-12 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain">
           <p className="text-sm text-muted-foreground">
             {stats.solved}/{stats.total} · {LEETCODE_SQL_MUST_DO} must-do
           </p>
@@ -272,7 +272,7 @@ export function SqlLeetCodeTrack({
         </aside>
 
         {active && (
-          <section id="practice-editor" className="panel order-1 p-5 sm:p-6 lg:order-2 lg:sticky lg:top-14 lg:self-start lg:max-h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain">
+          <section id="practice-editor" className="panel order-1 p-5 sm:p-6 lg:order-2 lg:sticky lg:top-12 lg:self-start lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="flex flex-wrap items-center gap-2">

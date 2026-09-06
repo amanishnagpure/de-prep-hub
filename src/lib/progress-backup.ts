@@ -8,6 +8,10 @@ import { SPARK_PROGRESS_KEY } from "@/lib/spark-progress";
 import { SQL_DIALECT_KEY, SQL_DIALECT_MANUAL_KEY } from "@/lib/sql-dialect";
 import { SQL_PROGRESS_KEY } from "@/lib/sql-progress";
 import { SYSTEM_DESIGN_PROGRESS_KEY } from "@/lib/system-design-progress";
+import {
+  DE_CODE_SOLUTIONS_KEY,
+  DE_CODE_STORAGE_KEY,
+} from "@/lib/de-code/progress";
 import { importSqlProgress } from "@/lib/sql-progress";
 import { importPythonProgress } from "@/lib/python-progress";
 import { importSparkProgress } from "@/lib/spark-progress";
@@ -30,6 +34,8 @@ export const ALL_PROGRESS_STORAGE_KEYS = [
   SQL_DIALECT_KEY,
   SQL_DIALECT_MANUAL_KEY,
   "de-prep-hub-study-schedule",
+  DE_CODE_STORAGE_KEY,
+  DE_CODE_SOLUTIONS_KEY,
 ] as const;
 
 const PROGRESS_EVENTS = [
@@ -44,6 +50,7 @@ const PROGRESS_EVENTS = [
   "study-schedule-updated",
   "progress-updated",
   "sql-dialect-updated",
+  "de-code-updated",
 ] as const;
 
 export type FullProgressBackup = {

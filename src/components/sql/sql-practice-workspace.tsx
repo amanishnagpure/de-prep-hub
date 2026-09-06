@@ -10,6 +10,7 @@ import {
   Search,
 } from "lucide-react";
 import type { SqlPracticeQuestion } from "@/lib/sql-practice";
+import { LC_TIER_BADGE } from "@/lib/lc-styles";
 import {
   pickRandomQuestions,
   QUIZ_SIZE,
@@ -42,23 +43,22 @@ const tierLabels: Record<TierFilter, string> = {
   hard: "Hard",
 };
 
-const tierBadge: Record<SqlPracticeQuestion["tier"], string> = {
-  basic: "bg-emerald-500/10 text-primary ring-emerald-500/20",
-  medium: "bg-muted font-medium text-foreground ring-amber-500/20",
-  hard: "bg-rose-500/10 text-rose-400 ring-rose-500/20",
-};
+const tierBadge = LC_TIER_BADGE;
 
 interface SqlPracticeWorkspaceProps {
   questions: SqlPracticeQuestion[];
+  syncSelectionToUrl?: boolean;
 }
 
-export function SqlPracticeWorkspace({ questions }: SqlPracticeWorkspaceProps) {
+export function SqlPracticeWorkspace({ questions, syncSelectionToUrl }: SqlPracticeWorkspaceProps) {
   usePracticeScrollToEditor();
   const { dialect } = useSqlDialect();
   const [viewMode, setViewMode] = React.useState<ViewMode>("browse");
   const [tier, setTier] = React.useState<TierFilter>("all");
   const [search, setSearch] = React.useState("");
-  const [selectedId, setSelectedId] = usePracticeQuestionId(questions);
+  const [selectedId, setSelectedId] = usePracticeQuestionId(questions, undefined, {
+    syncToUrl: syncSelectionToUrl,
+  });
   const [quizQuestions, setQuizQuestions] = React.useState<SqlPracticeQuestion[]>([]);
   const [quizIndex, setQuizIndex] = React.useState(0);
   const [userSql, setUserSql] = React.useState("");
@@ -156,7 +156,7 @@ export function SqlPracticeWorkspace({ questions }: SqlPracticeWorkspaceProps) {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(220px,260px)_minmax(0,1fr)_minmax(200px,240px)] lg:items-start">
         {viewMode === "browse" && (
-          <aside className="order-2 space-y-3 lg:order-1 lg:sticky lg:top-14 lg:max-h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain">
+          <aside className="order-2 space-y-3 lg:order-1 lg:sticky lg:top-12 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -211,12 +211,12 @@ export function SqlPracticeWorkspace({ questions }: SqlPracticeWorkspaceProps) {
         )}
 
         {activeQuestion && (
-          <section id="practice-editor" className="panel order-1 p-5 sm:p-6 lg:order-2 lg:sticky lg:top-14 lg:self-start lg:max-h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain">
+          <section id="practice-editor" className="panel order-1 p-5 sm:p-6 lg:order-2 lg:sticky lg:top-12 lg:self-start lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-xs text-muted-foreground">#{activeQuestion.id}</span>
               <span
                 className={cn(
-                  "rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase ring-1",
+                  "lc-badge",
                   tierBadge[activeQuestion.tier]
                 )}
               >
@@ -319,7 +319,7 @@ export function SqlPracticeWorkspace({ questions }: SqlPracticeWorkspaceProps) {
         )}
 
         {activeQuestion && (
-          <aside className="order-3 hidden min-w-0 lg:sticky lg:top-14 lg:block lg:max-h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain lg:self-start">
+          <aside className="order-3 hidden min-w-0 lg:sticky lg:top-12 lg:block lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:self-start">
             <SqlSchemaPanel tables={schemas} />
           </aside>
         )}

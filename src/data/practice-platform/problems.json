@@ -1,0 +1,3620 @@
+[
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "One-pass hash map: store value -> index; check complement."
+    ],
+    "editorial": "def twoSum(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        if target - n in seen:\n            return [seen[target - n], i]\n        seen[n] = i",
+    "starterCode": "",
+    "id": "dsa/two-sum",
+    "slug": "two-sum",
+    "track": "dsa",
+    "title": "Two Sum",
+    "description": "Return indices of two numbers that add to target.\n\nImplement `twoSum` efficiently.",
+    "difficulty": "easy",
+    "topics": [
+      "hashmap"
+    ],
+    "constraints": [
+      "Follow the starter function signature",
+      "2000ms time limit per case"
+    ],
+    "examples": [
+      {
+        "input": "nums = [2,7,11,15], target = 9",
+        "output": "[0,1]"
+      }
+    ],
+    "solution": "def twoSum(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        if target - n in seen:\n            return [seen[target - n], i]\n        seen[n] = i",
+    "judge": "pyodide",
+    "functionName": "twoSum",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "nums = [2,7,11,15], target = 9",
+        "args": [
+          [
+            2,
+            7,
+            11,
+            15
+          ],
+          9
+        ],
+        "expected": [
+          0,
+          1
+        ],
+        "expectedOutput": "[0,1]",
+        "isHidden": false
+      },
+      {
+        "id": "2",
+        "input": "nums = [3,2,4], target = 6",
+        "args": [
+          [
+            3,
+            2,
+            4
+          ],
+          6
+        ],
+        "expected": [
+          1,
+          2
+        ],
+        "expectedOutput": "[1,2]",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/two-sum/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Track seen values in a set."
+    ],
+    "editorial": "def containsDuplicate(nums):\n    seen = set()\n    for n in nums:\n        if n in seen:\n            return True\n        seen.add(n)\n    return False",
+    "starterCode": "",
+    "id": "dsa/contains-duplicate",
+    "slug": "contains-duplicate",
+    "track": "dsa",
+    "title": "Contains Duplicate",
+    "description": "True if any value appears at least twice.\n\nImplement `containsDuplicate` efficiently.",
+    "difficulty": "easy",
+    "topics": [
+      "hashmap"
+    ],
+    "constraints": [
+      "Follow the starter function signature",
+      "2000ms time limit per case"
+    ],
+    "examples": [
+      {
+        "input": "[1,2,3,1]",
+        "output": "true"
+      }
+    ],
+    "solution": "def containsDuplicate(nums):\n    seen = set()\n    for n in nums:\n        if n in seen:\n            return True\n        seen.add(n)\n    return False",
+    "judge": "pyodide",
+    "functionName": "containsDuplicate",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "[1,2,3,1]",
+        "args": [
+          [
+            1,
+            2,
+            3,
+            1
+          ]
+        ],
+        "expected": true,
+        "expectedOutput": "true",
+        "isHidden": false
+      },
+      {
+        "id": "2",
+        "input": "[1,2,3,4]",
+        "args": [
+          [
+            1,
+            2,
+            3,
+            4
+          ]
+        ],
+        "expected": false,
+        "expectedOutput": "false",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/contains-duplicate/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Compare Counter(s) and Counter(t)."
+    ],
+    "editorial": "from collections import Counter\n\ndef isAnagram(s, t):\n    return Counter(s) == Counter(t)",
+    "starterCode": "",
+    "id": "dsa/valid-anagram",
+    "slug": "valid-anagram",
+    "track": "dsa",
+    "title": "Valid Anagram",
+    "description": "Check if t is an anagram of s.\n\nImplement `isAnagram` efficiently.",
+    "difficulty": "easy",
+    "topics": [
+      "hashmap"
+    ],
+    "constraints": [
+      "Follow the starter function signature",
+      "2000ms time limit per case"
+    ],
+    "examples": [
+      {
+        "input": "s = \"anagram\", t = \"nagaram\"",
+        "output": "true"
+      }
+    ],
+    "solution": "from collections import Counter\n\ndef isAnagram(s, t):\n    return Counter(s) == Counter(t)",
+    "judge": "pyodide",
+    "functionName": "isAnagram",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "s = \"anagram\", t = \"nagaram\"",
+        "args": [
+          "anagram",
+          "nagaram"
+        ],
+        "expected": true,
+        "expectedOutput": "true",
+        "isHidden": false
+      },
+      {
+        "id": "2",
+        "input": "s = \"rat\", t = \"car\"",
+        "args": [
+          "rat",
+          "car"
+        ],
+        "expected": false,
+        "expectedOutput": "false",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/valid-anagram/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Key by sorted tuple of chars."
+    ],
+    "editorial": "from collections import defaultdict\n\ndef groupAnagrams(strs):\n    groups = defaultdict(list)\n    for s in strs:\n        groups[tuple(sorted(s))].append(s)\n    return list(groups.values())",
+    "starterCode": "",
+    "id": "dsa/group-anagrams",
+    "slug": "group-anagrams",
+    "track": "dsa",
+    "title": "Group Anagrams",
+    "description": "Group strings that are anagrams.\n\nImplement `groupAnagrams` efficiently.",
+    "difficulty": "medium",
+    "topics": [
+      "hashmap"
+    ],
+    "constraints": [
+      "Follow the starter function signature",
+      "2000ms time limit per case"
+    ],
+    "examples": [
+      {
+        "input": "[\"eat\",\"tea\",\"tan\",\"ate\",\"nat\",\"bat\"]",
+        "output": "grouped anagram lists"
+      }
+    ],
+    "solution": "from collections import defaultdict\n\ndef groupAnagrams(strs):\n    groups = defaultdict(list)\n    for s in strs:\n        groups[tuple(sorted(s))].append(s)\n    return list(groups.values())",
+    "judge": "pyodide",
+    "functionName": "groupAnagrams",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "[\"eat\",\"tea\",\"tan\",\"ate\",\"nat\",\"bat\"]",
+        "args": [
+          [
+            "eat",
+            "tea",
+            "tan",
+            "ate",
+            "nat",
+            "bat"
+          ]
+        ],
+        "expected": [
+          [
+            "eat",
+            "tea",
+            "ate"
+          ],
+          [
+            "tan",
+            "nat"
+          ],
+          [
+            "bat"
+          ]
+        ],
+        "expectedOutput": "grouped anagram lists",
+        "compare": "sorted",
+        "isHidden": false
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/group-anagrams/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Counter + nlargest or bucket sort."
+    ],
+    "editorial": "from collections import Counter\nimport heapq\n\ndef topKFrequent(nums, k):\n    return [x for x, _ in heapq.nlargest(k, Counter(nums).items(), key=lambda x: x[1])]",
+    "starterCode": "",
+    "id": "dsa/top-k-frequent-elements",
+    "slug": "top-k-frequent-elements",
+    "track": "dsa",
+    "title": "Top K Frequent Elements",
+    "description": "Return k most frequent integers.\n\nImplement `topKFrequent` efficiently.",
+    "difficulty": "medium",
+    "topics": [
+      "heap"
+    ],
+    "constraints": [
+      "Follow the starter function signature",
+      "2000ms time limit per case"
+    ],
+    "examples": [
+      {
+        "input": "nums=[1,1,1,2,2,3], k=2",
+        "output": "[1,2]"
+      }
+    ],
+    "solution": "from collections import Counter\nimport heapq\n\ndef topKFrequent(nums, k):\n    return [x for x, _ in heapq.nlargest(k, Counter(nums).items(), key=lambda x: x[1])]",
+    "judge": "pyodide",
+    "functionName": "topKFrequent",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "nums=[1,1,1,2,2,3], k=2",
+        "args": [
+          [
+            1,
+            1,
+            1,
+            2,
+            2,
+            3
+          ],
+          2
+        ],
+        "expected": [
+          1,
+          2
+        ],
+        "expectedOutput": "[1,2]",
+        "compare": "set",
+        "isHidden": false
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/top-k-frequent-elements/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Prefix products left-to-right then right-to-left."
+    ],
+    "editorial": "def productExceptSelf(nums):\n    n = len(nums)\n    out = [1] * n\n    left = 1\n    for i in range(n):\n        out[i] = left\n        left *= nums[i]\n    right = 1\n    for i in range(n - 1, -1, -1):\n        out[i] *= right\n        right *= nums[i]\n    return out",
+    "starterCode": "",
+    "id": "dsa/product-of-array-except-self",
+    "slug": "product-of-array-except-self",
+    "track": "dsa",
+    "title": "Product of Array Except Self",
+    "description": "Output[i] = product of all nums except nums[i], no division.\n\nImplement `productExceptSelf` efficiently.",
+    "difficulty": "medium",
+    "topics": [
+      "array"
+    ],
+    "constraints": [
+      "Follow the starter function signature",
+      "2000ms time limit per case"
+    ],
+    "examples": [
+      {
+        "input": "[1,2,3,4]",
+        "output": "[24,12,8,6]"
+      }
+    ],
+    "solution": "def productExceptSelf(nums):\n    n = len(nums)\n    out = [1] * n\n    left = 1\n    for i in range(n):\n        out[i] = left\n        left *= nums[i]\n    right = 1\n    for i in range(n - 1, -1, -1):\n        out[i] *= right\n        right *= nums[i]\n    return out",
+    "judge": "pyodide",
+    "functionName": "productExceptSelf",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "[1,2,3,4]",
+        "args": [
+          [
+            1,
+            2,
+            3,
+            4
+          ]
+        ],
+        "expected": [
+          24,
+          12,
+          8,
+          6
+        ],
+        "expectedOutput": "[24,12,8,6]",
+        "isHidden": false
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/product-of-array-except-self/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Sliding window with last-seen index map."
+    ],
+    "editorial": "def lengthOfLongestSubstring(s):\n    last = {}\n    start = best = 0\n    for i, ch in enumerate(s):\n        if ch in last and last[ch] >= start:\n            start = last[ch] + 1\n        last[ch] = i\n        best = max(best, i - start + 1)\n    return best",
+    "starterCode": "",
+    "id": "dsa/longest-substring-without-repeating-characters",
+    "slug": "longest-substring-without-repeating-characters",
+    "track": "dsa",
+    "title": "Longest Substring Without Repeating Characters",
+    "description": "Length of longest substring without repeating chars.\n\nImplement `lengthOfLongestSubstring` efficiently.",
+    "difficulty": "medium",
+    "topics": [
+      "sliding-window"
+    ],
+    "constraints": [
+      "Follow the starter function signature",
+      "2000ms time limit per case"
+    ],
+    "examples": [
+      {
+        "input": "\"abcabcbb\"",
+        "output": "3"
+      }
+    ],
+    "solution": "def lengthOfLongestSubstring(s):\n    last = {}\n    start = best = 0\n    for i, ch in enumerate(s):\n        if ch in last and last[ch] >= start:\n            start = last[ch] + 1\n        last[ch] = i\n        best = max(best, i - start + 1)\n    return best",
+    "judge": "pyodide",
+    "functionName": "lengthOfLongestSubstring",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "\"abcabcbb\"",
+        "args": [
+          "abcabcbb"
+        ],
+        "expected": 3,
+        "expectedOutput": "3",
+        "isHidden": false
+      },
+      {
+        "id": "2",
+        "input": "\"bbbbb\"",
+        "args": [
+          "bbbbb"
+        ],
+        "expected": 1,
+        "expectedOutput": "1",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/longest-substring-without-repeating-characters/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Window where len - max_freq <= k."
+    ],
+    "editorial": "def characterReplacement(s, k):\n    count = {}\n    left = max_freq = best = 0\n    for right, ch in enumerate(s):\n        count[ch] = count.get(ch, 0) + 1\n        max_freq = max(max_freq, count[ch])\n        while (right - left + 1) - max_freq > k:\n            count[s[left]] -= 1\n            left += 1\n        best = max(best, right - left + 1)\n    return best",
+    "starterCode": "",
+    "id": "dsa/longest-repeating-character-replacement",
+    "slug": "longest-repeating-character-replacement",
+    "track": "dsa",
+    "title": "Longest Repeating Character Replacement",
+    "description": "Longest substring with at most k replacements.\n\nImplement `characterReplacement` efficiently.",
+    "difficulty": "medium",
+    "topics": [
+      "sliding-window"
+    ],
+    "constraints": [
+      "Follow the starter function signature",
+      "2000ms time limit per case"
+    ],
+    "examples": [
+      {
+        "input": "s=\"AABABBA\", k=1",
+        "output": "4"
+      }
+    ],
+    "solution": "def characterReplacement(s, k):\n    count = {}\n    left = max_freq = best = 0\n    for right, ch in enumerate(s):\n        count[ch] = count.get(ch, 0) + 1\n        max_freq = max(max_freq, count[ch])\n        while (right - left + 1) - max_freq > k:\n            count[s[left]] -= 1\n            left += 1\n        best = max(best, right - left + 1)\n    return best",
+    "judge": "pyodide",
+    "functionName": "characterReplacement",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "s=\"AABABBA\", k=1",
+        "args": [
+          "AABABBA",
+          1
+        ],
+        "expected": 4,
+        "expectedOutput": "4",
+        "isHidden": false
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/longest-repeating-character-replacement/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Fixed-size window frequency compare."
+    ],
+    "editorial": "from collections import Counter\n\ndef checkInclusion(s1, s2):\n    need, have = Counter(s1), Counter()\n    if len(s1) > len(s2):\n        return False\n    for i, ch in enumerate(s2):\n        have[ch] += 1\n        if i >= len(s1):\n            left = s2[i - len(s1)]\n            have[left] -= 1\n            if have[left] == 0:\n                del have[left]\n        if have == need:\n            return True\n    return False",
+    "starterCode": "",
+    "id": "dsa/permutation-in-string",
+    "slug": "permutation-in-string",
+    "track": "dsa",
+    "title": "Permutation in String",
+    "description": "True if s2 contains a permutation of s1.\n\nImplement `checkInclusion` efficiently.",
+    "difficulty": "medium",
+    "topics": [
+      "sliding-window"
+    ],
+    "constraints": [
+      "Follow the starter function signature",
+      "2000ms time limit per case"
+    ],
+    "examples": [
+      {
+        "input": "s1=\"ab\", s2=\"eidbaooo\"",
+        "output": "true"
+      }
+    ],
+    "solution": "from collections import Counter\n\ndef checkInclusion(s1, s2):\n    need, have = Counter(s1), Counter()\n    if len(s1) > len(s2):\n        return False\n    for i, ch in enumerate(s2):\n        have[ch] += 1\n        if i >= len(s1):\n            left = s2[i - len(s1)]\n            have[left] -= 1\n            if have[left] == 0:\n                del have[left]\n        if have == need:\n            return True\n    return False",
+    "judge": "pyodide",
+    "functionName": "checkInclusion",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "s1=\"ab\", s2=\"eidbaooo\"",
+        "args": [
+          "ab",
+          "eidbaooo"
+        ],
+        "expected": true,
+        "expectedOutput": "true",
+        "isHidden": false
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/permutation-in-string/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Stack of opening brackets."
+    ],
+    "editorial": "def isValid(s):\n    pairs = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}\n    stack = []\n    for ch in s:\n        if ch in pairs:\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n        else:\n            stack.append(ch)\n    return not stack",
+    "starterCode": "",
+    "id": "dsa/valid-parentheses",
+    "slug": "valid-parentheses",
+    "track": "dsa",
+    "title": "Valid Parentheses",
+    "description": "Check balanced brackets.\n\nImplement `isValid` efficiently.",
+    "difficulty": "easy",
+    "topics": [
+      "stack"
+    ],
+    "constraints": [
+      "Follow the starter function signature",
+      "2000ms time limit per case"
+    ],
+    "examples": [
+      {
+        "input": "\"()[]{}\"",
+        "output": "true"
+      }
+    ],
+    "solution": "def isValid(s):\n    pairs = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}\n    stack = []\n    for ch in s:\n        if ch in pairs:\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n        else:\n            stack.append(ch)\n    return not stack",
+    "judge": "pyodide",
+    "functionName": "isValid",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "\"()[]{}\"",
+        "args": [
+          "()[]{}"
+        ],
+        "expected": true,
+        "expectedOutput": "true",
+        "isHidden": false
+      },
+      {
+        "id": "2",
+        "input": "\"(]\"",
+        "args": [
+          "(]"
+        ],
+        "expected": false,
+        "expectedOutput": "false",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/valid-parentheses/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Parallel min stack."
+    ],
+    "editorial": "class MinStack:\n    def __init__(self):\n        self.stack = []\n        self.mins = []\n\n    def push(self, val):\n        self.stack.append(val)\n        self.mins.append(val if not self.mins else min(val, self.mins[-1]))\n\n    def pop(self):\n        self.stack.pop()\n        self.mins.pop()\n\n    def top(self):\n        return self.stack[-1]\n\n    def getMin(self):\n        return self.mins[-1]",
+    "starterCode": "",
+    "id": "dsa/min-stack",
+    "slug": "min-stack",
+    "track": "dsa",
+    "title": "Min Stack",
+    "description": "Stack supporting push, pop, top, getMin in O(1).\n\nImplement `__init__` efficiently.",
+    "difficulty": "medium",
+    "topics": [
+      "stack"
+    ],
+    "constraints": [
+      "Follow the starter function signature",
+      "2000ms time limit per case"
+    ],
+    "examples": [],
+    "solution": "class MinStack:\n    def __init__(self):\n        self.stack = []\n        self.mins = []\n\n    def push(self, val):\n        self.stack.append(val)\n        self.mins.append(val if not self.mins else min(val, self.mins[-1]))\n\n    def pop(self):\n        self.stack.pop()\n        self.mins.pop()\n\n    def top(self):\n        return self.stack[-1]\n\n    def getMin(self):\n        return self.mins[-1]",
+    "judge": "compare",
+    "functionName": "__init__",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "code",
+        "expectedOutput": "reference",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/min-stack/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Two pointers skip non-alnum."
+    ],
+    "editorial": "def isPalindrome(s):\n    left, right = 0, len(s) - 1\n    while left < right:\n        while left < right and not s[left].isalnum():\n            left += 1\n        while left < right and not s[right].isalnum():\n            right -= 1\n        if s[left].lower() != s[right].lower():\n            return False\n        left += 1\n        right -= 1\n    return True",
+    "starterCode": "",
+    "id": "dsa/valid-palindrome",
+    "slug": "valid-palindrome",
+    "track": "dsa",
+    "title": "Valid Palindrome",
+    "description": "Alphanumeric palindrome ignoring case.\n\nImplement `isPalindrome` efficiently.",
+    "difficulty": "easy",
+    "topics": [
+      "two-pointer"
+    ],
+    "constraints": [
+      "Follow the starter function signature",
+      "2000ms time limit per case"
+    ],
+    "examples": [
+      {
+        "input": "\"A man, a plan, a canal: Panama\"",
+        "output": "true"
+      }
+    ],
+    "solution": "def isPalindrome(s):\n    left, right = 0, len(s) - 1\n    while left < right:\n        while left < right and not s[left].isalnum():\n            left += 1\n        while left < right and not s[right].isalnum():\n            right -= 1\n        if s[left].lower() != s[right].lower():\n            return False\n        left += 1\n        right -= 1\n    return True",
+    "judge": "pyodide",
+    "functionName": "isPalindrome",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "\"A man, a plan, a canal: Panama\"",
+        "args": [
+          "A man, a plan, a canal: Panama"
+        ],
+        "expected": true,
+        "expectedOutput": "true",
+        "isHidden": false
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/valid-palindrome/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Classic binary search."
+    ],
+    "editorial": "def search(nums, target):\n    lo, hi = 0, len(nums) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if nums[mid] == target:\n            return mid\n        if nums[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1",
+    "starterCode": "",
+    "id": "dsa/binary-search",
+    "slug": "binary-search",
+    "track": "dsa",
+    "title": "Binary Search",
+    "description": "Find target index in sorted nums or -1.\n\nImplement `search` efficiently.",
+    "difficulty": "easy",
+    "topics": [
+      "array"
+    ],
+    "constraints": [
+      "Follow the starter function signature",
+      "2000ms time limit per case"
+    ],
+    "examples": [
+      {
+        "input": "nums=[-1,0,3,5,9,12], target=9",
+        "output": "4"
+      }
+    ],
+    "solution": "def search(nums, target):\n    lo, hi = 0, len(nums) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if nums[mid] == target:\n            return mid\n        if nums[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1",
+    "judge": "pyodide",
+    "functionName": "search",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "nums=[-1,0,3,5,9,12], target=9",
+        "args": [
+          [
+            -1,
+            0,
+            3,
+            5,
+            9,
+            12
+          ],
+          9
+        ],
+        "expected": 4,
+        "expectedOutput": "4",
+        "isHidden": false
+      },
+      {
+        "id": "2",
+        "input": "target=2",
+        "args": [
+          [
+            -1,
+            0,
+            3,
+            5,
+            9,
+            12
+          ],
+          2
+        ],
+        "expected": -1,
+        "expectedOutput": "-1",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/binary-search/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "BFS with queue."
+    ],
+    "editorial": "from collections import deque\n\ndef levelOrder(root):\n    if not root:\n        return []\n    out, q = [], deque([root])\n    while q:\n        level = []\n        for _ in range(len(q)):\n            node = q.popleft()\n            level.append(node.val)\n            if node.left:\n                q.append(node.left)\n            if node.right:\n                q.append(node.right)\n        out.append(level)\n    return out",
+    "starterCode": "",
+    "id": "dsa/binary-tree-level-order-traversal",
+    "slug": "binary-tree-level-order-traversal",
+    "track": "dsa",
+    "title": "Binary Tree Level Order Traversal",
+    "description": "Return level-order traversal.\n\nImplement `levelOrder` efficiently.",
+    "difficulty": "medium",
+    "topics": [
+      "tree"
+    ],
+    "constraints": [
+      "Follow the starter function signature",
+      "2000ms time limit per case"
+    ],
+    "examples": [],
+    "solution": "from collections import deque\n\ndef levelOrder(root):\n    if not root:\n        return []\n    out, q = [], deque([root])\n    while q:\n        level = []\n        for _ in range(len(q)):\n            node = q.popleft()\n            level.append(node.val)\n            if node.left:\n                q.append(node.left)\n            if node.right:\n                q.append(node.right)\n        out.append(level)\n    return out",
+    "judge": "compare",
+    "functionName": "levelOrder",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "code",
+        "expectedOutput": "reference",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/binary-tree-level-order-traversal/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Fibonacci DP."
+    ],
+    "editorial": "def climbStairs(n):\n    if n <= 2:\n        return n\n    a, b = 1, 2\n    for _ in range(3, n + 1):\n        a, b = b, a + b\n    return b",
+    "starterCode": "",
+    "id": "dsa/climbing-stairs",
+    "slug": "climbing-stairs",
+    "track": "dsa",
+    "title": "Climbing Stairs",
+    "description": "Ways to climb n steps taking 1 or 2 at a time.\n\nImplement `climbStairs` efficiently.",
+    "difficulty": "easy",
+    "topics": [
+      "dp"
+    ],
+    "constraints": [
+      "Follow the starter function signature",
+      "2000ms time limit per case"
+    ],
+    "examples": [
+      {
+        "input": "n=3",
+        "output": "3"
+      }
+    ],
+    "solution": "def climbStairs(n):\n    if n <= 2:\n        return n\n    a, b = 1, 2\n    for _ in range(3, n + 1):\n        a, b = b, a + b\n    return b",
+    "judge": "pyodide",
+    "functionName": "climbStairs",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "n=3",
+        "args": [
+          3
+        ],
+        "expected": 3,
+        "expectedOutput": "3",
+        "isHidden": false
+      },
+      {
+        "id": "2",
+        "input": "n=5",
+        "args": [
+          5
+        ],
+        "expected": 8,
+        "expectedOutput": "8",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/climbing-stairs/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Simple WHERE with AND on both flags."
+    ],
+    "editorial": "SELECT product_id\nFROM Products\nWHERE low_fats = 'Y' AND recyclable = 'Y';",
+    "starterCode": "",
+    "id": "sql/recyclable-and-low-fat-products",
+    "slug": "recyclable-and-low-fat-products",
+    "track": "sql",
+    "title": "Recyclable and Low Fat Products",
+    "description": "Return product ids where low_fats = 'Y' and recyclable = 'Y'.\n\n**Approach:** Simple WHERE with AND on both flags.",
+    "difficulty": "easy",
+    "topics": [
+      "filtering"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Products",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT product_id\nFROM Products\nWHERE low_fats = 'Y' AND recyclable = 'Y';",
+    "judge": "sql",
+    "tables": [
+      "Products"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/recyclable-and-low-fat-products/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Use referee <> 2 OR referee IS NULL — <> does not match NULL."
+    ],
+    "editorial": "SELECT name\nFROM Customer\nWHERE referee <> 2 OR referee IS NULL;",
+    "starterCode": "",
+    "id": "sql/find-customer-referee",
+    "slug": "find-customer-referee",
+    "track": "sql",
+    "title": "Find Customer Referee",
+    "description": "Customers whose referee is not 2, including NULL referees.\n\n**Approach:** Use referee <> 2 OR referee IS NULL — <> does not match NULL.\n\n*Dialect note:* On LeetCode (MySQL) the same NULL logic applies.",
+    "difficulty": "easy",
+    "topics": [
+      "filtering"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Customer",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT name\nFROM Customer\nWHERE referee <> 2 OR referee IS NULL;",
+    "judge": "sql",
+    "tables": [
+      "Customer"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/find-customer-referee/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "OR filter on two numeric thresholds."
+    ],
+    "editorial": "SELECT name, population, area\nFROM World\nWHERE area >= 3000000 OR population >= 25000000;",
+    "starterCode": "",
+    "id": "sql/big-countries",
+    "slug": "big-countries",
+    "track": "sql",
+    "title": "Big Countries",
+    "description": "Countries with area >= 3M km² or population >= 25M.\n\n**Approach:** OR filter on two numeric thresholds.",
+    "difficulty": "easy",
+    "topics": [
+      "filtering"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: World",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT name, population, area\nFROM World\nWHERE area >= 3000000 OR population >= 25000000;",
+    "judge": "sql",
+    "tables": [
+      "World"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/big-countries/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Filter author_id = viewer_id, GROUP BY author_id, HAVING COUNT(*) > 1."
+    ],
+    "editorial": "SELECT author_id AS id\nFROM Views\nWHERE author_id = viewer_id\nGROUP BY author_id\nHAVING COUNT(*) > 1;",
+    "starterCode": "",
+    "id": "sql/article-views-i",
+    "slug": "article-views-i",
+    "track": "sql",
+    "title": "Article Views I",
+    "description": "Authors who viewed their own articles more than once.\n\n**Approach:** Filter author_id = viewer_id, GROUP BY author_id, HAVING COUNT(*) > 1.",
+    "difficulty": "easy",
+    "topics": [
+      "filtering"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Views",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT author_id AS id\nFROM Views\nWHERE author_id = viewer_id\nGROUP BY author_id\nHAVING COUNT(*) > 1;",
+    "judge": "sql",
+    "tables": [
+      "Views"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/article-views-i/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "CHAR_LENGTH or LEN on content column."
+    ],
+    "editorial": "SELECT tweet_id\nFROM Tweets\nWHERE LEN(content) > 15;",
+    "starterCode": "",
+    "id": "sql/invalid-tweets",
+    "slug": "invalid-tweets",
+    "track": "sql",
+    "title": "Invalid Tweets",
+    "description": "Tweet ids where content length exceeds 15 characters.\n\n**Approach:** CHAR_LENGTH or LEN on content column.\n\n*Dialect note:* LeetCode uses CHAR_LENGTH; SQL Server uses LEN.",
+    "difficulty": "easy",
+    "topics": [
+      "filtering"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Tweets",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT tweet_id\nFROM Tweets\nWHERE LEN(content) > 15;",
+    "judge": "sql",
+    "tables": [
+      "Tweets"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/invalid-tweets/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "UNION ALL three SELECTs or UNPIVOT on store columns."
+    ],
+    "editorial": "SELECT product_id, 'store1' AS store, store1 AS price FROM Products\nUNION ALL\nSELECT product_id, 'store2', store2 FROM Products\nUNION ALL\nSELECT product_id, 'store3', store3 FROM Products;",
+    "starterCode": "",
+    "id": "sql/rearrange-products-table",
+    "slug": "rearrange-products-table",
+    "track": "sql",
+    "title": "Rearrange Products Table",
+    "description": "Unpivot store columns into (product_id, store, price) rows.\n\n**Approach:** UNION ALL three SELECTs or UNPIVOT on store columns.",
+    "difficulty": "easy",
+    "topics": [
+      "reporting"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Products",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT product_id, 'store1' AS store, store1 AS price FROM Products\nUNION ALL\nSELECT product_id, 'store2', store2 FROM Products\nUNION ALL\nSELECT product_id, 'store3', store3 FROM Products;",
+    "judge": "sql",
+    "tables": [
+      "Products"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/rearrange-products-table/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "JOIN Employees to EmployeeUNI on id = employee_id."
+    ],
+    "editorial": "SELECT u.unique_id, e.name\nFROM Employees e\nJOIN EmployeeUNI u ON e.id = u.employee_id;",
+    "starterCode": "",
+    "id": "sql/replace-employee-id-with-unique-identifier",
+    "slug": "replace-employee-id-with-unique-identifier",
+    "track": "sql",
+    "title": "Replace Employee ID With The Unique Identifier",
+    "description": "Map legacy id to unique id via join.\n\n**Approach:** JOIN Employees to EmployeeUNI on id = employee_id.",
+    "difficulty": "easy",
+    "topics": [
+      "join"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Employees, EmployeeUNI",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT u.unique_id, e.name\nFROM Employees e\nJOIN EmployeeUNI u ON e.id = u.employee_id;",
+    "judge": "sql",
+    "tables": [
+      "Employees",
+      "EmployeeUNI"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/replace-employee-id-with-unique-identifier/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "JOIN Sales to Product, project columns."
+    ],
+    "editorial": "SELECT p.product_name, s.year, s.price\nFROM Sales s\nJOIN Product p ON s.product_id = p.product_id;",
+    "starterCode": "",
+    "id": "sql/product-sales-analysis-i",
+    "slug": "product-sales-analysis-i",
+    "track": "sql",
+    "title": "Product Sales Analysis I",
+    "description": "Product name, year, and price for each sale.\n\n**Approach:** JOIN Sales to Product, project columns.",
+    "difficulty": "easy",
+    "topics": [
+      "join"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Sales, Product",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT p.product_name, s.year, s.price\nFROM Sales s\nJOIN Product p ON s.product_id = p.product_id;",
+    "judge": "sql",
+    "tables": [
+      "Sales",
+      "Product"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/product-sales-analysis-i/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "LEFT JOIN transactions, filter NULL transaction_id, GROUP BY customer."
+    ],
+    "editorial": "SELECT v.customer_id, COUNT(*) AS count_no_trans\nFROM Visits v\nLEFT JOIN Transactions t\n  ON v.visit_id = t.visit_id AND v.customer_id = t.customer_id\nWHERE t.transaction_id IS NULL\nGROUP BY v.customer_id;",
+    "starterCode": "",
+    "id": "sql/customer-who-visited-but-did-not-transact",
+    "slug": "customer-who-visited-but-did-not-transact",
+    "track": "sql",
+    "title": "Customer Who Visited but Did Not Make Any Transactions",
+    "description": "Count visits with zero transactions per customer.\n\n**Approach:** LEFT JOIN transactions, filter NULL transaction_id, GROUP BY customer.",
+    "difficulty": "easy",
+    "topics": [
+      "anti-join"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Visits, Transactions",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT v.customer_id, COUNT(*) AS count_no_trans\nFROM Visits v\nLEFT JOIN Transactions t\n  ON v.visit_id = t.visit_id AND v.customer_id = t.customer_id\nWHERE t.transaction_id IS NULL\nGROUP BY v.customer_id;",
+    "judge": "sql",
+    "tables": [
+      "Visits",
+      "Transactions"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/customer-who-visited-but-did-not-transact/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Self-join on date + 1 day, compare temperatures."
+    ],
+    "editorial": "SELECT w1.id\nFROM Weather w1\nJOIN Weather w2\n  ON DATEDIFF(day, w2.recordDate, w1.recordDate) = 1\nWHERE w1.temperature > w2.temperature;",
+    "starterCode": "",
+    "id": "sql/rising-temperature",
+    "slug": "rising-temperature",
+    "track": "sql",
+    "title": "Rising Temperature",
+    "description": "Dates where temperature is higher than the previous day.\n\n**Approach:** Self-join on date + 1 day, compare temperatures.\n\n*Dialect note:* LeetCode uses DATEDIFF; SQL Server uses DATEADD.",
+    "difficulty": "easy",
+    "topics": [
+      "self-join"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Weather",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT w1.id\nFROM Weather w1\nJOIN Weather w2\n  ON DATEDIFF(day, w2.recordDate, w1.recordDate) = 1\nWHERE w1.temperature > w2.temperature;",
+    "judge": "sql",
+    "tables": [
+      "Weather"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/rising-temperature/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "GROUP BY user_id, HAVING COUNT(*) >= 1000."
+    ],
+    "editorial": "SELECT user_id\nFROM Followers\nGROUP BY user_id\nHAVING COUNT(*) >= 1000;",
+    "starterCode": "",
+    "id": "sql/find-followers-count",
+    "slug": "find-followers-count",
+    "track": "sql",
+    "title": "Find Followers Count",
+    "description": "Users with at least 1000 followers.\n\n**Approach:** GROUP BY user_id, HAVING COUNT(*) >= 1000.",
+    "difficulty": "easy",
+    "topics": [
+      "aggregation"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Followers",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT user_id\nFROM Followers\nGROUP BY user_id\nHAVING COUNT(*) >= 1000;",
+    "judge": "sql",
+    "tables": [
+      "Followers"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/find-followers-count/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "GROUP BY num HAVING COUNT=1, then MAX."
+    ],
+    "editorial": "SELECT MAX(num) AS num\nFROM (\n  SELECT num\n  FROM MyNumbers\n  GROUP BY num\n  HAVING COUNT(*) = 1\n) x;",
+    "starterCode": "",
+    "id": "sql/biggest-single-number",
+    "slug": "biggest-single-number",
+    "track": "sql",
+    "title": "Biggest Single Number",
+    "description": "Largest number that appears exactly once.\n\n**Approach:** GROUP BY num HAVING COUNT=1, then MAX.",
+    "difficulty": "easy",
+    "topics": [
+      "aggregation"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: MyNumbers",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT MAX(num) AS num\nFROM (\n  SELECT num\n  FROM MyNumbers\n  GROUP BY num\n  HAVING COUNT(*) = 1\n) x;",
+    "judge": "sql",
+    "tables": [
+      "MyNumbers"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/biggest-single-number/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "JOIN and AVG grouped by project_id."
+    ],
+    "editorial": "SELECT p.project_id, ROUND(AVG(e.experience_years), 2) AS average_years\nFROM Project p\nJOIN Employee e ON p.employee_id = e.employee_id\nGROUP BY p.project_id;",
+    "starterCode": "",
+    "id": "sql/project-employees-i",
+    "slug": "project-employees-i",
+    "track": "sql",
+    "title": "Project Employees I",
+    "description": "Average experience years per project.\n\n**Approach:** JOIN and AVG grouped by project_id.",
+    "difficulty": "easy",
+    "topics": [
+      "aggregation"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Project, Employee",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT p.project_id, ROUND(AVG(e.experience_years), 2) AS average_years\nFROM Project p\nJOIN Employee e ON p.employee_id = e.employee_id\nGROUP BY p.project_id;",
+    "judge": "sql",
+    "tables": [
+      "Project",
+      "Employee"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/project-employees-i/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "GROUP BY product, use MIN(year) and MAX(year) both = 2018."
+    ],
+    "editorial": "SELECT p.product_id, p.product_name\nFROM Sales s\nJOIN Product p ON s.product_id = p.product_id\nGROUP BY p.product_id, p.product_name\nHAVING MIN(s.year) = 2018 AND MAX(s.year) = 2018;",
+    "starterCode": "",
+    "id": "sql/sales-analysis-iii",
+    "slug": "sales-analysis-iii",
+    "track": "sql",
+    "title": "Sales Analysis III",
+    "description": "Products sold only in first year (2018) and never in 2019.\n\n**Approach:** GROUP BY product, use MIN(year) and MAX(year) both = 2018.",
+    "difficulty": "easy",
+    "topics": [
+      "aggregation"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Product, Sales",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT p.product_id, p.product_name\nFROM Sales s\nJOIN Product p ON s.product_id = p.product_id\nGROUP BY p.product_id, p.product_name\nHAVING MIN(s.year) = 2018 AND MAX(s.year) = 2018;",
+    "judge": "sql",
+    "tables": [
+      "Product",
+      "Sales"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/sales-analysis-iii/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "RANK or DENSE_RANK partitioned by day on amount."
+    ],
+    "editorial": "SELECT transaction_id\nFROM (\n  SELECT transaction_id,\n    DENSE_RANK() OVER (\n      PARTITION BY DAY(day) ORDER BY amount DESC\n    ) AS dr\n  FROM Transactions\n) x\nWHERE dr = 1;",
+    "starterCode": "",
+    "id": "sql/maximum-transaction-each-day",
+    "slug": "maximum-transaction-each-day",
+    "track": "sql",
+    "title": "Maximum Transaction Each Day",
+    "description": "Highest amount transaction per day (ties included).\n\n**Approach:** RANK or DENSE_RANK partitioned by day on amount.",
+    "difficulty": "medium",
+    "topics": [
+      "window"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Transactions",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT transaction_id\nFROM (\n  SELECT transaction_id,\n    DENSE_RANK() OVER (\n      PARTITION BY DAY(day) ORDER BY amount DESC\n    ) AS dr\n  FROM Transactions\n) x\nWHERE dr = 1;",
+    "judge": "sql",
+    "tables": [
+      "Transactions"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/maximum-transaction-each-day/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "MAX where salary < (SELECT MAX(salary)) or DENSE_RANK = 2."
+    ],
+    "editorial": "SELECT MAX(salary) AS SecondHighestSalary\nFROM Employee\nWHERE salary < (SELECT MAX(salary) FROM Employee);",
+    "starterCode": "",
+    "id": "sql/second-highest-salary",
+    "slug": "second-highest-salary",
+    "track": "sql",
+    "title": "Second Highest Salary",
+    "description": "Return the second highest distinct salary.\n\n**Approach:** MAX where salary < (SELECT MAX(salary)) or DENSE_RANK = 2.",
+    "difficulty": "medium",
+    "topics": [
+      "ranking"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Employee",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT MAX(salary) AS SecondHighestSalary\nFROM Employee\nWHERE salary < (SELECT MAX(salary) FROM Employee);",
+    "judge": "sql",
+    "tables": [
+      "Employee"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/second-highest-salary/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "DENSE_RANK in subquery filtered to N."
+    ],
+    "editorial": "-- LeetCode expects a function; core query:\nSELECT salary\nFROM (\n  SELECT salary, DENSE_RANK() OVER (ORDER BY salary DESC) AS rk\n  FROM Employee\n) x\nWHERE rk = @N;",
+    "starterCode": "",
+    "id": "sql/nth-highest-salary",
+    "slug": "nth-highest-salary",
+    "track": "sql",
+    "title": "Nth Highest Salary",
+    "description": "Function returning Nth highest salary.\n\n**Approach:** DENSE_RANK in subquery filtered to N.",
+    "difficulty": "medium",
+    "topics": [
+      "ranking"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Employee",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "-- LeetCode expects a function; core query:\nSELECT salary\nFROM (\n  SELECT salary, DENSE_RANK() OVER (ORDER BY salary DESC) AS rk\n  FROM Employee\n) x\nWHERE rk = @N;",
+    "judge": "sql",
+    "tables": [
+      "Employee"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/nth-highest-salary/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "RANK() OVER (ORDER BY score DESC)."
+    ],
+    "editorial": "SELECT score,\n  RANK() OVER (ORDER BY score DESC) AS rank\nFROM Scores;",
+    "starterCode": "",
+    "id": "sql/rank-scores",
+    "slug": "rank-scores",
+    "track": "sql",
+    "title": "Rank Scores",
+    "description": "Rank scores with ties (gaps after ties).\n\n**Approach:** RANK() OVER (ORDER BY score DESC).",
+    "difficulty": "medium",
+    "topics": [
+      "window"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Scores",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT score,\n  RANK() OVER (ORDER BY score DESC) AS rank\nFROM Scores;",
+    "judge": "sql",
+    "tables": [
+      "Scores"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/rank-scores/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Self-join id+1 and id+2 with same num, or LAG window."
+    ],
+    "editorial": "SELECT DISTINCT l1.num AS ConsecutiveNums\nFROM Logs l1\nJOIN Logs l2 ON l1.id = l2.id - 1 AND l1.num = l2.num\nJOIN Logs l3 ON l2.id = l3.id - 1 AND l2.num = l3.num;",
+    "starterCode": "",
+    "id": "sql/consecutive-numbers",
+    "slug": "consecutive-numbers",
+    "track": "sql",
+    "title": "Consecutive Numbers",
+    "description": "Numbers appearing at least three times in a row.\n\n**Approach:** Self-join id+1 and id+2 with same num, or LAG window.",
+    "difficulty": "medium",
+    "topics": [
+      "consecutive"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Logs",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT DISTINCT l1.num AS ConsecutiveNums\nFROM Logs l1\nJOIN Logs l2 ON l1.id = l2.id - 1 AND l1.num = l2.num\nJOIN Logs l3 ON l2.id = l3.id - 1 AND l2.num = l3.num;",
+    "judge": "sql",
+    "tables": [
+      "Logs"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/consecutive-numbers/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Self-join employee to manager on managerId."
+    ],
+    "editorial": "SELECT e1.name AS Employee\nFROM Employee e1\nJOIN Employee e2 ON e1.managerId = e2.id\nWHERE e1.salary > e2.salary;",
+    "starterCode": "",
+    "id": "sql/employees-earning-more-than-managers",
+    "slug": "employees-earning-more-than-managers",
+    "track": "sql",
+    "title": "Employees Earning More Than Their Managers",
+    "description": "Employees paid more than their direct manager.\n\n**Approach:** Self-join employee to manager on managerId.",
+    "difficulty": "easy",
+    "topics": [
+      "self-join"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Employee",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT e1.name AS Employee\nFROM Employee e1\nJOIN Employee e2 ON e1.managerId = e2.id\nWHERE e1.salary > e2.salary;",
+    "judge": "sql",
+    "tables": [
+      "Employee"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/employees-earning-more-than-managers/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "GROUP BY email HAVING COUNT(*) > 1."
+    ],
+    "editorial": "SELECT email\nFROM Person\nGROUP BY email\nHAVING COUNT(*) > 1;",
+    "starterCode": "",
+    "id": "sql/duplicate-emails",
+    "slug": "duplicate-emails",
+    "track": "sql",
+    "title": "Duplicate Emails",
+    "description": "Emails that appear more than once.\n\n**Approach:** GROUP BY email HAVING COUNT(*) > 1.",
+    "difficulty": "easy",
+    "topics": [
+      "duplicate"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Person",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT email\nFROM Person\nGROUP BY email\nHAVING COUNT(*) > 1;",
+    "judge": "sql",
+    "tables": [
+      "Person"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/duplicate-emails/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "LEFT JOIN orders WHERE order id IS NULL, or NOT EXISTS."
+    ],
+    "editorial": "SELECT c.name AS Customers\nFROM Customers c\nLEFT JOIN Orders o ON c.id = o.customerId\nWHERE o.id IS NULL;",
+    "starterCode": "",
+    "id": "sql/customers-who-never-order",
+    "slug": "customers-who-never-order",
+    "track": "sql",
+    "title": "Customers Who Never Order",
+    "description": "Customer names with no orders.\n\n**Approach:** LEFT JOIN orders WHERE order id IS NULL, or NOT EXISTS.",
+    "difficulty": "easy",
+    "topics": [
+      "anti-join"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Customers, Orders",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT c.name AS Customers\nFROM Customers c\nLEFT JOIN Orders o ON c.id = o.customerId\nWHERE o.id IS NULL;",
+    "judge": "sql",
+    "tables": [
+      "Customers",
+      "Orders"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/customers-who-never-order/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Join dept, filter salary = MAX per department."
+    ],
+    "editorial": "SELECT d.name AS Department, e.name AS Employee, e.salary\nFROM Employee e\nJOIN Department d ON e.departmentId = d.id\nWHERE e.salary = (\n  SELECT MAX(salary) FROM Employee e2\n  WHERE e2.departmentId = e.departmentId\n);",
+    "starterCode": "",
+    "id": "sql/department-highest-salary",
+    "slug": "department-highest-salary",
+    "track": "sql",
+    "title": "Department Highest Salary",
+    "description": "Employee with max salary in each department.\n\n**Approach:** Join dept, filter salary = MAX per department.",
+    "difficulty": "medium",
+    "topics": [
+      "ranking"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Employee, Department",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT d.name AS Department, e.name AS Employee, e.salary\nFROM Employee e\nJOIN Department d ON e.departmentId = d.id\nWHERE e.salary = (\n  SELECT MAX(salary) FROM Employee e2\n  WHERE e2.departmentId = e.departmentId\n);",
+    "judge": "sql",
+    "tables": [
+      "Employee",
+      "Department"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/department-highest-salary/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "DENSE_RANK partitioned by department ORDER BY salary DESC <= 3."
+    ],
+    "editorial": "SELECT d.name AS Department, e.name AS Employee, e.salary\nFROM (\n  SELECT *, DENSE_RANK() OVER (\n    PARTITION BY departmentId ORDER BY salary DESC\n  ) AS dr\n  FROM Employee\n) e\nJOIN Department d ON e.departmentId = d.id\nWHERE e.dr <= 3;",
+    "starterCode": "",
+    "id": "sql/department-top-three-salaries",
+    "slug": "department-top-three-salaries",
+    "track": "sql",
+    "title": "Department Top Three Salaries",
+    "description": "Top 3 salaries per department (ties may yield more than 3).\n\n**Approach:** DENSE_RANK partitioned by department ORDER BY salary DESC <= 3.",
+    "difficulty": "hard",
+    "topics": [
+      "window"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Employee, Department",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT d.name AS Department, e.name AS Employee, e.salary\nFROM (\n  SELECT *, DENSE_RANK() OVER (\n    PARTITION BY departmentId ORDER BY salary DESC\n  ) AS dr\n  FROM Employee\n) e\nJOIN Department d ON e.departmentId = d.id\nWHERE e.dr <= 3;",
+    "judge": "sql",
+    "tables": [
+      "Employee",
+      "Department"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/department-top-three-salaries/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "DELETE where id not in min(id) per email group."
+    ],
+    "editorial": "DELETE p1\nFROM Person p1\nJOIN Person p2\n  ON p1.email = p2.email AND p1.id > p2.id;",
+    "starterCode": "",
+    "id": "sql/delete-duplicate-emails",
+    "slug": "delete-duplicate-emails",
+    "track": "sql",
+    "title": "Delete Duplicate Emails",
+    "description": "Keep one row per email (lowest id).\n\n**Approach:** DELETE where id not in min(id) per email group.\n\n*Dialect note:* LeetCode allows DELETE with subquery; test on their editor.",
+    "difficulty": "easy",
+    "topics": [
+      "duplicate"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Person",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "DELETE p1\nFROM Person p1\nJOIN Person p2\n  ON p1.email = p2.email AND p1.id > p2.id;",
+    "judge": "sql",
+    "tables": [
+      "Person"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/delete-duplicate-emails/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "GROUP BY player_id, MIN(event_date)."
+    ],
+    "editorial": "SELECT player_id, MIN(event_date) AS first_login\nFROM Activity\nGROUP BY player_id;",
+    "starterCode": "",
+    "id": "sql/game-play-analysis-i",
+    "slug": "game-play-analysis-i",
+    "track": "sql",
+    "title": "Game Play Analysis I",
+    "description": "First login date per player.\n\n**Approach:** GROUP BY player_id, MIN(event_date).",
+    "difficulty": "easy",
+    "topics": [
+      "aggregation"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Activity",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT player_id, MIN(event_date) AS first_login\nFROM Activity\nGROUP BY player_id;",
+    "judge": "sql",
+    "tables": [
+      "Activity"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/game-play-analysis-i/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "CTE first login, count day+1 logins / total players."
+    ],
+    "editorial": "WITH first AS (\n  SELECT player_id, MIN(event_date) AS first_login\n  FROM Activity GROUP BY player_id\n)\nSELECT ROUND(\n  1.0 * SUM(CASE WHEN DATEDIFF(day, f.first_login, a.event_date) = 1 THEN 1 ELSE 0 END)\n  / COUNT(DISTINCT f.player_id), 2\n) AS fraction\nFROM first f\nLEFT JOIN Activity a ON f.player_id = a.player_id;",
+    "starterCode": "",
+    "id": "sql/game-play-analysis-ii",
+    "slug": "game-play-analysis-ii",
+    "track": "sql",
+    "title": "Game Play Analysis II",
+    "description": "Fraction of players who logged in on day 1 and day 2 after first login.\n\n**Approach:** CTE first login, count day+1 logins / total players.",
+    "difficulty": "easy",
+    "topics": [
+      "date"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Activity",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "WITH first AS (\n  SELECT player_id, MIN(event_date) AS first_login\n  FROM Activity GROUP BY player_id\n)\nSELECT ROUND(\n  1.0 * SUM(CASE WHEN DATEDIFF(day, f.first_login, a.event_date) = 1 THEN 1 ELSE 0 END)\n  / COUNT(DISTINCT f.player_id), 2\n) AS fraction\nFROM first f\nLEFT JOIN Activity a ON f.player_id = a.player_id;",
+    "judge": "sql",
+    "tables": [
+      "Activity"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/game-play-analysis-ii/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Date minus row_number grouping (islands pattern)."
+    ],
+    "editorial": "WITH d AS (\n  SELECT player_id, event_date,\n    DATEADD(day, -ROW_NUMBER() OVER (\n      PARTITION BY player_id ORDER BY event_date\n    ), event_date) AS grp\n  FROM (SELECT DISTINCT player_id, event_date FROM Activity) x\n)\nSELECT DISTINCT player_id\nFROM d\nGROUP BY player_id, grp\nHAVING COUNT(*) >= 5;",
+    "starterCode": "",
+    "id": "sql/game-play-analysis-iii",
+    "slug": "game-play-analysis-iii",
+    "track": "sql",
+    "title": "Game Play Analysis III",
+    "description": "Players with login streak of at least 5 consecutive days.\n\n**Approach:** Date minus row_number grouping (islands pattern).",
+    "difficulty": "hard",
+    "topics": [
+      "consecutive"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Activity",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "WITH d AS (\n  SELECT player_id, event_date,\n    DATEADD(day, -ROW_NUMBER() OVER (\n      PARTITION BY player_id ORDER BY event_date\n    ), event_date) AS grp\n  FROM (SELECT DISTINCT player_id, event_date FROM Activity) x\n)\nSELECT DISTINCT player_id\nFROM d\nGROUP BY player_id, grp\nHAVING COUNT(*) >= 5;",
+    "judge": "sql",
+    "tables": [
+      "Activity"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/game-play-analysis-iii/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Self-join activity within 7-day window of first login."
+    ],
+    "editorial": "WITH first AS (\n  SELECT player_id, MIN(event_date) AS install\n  FROM Activity GROUP BY player_id\n)\nSELECT a.event_date AS install_dt,\n  ROUND(100.0 * COUNT(DISTINCT b.player_id) / COUNT(DISTINCT a.player_id), 2) AS percentage\nFROM first a\nJOIN Activity b\n  ON a.player_id = b.player_id\n AND b.event_date BETWEEN a.install AND DATEADD(day, 6, a.install)\nGROUP BY a.event_date;",
+    "starterCode": "",
+    "id": "sql/game-play-analysis-iv",
+    "slug": "game-play-analysis-iv",
+    "track": "sql",
+    "title": "Game Play Analysis IV",
+    "description": "Percentage of players active each day in first 7 days after install.\n\n**Approach:** Self-join activity within 7-day window of first login.",
+    "difficulty": "medium",
+    "topics": [
+      "date"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Activity",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "WITH first AS (\n  SELECT player_id, MIN(event_date) AS install\n  FROM Activity GROUP BY player_id\n)\nSELECT a.event_date AS install_dt,\n  ROUND(100.0 * COUNT(DISTINCT b.player_id) / COUNT(DISTINCT a.player_id), 2) AS percentage\nFROM first a\nJOIN Activity b\n  ON a.player_id = b.player_id\n AND b.event_date BETWEEN a.install AND DATEADD(day, 6, a.install)\nGROUP BY a.event_date;",
+    "judge": "sql",
+    "tables": [
+      "Activity"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/game-play-analysis-iv/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "GROUP BY managerId HAVING COUNT >= 5, join for name."
+    ],
+    "editorial": "SELECT e2.name\nFROM Employee e1\nJOIN Employee e2 ON e1.managerId = e2.id\nGROUP BY e2.id, e2.name\nHAVING COUNT(*) >= 5;",
+    "starterCode": "",
+    "id": "sql/managers-with-at-least-5-direct-reports",
+    "slug": "managers-with-at-least-5-direct-reports",
+    "track": "sql",
+    "title": "Managers with At Least 5 Direct Reports",
+    "description": "Manager names with 5+ direct reports.\n\n**Approach:** GROUP BY managerId HAVING COUNT >= 5, join for name.",
+    "difficulty": "medium",
+    "topics": [
+      "aggregation"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Employee",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT e2.name\nFROM Employee e1\nJOIN Employee e2 ON e1.managerId = e2.id\nGROUP BY e2.id, e2.name\nHAVING COUNT(*) >= 5;",
+    "judge": "sql",
+    "tables": [
+      "Employee"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/managers-with-at-least-5-direct-reports/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Running sum window to find middle position."
+    ],
+    "editorial": "WITH expanded AS (\n  SELECT num FROM Numbers\n  -- expand by frequency in practice; LC schema uses freq column\n),\nranked AS (\n  SELECT num, ROW_NUMBER() OVER (ORDER BY num) AS rn,\n    COUNT(*) OVER () AS cnt\n  FROM expanded\n)\nSELECT AVG(1.0 * num) AS median\nFROM ranked\nWHERE rn IN ((cnt + 1) / 2, (cnt + 2) / 2);",
+    "starterCode": "",
+    "id": "sql/find-median-given-frequency-of-numbers",
+    "slug": "find-median-given-frequency-of-numbers",
+    "track": "sql",
+    "title": "Find Median Given Frequency of Numbers",
+    "description": "Median from frequency table.\n\n**Approach:** Running sum window to find middle position.",
+    "difficulty": "hard",
+    "topics": [
+      "window"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Numbers",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "WITH expanded AS (\n  SELECT num FROM Numbers\n  -- expand by frequency in practice; LC schema uses freq column\n),\nranked AS (\n  SELECT num, ROW_NUMBER() OVER (ORDER BY num) AS rn,\n    COUNT(*) OVER () AS cnt\n  FROM expanded\n)\nSELECT AVG(1.0 * num) AS median\nFROM ranked\nWHERE rn IN ((cnt + 1) / 2, (cnt + 2) / 2);",
+    "judge": "sql",
+    "tables": [
+      "Numbers"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/find-median-given-frequency-of-numbers/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Self-join on seat id difference 1 with both free."
+    ],
+    "editorial": "SELECT DISTINCT c1.seat_id\nFROM Cinema c1\nJOIN Cinema c2\n  ON ABS(c1.seat_id - c2.seat_id) = 1\n AND c1.free = 1 AND c2.free = 1\nORDER BY c1.seat_id;",
+    "starterCode": "",
+    "id": "sql/consecutive-available-seats",
+    "slug": "consecutive-available-seats",
+    "track": "sql",
+    "title": "Consecutive Available Seats",
+    "description": "Seat ids that are free and next to another free seat.\n\n**Approach:** Self-join on seat id difference 1 with both free.",
+    "difficulty": "medium",
+    "topics": [
+      "consecutive"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Cinema",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT DISTINCT c1.seat_id\nFROM Cinema c1\nJOIN Cinema c2\n  ON ABS(c1.seat_id - c2.seat_id) = 1\n AND c1.free = 1 AND c2.free = 1\nORDER BY c1.seat_id;",
+    "judge": "sql",
+    "tables": [
+      "Cinema"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/consecutive-available-seats/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "NOT EXISTS orders linked to RED company."
+    ],
+    "editorial": "SELECT s.name\nFROM SalesPerson s\nWHERE NOT EXISTS (\n  SELECT 1\n  FROM Orders o\n  JOIN Company c ON o.company_id = c.com_id\n  WHERE o.sales_id = s.sales_id AND c.name = 'RED'\n);",
+    "starterCode": "",
+    "id": "sql/sales-person",
+    "slug": "sales-person",
+    "track": "sql",
+    "title": "Sales Person",
+    "description": "Salespeople with no orders for RED company.\n\n**Approach:** NOT EXISTS orders linked to RED company.",
+    "difficulty": "easy",
+    "topics": [
+      "anti-join"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: SalesPerson, Orders, Company",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT s.name\nFROM SalesPerson s\nWHERE NOT EXISTS (\n  SELECT 1\n  FROM Orders o\n  JOIN Company c ON o.company_id = c.com_id\n  WHERE o.sales_id = s.sales_id AND c.name = 'RED'\n);",
+    "judge": "sql",
+    "tables": [
+      "SalesPerson",
+      "Orders",
+      "Company"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/sales-person/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Three inequality checks in WHERE."
+    ],
+    "editorial": "SELECT x, y, z\nFROM Triangle\nWHERE x + y > z AND x + z > y AND y + z > x;",
+    "starterCode": "",
+    "id": "sql/triangle-judgement",
+    "slug": "triangle-judgement",
+    "track": "sql",
+    "title": "Triangle Judgement",
+    "description": "Rows where x+y>z, x+z>y, y+z>x.\n\n**Approach:** Three inequality checks in WHERE.",
+    "difficulty": "easy",
+    "topics": [
+      "filtering"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Triangle",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT x, y, z\nFROM Triangle\nWHERE x + y > z AND x + z > y AND y + z > x;",
+    "judge": "sql",
+    "tables": [
+      "Triangle"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/triangle-judgement/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Self-join all pairs, compute distance, MIN."
+    ],
+    "editorial": "SELECT ROUND(MIN(SQRT(POWER(p1.x - p2.x, 2) + POWER(p1.y - p2.y, 2))), 2) AS shortest\nFROM Point2D p1\nJOIN Point2D p2\n  ON (p1.x <> p2.x OR p1.y <> p2.y);",
+    "starterCode": "",
+    "id": "sql/shortest-distance-in-a-plane",
+    "slug": "shortest-distance-in-a-plane",
+    "track": "sql",
+    "title": "Shortest Distance in a Plane",
+    "description": "Minimum Euclidean distance between any two points.\n\n**Approach:** Self-join all pairs, compute distance, MIN.",
+    "difficulty": "medium",
+    "topics": [
+      "self-join"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Point2D",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT ROUND(MIN(SQRT(POWER(p1.x - p2.x, 2) + POWER(p1.y - p2.y, 2))), 2) AS shortest\nFROM Point2D p1\nJOIN Point2D p2\n  ON (p1.x <> p2.x OR p1.y <> p2.y);",
+    "judge": "sql",
+    "tables": [
+      "Point2D"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/shortest-distance-in-a-plane/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Join Follow to itself on followee/follower chain."
+    ],
+    "editorial": "SELECT DISTINCT f1.follower\nFROM Follow f1\nJOIN Follow f2 ON f1.followee = f2.follower;",
+    "starterCode": "",
+    "id": "sql/second-degree-follower",
+    "slug": "second-degree-follower",
+    "track": "sql",
+    "title": "Second Degree Follower",
+    "description": "Users followed by someone you follow.\n\n**Approach:** Join Follow to itself on followee/follower chain.",
+    "difficulty": "medium",
+    "topics": [
+      "join"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Follow",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT DISTINCT f1.follower\nFROM Follow f1\nJOIN Follow f2 ON f1.followee = f2.follower;",
+    "judge": "sql",
+    "tables": [
+      "Follow"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/second-degree-follower/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "CASE on id parity with neighbor id."
+    ],
+    "editorial": "SELECT\n  CASE\n    WHEN id = (SELECT MAX(id) FROM Seat) AND id % 2 = 1 THEN id\n    WHEN id % 2 = 1 THEN id + 1\n    ELSE id - 1\n  END AS id,\n  student\nFROM Seat\nORDER BY id;",
+    "starterCode": "",
+    "id": "sql/exchange-seats",
+    "slug": "exchange-seats",
+    "track": "sql",
+    "title": "Exchange Seats",
+    "description": "Swap adjacent seat ids; last stays if odd count.\n\n**Approach:** CASE on id parity with neighbor id.",
+    "difficulty": "medium",
+    "topics": [
+      "reporting"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Seat",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT\n  CASE\n    WHEN id = (SELECT MAX(id) FROM Seat) AND id % 2 = 1 THEN id\n    WHEN id % 2 = 1 THEN id + 1\n    ELSE id - 1\n  END AS id,\n  student\nFROM Seat\nORDER BY id;",
+    "judge": "sql",
+    "tables": [
+      "Seat"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/exchange-seats/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "GROUP BY customer HAVING COUNT(DISTINCT product) = total products."
+    ],
+    "editorial": "SELECT customer_id\nFROM Customer\nGROUP BY customer_id\nHAVING COUNT(DISTINCT product_key) = (SELECT COUNT(*) FROM Product);",
+    "starterCode": "",
+    "id": "sql/customers-who-bought-all-products",
+    "slug": "customers-who-bought-all-products",
+    "track": "sql",
+    "title": "Customers Who Bought All Products",
+    "description": "Customers who purchased every product in catalog.\n\n**Approach:** GROUP BY customer HAVING COUNT(DISTINCT product) = total products.",
+    "difficulty": "medium",
+    "topics": [
+      "aggregation"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Customer, Product",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT customer_id\nFROM Customer\nGROUP BY customer_id\nHAVING COUNT(DISTINCT product_key) = (SELECT COUNT(*) FROM Product);",
+    "judge": "sql",
+    "tables": [
+      "Customer",
+      "Product"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/customers-who-bought-all-products/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "GROUP BY actor, director HAVING COUNT >= 3."
+    ],
+    "editorial": "SELECT actor_id, director_id\nFROM ActorDirector\nGROUP BY actor_id, director_id\nHAVING COUNT(*) >= 3;",
+    "starterCode": "",
+    "id": "sql/actors-and-directors-cooperated-three-times",
+    "slug": "actors-and-directors-cooperated-three-times",
+    "track": "sql",
+    "title": "Actors and Directors Who Cooperated At Least Three Times",
+    "description": "Pairs with 3+ joint movies.\n\n**Approach:** GROUP BY actor, director HAVING COUNT >= 3.",
+    "difficulty": "easy",
+    "topics": [
+      "aggregation"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: ActorDirector",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT actor_id, director_id\nFROM ActorDirector\nGROUP BY actor_id, director_id\nHAVING COUNT(*) >= 3;",
+    "judge": "sql",
+    "tables": [
+      "ActorDirector"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/actors-and-directors-cooperated-three-times/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "LEFT JOIN product to sales, SUM quantity."
+    ],
+    "editorial": "SELECT p.product_name, ISNULL(SUM(s.quantity), 0) AS total\nFROM Product p\nLEFT JOIN Sales s ON p.product_id = s.product_id\nGROUP BY p.product_name;",
+    "starterCode": "",
+    "id": "sql/product-sales-analysis-ii",
+    "slug": "product-sales-analysis-ii",
+    "track": "sql",
+    "title": "Product Sales Analysis II",
+    "description": "Total sales quantity per product (no sales = 0).\n\n**Approach:** LEFT JOIN product to sales, SUM quantity.",
+    "difficulty": "easy",
+    "topics": [
+      "aggregation"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Sales, Product",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT p.product_name, ISNULL(SUM(s.quantity), 0) AS total\nFROM Product p\nLEFT JOIN Sales s ON p.product_id = s.product_id\nGROUP BY p.product_name;",
+    "judge": "sql",
+    "tables": [
+      "Sales",
+      "Product"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/product-sales-analysis-ii/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "ROW_NUMBER by experience DESC, employee_id ASC per project."
+    ],
+    "editorial": "SELECT project_id, employee_id\nFROM (\n  SELECT p.project_id, p.employee_id,\n    ROW_NUMBER() OVER (\n      PARTITION BY p.project_id\n      ORDER BY e.experience_years DESC, p.employee_id\n    ) AS rn\n  FROM Project p\n  JOIN Employee e ON p.employee_id = e.employee_id\n) x\nWHERE rn = 1;",
+    "starterCode": "",
+    "id": "sql/project-employees-ii",
+    "slug": "project-employees-ii",
+    "track": "sql",
+    "title": "Project Employees II",
+    "description": "Most experienced employee per project (ties → lowest id).\n\n**Approach:** ROW_NUMBER by experience DESC, employee_id ASC per project.",
+    "difficulty": "easy",
+    "topics": [
+      "ranking"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Project, Employee",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT project_id, employee_id\nFROM (\n  SELECT p.project_id, p.employee_id,\n    ROW_NUMBER() OVER (\n      PARTITION BY p.project_id\n      ORDER BY e.experience_years DESC, p.employee_id\n    ) AS rn\n  FROM Project p\n  JOIN Employee e ON p.employee_id = e.employee_id\n) x\nWHERE rn = 1;",
+    "judge": "sql",
+    "tables": [
+      "Project",
+      "Employee"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/project-employees-ii/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "LEFT JOIN 2018 sales, filter NULL."
+    ],
+    "editorial": "SELECT p.product_id, p.product_name\nFROM Product p\nLEFT JOIN Sales s\n  ON p.product_id = s.product_id AND s.year = 2018\nWHERE s.product_id IS NULL;",
+    "starterCode": "",
+    "id": "sql/sales-analysis-i",
+    "slug": "sales-analysis-i",
+    "track": "sql",
+    "title": "Sales Analysis I",
+    "description": "Products with no sales in 2018.\n\n**Approach:** LEFT JOIN 2018 sales, filter NULL.",
+    "difficulty": "easy",
+    "topics": [
+      "filtering"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Product, Sales",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT p.product_id, p.product_name\nFROM Product p\nLEFT JOIN Sales s\n  ON p.product_id = s.product_id AND s.year = 2018\nWHERE s.product_id IS NULL;",
+    "judge": "sql",
+    "tables": [
+      "Product",
+      "Sales"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/sales-analysis-i/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "GROUP BY product HAVING both years in set."
+    ],
+    "editorial": "SELECT p.product_id, p.product_name\nFROM Sales s\nJOIN Product p ON s.product_id = p.product_id\nGROUP BY p.product_id, p.product_name\nHAVING SUM(CASE WHEN s.year = 2018 THEN 1 ELSE 0 END) > 0\n   AND SUM(CASE WHEN s.year = 2019 THEN 1 ELSE 0 END) > 0;",
+    "starterCode": "",
+    "id": "sql/sales-analysis-ii",
+    "slug": "sales-analysis-ii",
+    "track": "sql",
+    "title": "Sales Analysis II",
+    "description": "Products with sales in both 2018 and 2019.\n\n**Approach:** GROUP BY product HAVING both years in set.",
+    "difficulty": "easy",
+    "topics": [
+      "aggregation"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Product, Sales",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT p.product_id, p.product_name\nFROM Sales s\nJOIN Product p ON s.product_id = p.product_id\nGROUP BY p.product_id, p.product_name\nHAVING SUM(CASE WHEN s.year = 2018 THEN 1 ELSE 0 END) > 0\n   AND SUM(CASE WHEN s.year = 2019 THEN 1 ELSE 0 END) > 0;",
+    "judge": "sql",
+    "tables": [
+      "Product",
+      "Sales"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/sales-analysis-ii/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "ROW_NUMBER partition student order grade desc, course asc."
+    ],
+    "editorial": "SELECT student_id, course_id, grade\nFROM (\n  SELECT *, ROW_NUMBER() OVER (\n    PARTITION BY student_id ORDER BY grade DESC, course_id\n  ) AS rn\n  FROM Enrollments\n) x\nWHERE rn = 1;",
+    "starterCode": "",
+    "id": "sql/highest-grade-for-each-student",
+    "slug": "highest-grade-for-each-student",
+    "track": "sql",
+    "title": "Highest Grade For Each Student",
+    "description": "One row per student with their max grade (ties → lowest course).\n\n**Approach:** ROW_NUMBER partition student order grade desc, course asc.",
+    "difficulty": "medium",
+    "topics": [
+      "ranking"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Enrollments",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT student_id, course_id, grade\nFROM (\n  SELECT *, ROW_NUMBER() OVER (\n    PARTITION BY student_id ORDER BY grade DESC, course_id\n  ) AS rn\n  FROM Enrollments\n) x\nWHERE rn = 1;",
+    "judge": "sql",
+    "tables": [
+      "Enrollments"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/highest-grade-for-each-student/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Filter activity_date window, GROUP BY day."
+    ],
+    "editorial": "SELECT activity_date AS day, COUNT(DISTINCT user_id) AS active_users\nFROM Activity\nWHERE activity_date > DATEADD(day, -30, '2019-07-27')\nGROUP BY activity_date;",
+    "starterCode": "",
+    "id": "sql/user-activity-for-the-past-30-days-i",
+    "slug": "user-activity-for-the-past-30-days-i",
+    "track": "sql",
+    "title": "User Activity for the Past 30 Days I",
+    "description": "Daily active user count for last 30 days.\n\n**Approach:** Filter activity_date window, GROUP BY day.",
+    "difficulty": "easy",
+    "topics": [
+      "date"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Activity",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT activity_date AS day, COUNT(DISTINCT user_id) AS active_users\nFROM Activity\nWHERE activity_date > DATEADD(day, -30, '2019-07-27')\nGROUP BY activity_date;",
+    "judge": "sql",
+    "tables": [
+      "Activity"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/user-activity-for-the-past-30-days-i/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Join users/orders/items, filter year and return flag."
+    ],
+    "editorial": "SELECT u.user_id AS buyer_id, u.join_date\nFROM Users u\nJOIN Orders o ON u.user_id = o.buyer_id\nJOIN Items i ON o.order_id = i.order_id\nWHERE YEAR(o.order_date) = 2019 AND i.item_id IS NOT NULL\nGROUP BY u.user_id, u.join_date\nHAVING SUM(CASE WHEN i.is_return = 'approved' THEN 1 ELSE 0 END) = 0;",
+    "starterCode": "",
+    "id": "sql/market-analysis-i",
+    "slug": "market-analysis-i",
+    "track": "sql",
+    "title": "Market Analysis I",
+    "description": "Buyers in 2019 with no approve return in 2019.\n\n**Approach:** Join users/orders/items, filter year and return flag.",
+    "difficulty": "medium",
+    "topics": [
+      "join"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Users, Orders, Items",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT u.user_id AS buyer_id, u.join_date\nFROM Users u\nJOIN Orders o ON u.user_id = o.buyer_id\nJOIN Items i ON o.order_id = i.order_id\nWHERE YEAR(o.order_date) = 2019 AND i.item_id IS NOT NULL\nGROUP BY u.user_id, u.join_date\nHAVING SUM(CASE WHEN i.is_return = 'approved' THEN 1 ELSE 0 END) = 0;",
+    "judge": "sql",
+    "tables": [
+      "Users",
+      "Orders",
+      "Items"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/market-analysis-i/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "ROW_NUMBER partition product order change_date desc, filter date."
+    ],
+    "editorial": "SELECT product_id, new_price AS price\nFROM (\n  SELECT product_id, new_price,\n    ROW_NUMBER() OVER (\n      PARTITION BY product_id ORDER BY change_date DESC\n    ) AS rn\n  FROM Products\n  WHERE change_date <= '2019-08-16'\n) x\nWHERE rn = 1;",
+    "starterCode": "",
+    "id": "sql/product-price-at-a-given-date",
+    "slug": "product-price-at-a-given-date",
+    "track": "sql",
+    "title": "Product Price at a Given Date",
+    "description": "Latest price per product on or before 2019-08-16.\n\n**Approach:** ROW_NUMBER partition product order change_date desc, filter date.",
+    "difficulty": "medium",
+    "topics": [
+      "window"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Products",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT product_id, new_price AS price\nFROM (\n  SELECT product_id, new_price,\n    ROW_NUMBER() OVER (\n      PARTITION BY product_id ORDER BY change_date DESC\n    ) AS rn\n  FROM Products\n  WHERE change_date <= '2019-08-16'\n) x\nWHERE rn = 1;",
+    "judge": "sql",
+    "tables": [
+      "Products"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/product-price-at-a-given-date/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "AVG of case when order_date = customer_pref_delivery_date."
+    ],
+    "editorial": "SELECT ROUND(100.0 * AVG(CASE WHEN order_date = customer_pref_delivery_date THEN 1.0 ELSE 0 END), 2) AS immediate_percentage\nFROM Delivery;",
+    "starterCode": "",
+    "id": "sql/immediate-food-delivery-ii",
+    "slug": "immediate-food-delivery-ii",
+    "track": "sql",
+    "title": "Immediate Food Delivery II",
+    "description": "Percentage of orders delivered immediately on first day.\n\n**Approach:** AVG of case when order_date = customer_pref_delivery_date.",
+    "difficulty": "medium",
+    "topics": [
+      "aggregation"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Delivery",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT ROUND(100.0 * AVG(CASE WHEN order_date = customer_pref_delivery_date THEN 1.0 ELSE 0 END), 2) AS immediate_percentage\nFROM Delivery;",
+    "judge": "sql",
+    "tables": [
+      "Delivery"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/immediate-food-delivery-ii/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "FORMAT month, conditional SUM for approved vs chargeback."
+    ],
+    "editorial": "SELECT DATEFROMPARTS(YEAR(trans_date), MONTH(trans_date), 1) AS month,\n  country,\n  COUNT(CASE WHEN state = 'approved' THEN 1 END) AS approved_count,\n  SUM(CASE WHEN state = 'approved' THEN amount ELSE 0 END) AS approved_total,\n  SUM(CASE WHEN state = 'chargeback' THEN amount ELSE 0 END) AS chargeback_total\nFROM Transactions\nGROUP BY YEAR(trans_date), MONTH(trans_date), country;",
+    "starterCode": "",
+    "id": "sql/monthly-transactions-i",
+    "slug": "monthly-transactions-i",
+    "track": "sql",
+    "title": "Monthly Transactions I",
+    "description": "Monthly approved trans count, total, and chargebacks per country/month.\n\n**Approach:** FORMAT month, conditional SUM for approved vs chargeback.",
+    "difficulty": "medium",
+    "topics": [
+      "reporting"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Transactions",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT DATEFROMPARTS(YEAR(trans_date), MONTH(trans_date), 1) AS month,\n  country,\n  COUNT(CASE WHEN state = 'approved' THEN 1 END) AS approved_count,\n  SUM(CASE WHEN state = 'approved' THEN amount ELSE 0 END) AS approved_total,\n  SUM(CASE WHEN state = 'chargeback' THEN amount ELSE 0 END) AS chargeback_total\nFROM Transactions\nGROUP BY YEAR(trans_date), MONTH(trans_date), country;",
+    "judge": "sql",
+    "tables": [
+      "Transactions"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/monthly-transactions-i/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Running sum window, max turn where sum <= 1000."
+    ],
+    "editorial": "SELECT person_name\nFROM (\n  SELECT person_name, turn,\n    SUM(weight) OVER (ORDER BY turn ROWS UNBOUNDED PRECEDING) AS running\n  FROM Queue\n) x\nWHERE running <= 1000\nORDER BY turn DESC\nOFFSET 0 ROWS FETCH NEXT 1 ROW ONLY;",
+    "starterCode": "",
+    "id": "sql/last-person-to-fit-on-bus",
+    "slug": "last-person-to-fit-on-bus",
+    "track": "sql",
+    "title": "Last Person to Fit in the Bus",
+    "description": "Last person who boards without exceeding 1000 kg cumulative weight.\n\n**Approach:** Running sum window, max turn where sum <= 1000.",
+    "difficulty": "medium",
+    "topics": [
+      "window"
+    ],
+    "constraints": [
+      "SELECT / WITH only",
+      "Match expected result shape"
+    ],
+    "examples": [
+      {
+        "input": "Tables: Queue",
+        "output": "Query returns expected columns and rows"
+      }
+    ],
+    "solution": "SELECT person_name\nFROM (\n  SELECT person_name, turn,\n    SUM(weight) OVER (ORDER BY turn ROWS UNBOUNDED PRECEDING) AS running\n  FROM Queue\n) x\nWHERE running <= 1000\nORDER BY turn DESC\nOFFSET 0 ROWS FETCH NEXT 1 ROW ONLY;",
+    "judge": "sql",
+    "tables": [
+      "Queue"
+    ],
+    "testCases": [
+      {
+        "id": "submit",
+        "input": "SQL query",
+        "expectedOutput": "Reference result",
+        "isHidden": true
+      }
+    ],
+    "externalUrl": "https://leetcode.com/problems/last-person-to-fit-on-bus/"
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Think about edge cases with empty input"
+    ],
+    "editorial": "def csv_sum(text):\n    lines = text.strip().splitlines()\n    idx = lines[0].split(',').index('amount')\n    return sum(int(r.split(',')[idx]) for r in lines[1:])",
+    "starterCode": "",
+    "id": "python/csv-sum",
+    "slug": "csv-sum",
+    "track": "python",
+    "title": "Sum CSV Column",
+    "description": "Sum integer values in the `amount` column of CSV text (header row included).",
+    "difficulty": "easy",
+    "topics": [
+      "csv"
+    ],
+    "constraints": [
+      "Standard library only"
+    ],
+    "examples": [
+      {
+        "input": "id,amount\\n1,10\\n2,5",
+        "output": "15"
+      }
+    ],
+    "solution": "def csv_sum(text):\n    lines = text.strip().splitlines()\n    idx = lines[0].split(',').index('amount')\n    return sum(int(r.split(',')[idx]) for r in lines[1:])",
+    "judge": "pyodide",
+    "functionName": "csv_sum",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "id,amount\\n1,10\\n2,5",
+        "args": [
+          "id,amount\n1,10\n2,5"
+        ],
+        "expected": 15,
+        "expectedOutput": "15",
+        "isHidden": false
+      },
+      {
+        "id": "2",
+        "input": "three rows",
+        "args": [
+          "id,amount\n1,4\n2,6\n3,0"
+        ],
+        "expected": 10,
+        "expectedOutput": "10",
+        "isHidden": true
+      }
+    ]
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Think about edge cases with empty input"
+    ],
+    "editorial": "def word_count(text):\n    counts = {}\n    for word in text.lower().split():\n        counts[word] = counts.get(word, 0) + 1\n    return counts",
+    "starterCode": "",
+    "id": "python/word-count",
+    "slug": "word-count",
+    "track": "python",
+    "title": "Word Frequency",
+    "description": "Return a dict mapping each lowercase word to its frequency.",
+    "difficulty": "easy",
+    "topics": [
+      "hashmap"
+    ],
+    "constraints": [
+      "Standard library only"
+    ],
+    "examples": [
+      {
+        "input": "data data eng",
+        "output": "{data:2,eng:1}"
+      }
+    ],
+    "solution": "def word_count(text):\n    counts = {}\n    for word in text.lower().split():\n        counts[word] = counts.get(word, 0) + 1\n    return counts",
+    "judge": "pyodide",
+    "functionName": "word_count",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "data data eng",
+        "args": [
+          "data data eng"
+        ],
+        "expected": {
+          "data": 2,
+          "eng": 1
+        },
+        "expectedOutput": "{data:2,eng:1}",
+        "isHidden": false
+      }
+    ]
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Think about edge cases with empty input"
+    ],
+    "editorial": "def dedupe_by_id(rows):\n    seen = {}\n    for row in rows:\n        seen[row['id']] = row\n    return list(seen.values())",
+    "starterCode": "",
+    "id": "python/dedupe-by-id",
+    "slug": "dedupe-by-id",
+    "track": "python",
+    "title": "Deduplicate Records",
+    "description": "Given list of dicts with `id`, keep the last occurrence of each id.",
+    "difficulty": "easy",
+    "topics": [
+      "etl"
+    ],
+    "constraints": [
+      "Standard library only"
+    ],
+    "examples": [
+      {
+        "input": "three rows, duplicate id",
+        "output": "last wins"
+      }
+    ],
+    "solution": "def dedupe_by_id(rows):\n    seen = {}\n    for row in rows:\n        seen[row['id']] = row\n    return list(seen.values())",
+    "judge": "pyodide",
+    "functionName": "dedupe_by_id",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "three rows, duplicate id",
+        "args": [
+          [
+            {
+              "id": 1,
+              "v": "a"
+            },
+            {
+              "id": 2,
+              "v": "b"
+            },
+            {
+              "id": 1,
+              "v": "c"
+            }
+          ]
+        ],
+        "expected": [
+          {
+            "id": 1,
+            "v": "c"
+          },
+          {
+            "id": 2,
+            "v": "b"
+          }
+        ],
+        "expectedOutput": "last wins",
+        "isHidden": false
+      }
+    ]
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Think about edge cases with empty input"
+    ],
+    "editorial": "def moving_average(nums, k):\n    out, window = [], 0\n    for i, n in enumerate(nums):\n        window += n\n        if i >= k:\n            window -= nums[i-k]\n        if i >= k-1:\n            out.append(window/k)\n    return out",
+    "starterCode": "",
+    "id": "python/moving-average",
+    "slug": "moving-average",
+    "track": "python",
+    "title": "Moving Average",
+    "description": "Return moving averages of window size k for numeric list nums.",
+    "difficulty": "easy",
+    "topics": [
+      "window"
+    ],
+    "constraints": [
+      "Standard library only"
+    ],
+    "examples": [
+      {
+        "input": "[1,2,3,4], k=2",
+        "output": "[1.5,2.5,3.5]"
+      }
+    ],
+    "solution": "def moving_average(nums, k):\n    out, window = [], 0\n    for i, n in enumerate(nums):\n        window += n\n        if i >= k:\n            window -= nums[i-k]\n        if i >= k-1:\n            out.append(window/k)\n    return out",
+    "judge": "pyodide",
+    "functionName": "moving_average",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "[1,2,3,4], k=2",
+        "args": [
+          [
+            1,
+            2,
+            3,
+            4
+          ],
+          2
+        ],
+        "expected": [
+          1.5,
+          2.5,
+          3.5
+        ],
+        "expectedOutput": "[1.5,2.5,3.5]",
+        "isHidden": false
+      }
+    ]
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Think about edge cases with empty input"
+    ],
+    "editorial": "import json\n\ndef parse_user_id(payload):\n    return int(json.loads(payload)['user_id'])",
+    "starterCode": "",
+    "id": "python/parse-json-field",
+    "slug": "parse-json-field",
+    "track": "python",
+    "title": "Parse JSON Field",
+    "description": "Parse JSON string and return integer user_id.",
+    "difficulty": "easy",
+    "topics": [
+      "json"
+    ],
+    "constraints": [
+      "Standard library only"
+    ],
+    "examples": [
+      {
+        "input": "{\"user_id\":42}",
+        "output": "42"
+      }
+    ],
+    "solution": "import json\n\ndef parse_user_id(payload):\n    return int(json.loads(payload)['user_id'])",
+    "judge": "pyodide",
+    "functionName": "parse_user_id",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "{\"user_id\":42}",
+        "args": [
+          "{\"user_id\":42}"
+        ],
+        "expected": 42,
+        "expectedOutput": "42",
+        "isHidden": false
+      }
+    ]
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Match column names and API methods from the prompt"
+    ],
+    "editorial": "df = spark.read.parquet(path)",
+    "starterCode": "# PySpark\n",
+    "id": "spark/read-parquet",
+    "slug": "read-parquet",
+    "track": "spark",
+    "title": "Read Parquet",
+    "description": "Read parquet path into df.",
+    "difficulty": "easy",
+    "topics": [
+      "io"
+    ],
+    "constraints": [
+      "Use PySpark DataFrame API"
+    ],
+    "examples": [
+      {
+        "input": "Sample dataframe(s)",
+        "output": "Transformed result"
+      }
+    ],
+    "solution": "df = spark.read.parquet(path)",
+    "judge": "compare",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "code",
+        "expectedOutput": "reference",
+        "isHidden": true
+      }
+    ]
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Match column names and API methods from the prompt"
+    ],
+    "editorial": "active = df.filter(df.status == 'active')",
+    "starterCode": "# PySpark\n",
+    "id": "spark/filter-active",
+    "slug": "filter-active",
+    "track": "spark",
+    "title": "Filter Active",
+    "description": "Filter df where status is active.",
+    "difficulty": "easy",
+    "topics": [
+      "transform"
+    ],
+    "constraints": [
+      "Use PySpark DataFrame API"
+    ],
+    "examples": [
+      {
+        "input": "Sample dataframe(s)",
+        "output": "Transformed result"
+      }
+    ],
+    "solution": "active = df.filter(df.status == 'active')",
+    "judge": "compare",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "code",
+        "expectedOutput": "reference",
+        "isHidden": true
+      }
+    ]
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Match column names and API methods from the prompt"
+    ],
+    "editorial": "out = df.select('user_id', 'event_time')",
+    "starterCode": "# PySpark\n",
+    "id": "spark/select-columns",
+    "slug": "select-columns",
+    "track": "spark",
+    "title": "Select Columns",
+    "description": "Select user_id, event_time from df.",
+    "difficulty": "easy",
+    "topics": [
+      "transform"
+    ],
+    "constraints": [
+      "Use PySpark DataFrame API"
+    ],
+    "examples": [
+      {
+        "input": "Sample dataframe(s)",
+        "output": "Transformed result"
+      }
+    ],
+    "solution": "out = df.select('user_id', 'event_time')",
+    "judge": "compare",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "code",
+        "expectedOutput": "reference",
+        "isHidden": true
+      }
+    ]
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Match column names and API methods from the prompt"
+    ],
+    "editorial": "counts = df.groupBy('country').count()",
+    "starterCode": "# PySpark\n",
+    "id": "spark/group-count",
+    "slug": "group-count",
+    "track": "spark",
+    "title": "Group Count",
+    "description": "Count rows per country.",
+    "difficulty": "easy",
+    "topics": [
+      "aggregation"
+    ],
+    "constraints": [
+      "Use PySpark DataFrame API"
+    ],
+    "examples": [
+      {
+        "input": "Sample dataframe(s)",
+        "output": "Transformed result"
+      }
+    ],
+    "solution": "counts = df.groupBy('country').count()",
+    "judge": "compare",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "code",
+        "expectedOutput": "reference",
+        "isHidden": true
+      }
+    ]
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Match column names and API methods from the prompt"
+    ],
+    "editorial": "joined = orders.join(customers, on='customer_id', how='inner')",
+    "starterCode": "# PySpark\n",
+    "id": "spark/inner-join",
+    "slug": "inner-join",
+    "track": "spark",
+    "title": "Inner Join",
+    "description": "Inner join orders and customers on customer_id.",
+    "difficulty": "medium",
+    "topics": [
+      "joins"
+    ],
+    "constraints": [
+      "Use PySpark DataFrame API"
+    ],
+    "examples": [
+      {
+        "input": "Sample dataframe(s)",
+        "output": "Transformed result"
+      }
+    ],
+    "solution": "joined = orders.join(customers, on='customer_id', how='inner')",
+    "judge": "compare",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "code",
+        "expectedOutput": "reference",
+        "isHidden": true
+      }
+    ]
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Match column names and API methods from the prompt"
+    ],
+    "editorial": "deduped = df.dropDuplicates(['user_id', 'event_date'])",
+    "starterCode": "# PySpark\n",
+    "id": "spark/drop-duplicates",
+    "slug": "drop-duplicates",
+    "track": "spark",
+    "title": "Drop Duplicates",
+    "description": "Drop duplicates on user_id and event_date.",
+    "difficulty": "medium",
+    "topics": [
+      "transform"
+    ],
+    "constraints": [
+      "Use PySpark DataFrame API"
+    ],
+    "examples": [
+      {
+        "input": "Sample dataframe(s)",
+        "output": "Transformed result"
+      }
+    ],
+    "solution": "deduped = df.dropDuplicates(['user_id', 'event_date'])",
+    "judge": "compare",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "code",
+        "expectedOutput": "reference",
+        "isHidden": true
+      }
+    ]
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Match column names and API methods from the prompt"
+    ],
+    "editorial": "with_usd = df.withColumn('amount_usd', df.amount * df.rate)",
+    "starterCode": "# PySpark\n",
+    "id": "spark/with-column",
+    "slug": "with-column",
+    "track": "spark",
+    "title": "With Column",
+    "description": "Add amount_usd = amount * rate.",
+    "difficulty": "medium",
+    "topics": [
+      "transform"
+    ],
+    "constraints": [
+      "Use PySpark DataFrame API"
+    ],
+    "examples": [
+      {
+        "input": "Sample dataframe(s)",
+        "output": "Transformed result"
+      }
+    ],
+    "solution": "with_usd = df.withColumn('amount_usd', df.amount * df.rate)",
+    "judge": "compare",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "code",
+        "expectedOutput": "reference",
+        "isHidden": true
+      }
+    ]
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Match column names and API methods from the prompt"
+    ],
+    "editorial": "sorted_df = df.orderBy(df.event_time.desc())",
+    "starterCode": "# PySpark\n",
+    "id": "spark/order-by",
+    "slug": "order-by",
+    "track": "spark",
+    "title": "Order By",
+    "description": "Sort df by event_time descending.",
+    "difficulty": "medium",
+    "topics": [
+      "transform"
+    ],
+    "constraints": [
+      "Use PySpark DataFrame API"
+    ],
+    "examples": [
+      {
+        "input": "Sample dataframe(s)",
+        "output": "Transformed result"
+      }
+    ],
+    "solution": "sorted_df = df.orderBy(df.event_time.desc())",
+    "judge": "compare",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "code",
+        "expectedOutput": "reference",
+        "isHidden": true
+      }
+    ]
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Match column names and API methods from the prompt"
+    ],
+    "editorial": "df.createOrReplaceTempView('events')\nresult = spark.sql(\"SELECT event_date, COUNT(*) cnt FROM events GROUP BY event_date\")",
+    "starterCode": "# PySpark\n",
+    "id": "spark/spark-sql-daily",
+    "slug": "spark-sql-daily",
+    "track": "spark",
+    "title": "Spark SQL Daily Count",
+    "description": "Register temp view and count events per day.",
+    "difficulty": "medium",
+    "topics": [
+      "sql"
+    ],
+    "constraints": [
+      "Use PySpark DataFrame API"
+    ],
+    "examples": [
+      {
+        "input": "Sample dataframe(s)",
+        "output": "Transformed result"
+      }
+    ],
+    "solution": "df.createOrReplaceTempView('events')\nresult = spark.sql(\"SELECT event_date, COUNT(*) cnt FROM events GROUP BY event_date\")",
+    "judge": "compare",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "code",
+        "expectedOutput": "reference",
+        "isHidden": true
+      }
+    ]
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Match column names and API methods from the prompt"
+    ],
+    "editorial": "cached = df.cache()",
+    "starterCode": "# PySpark\n",
+    "id": "spark/cache-df",
+    "slug": "cache-df",
+    "track": "spark",
+    "title": "Cache DataFrame",
+    "description": "Cache df for reuse.",
+    "difficulty": "hard",
+    "topics": [
+      "optimization"
+    ],
+    "constraints": [
+      "Use PySpark DataFrame API"
+    ],
+    "examples": [
+      {
+        "input": "Sample dataframe(s)",
+        "output": "Transformed result"
+      }
+    ],
+    "solution": "cached = df.cache()",
+    "judge": "compare",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "code",
+        "expectedOutput": "reference",
+        "isHidden": true
+      }
+    ]
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Match column names and API methods from the prompt"
+    ],
+    "editorial": "compact = df.coalesce(4)",
+    "starterCode": "# PySpark\n",
+    "id": "spark/coalesce-files",
+    "slug": "coalesce-files",
+    "track": "spark",
+    "title": "Coalesce Partitions",
+    "description": "Coalesce df to 4 partitions before write.",
+    "difficulty": "hard",
+    "topics": [
+      "optimization"
+    ],
+    "constraints": [
+      "Use PySpark DataFrame API"
+    ],
+    "examples": [
+      {
+        "input": "Sample dataframe(s)",
+        "output": "Transformed result"
+      }
+    ],
+    "solution": "compact = df.coalesce(4)",
+    "judge": "compare",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "code",
+        "expectedOutput": "reference",
+        "isHidden": true
+      }
+    ]
+  },
+  {
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "hints": [
+      "Match column names and API methods from the prompt"
+    ],
+    "editorial": "combined = df1.unionByName(df2)",
+    "starterCode": "# PySpark\n",
+    "id": "spark/union-dataframes",
+    "slug": "union-dataframes",
+    "track": "spark",
+    "title": "Union DataFrames",
+    "description": "Union df1 and df2 by name.",
+    "difficulty": "hard",
+    "topics": [
+      "transform"
+    ],
+    "constraints": [
+      "Use PySpark DataFrame API"
+    ],
+    "examples": [
+      {
+        "input": "Sample dataframe(s)",
+        "output": "Transformed result"
+      }
+    ],
+    "solution": "combined = df1.unionByName(df2)",
+    "judge": "compare",
+    "testCases": [
+      {
+        "id": "1",
+        "input": "code",
+        "expectedOutput": "reference",
+        "isHidden": true
+      }
+    ]
+  }
+]

@@ -54,6 +54,7 @@ const SEARCH_HREFS: Record<string, string> = {
 };
 
 export function getSearchHref(item: SearchItem): string {
+  if (item.href) return item.href;
   if (item.type === "roadmap") return "/roadmap";
   if (SEARCH_HREFS[item.slug]) return SEARCH_HREFS[item.slug];
   const labHref = TOPIC_LAB_HREFS[item.slug as keyof typeof TOPIC_LAB_HREFS];

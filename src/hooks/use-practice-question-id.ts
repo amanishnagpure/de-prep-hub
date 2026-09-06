@@ -1,12 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export function usePracticeQuestionId(
   questions: { id: number }[],
-  defaultId?: number
+  defaultId?: number,
+  options?: { syncToUrl?: boolean }
 ): [number, React.Dispatch<React.SetStateAction<number>>] {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const idParam = searchParams.get("id");
   const parsedId = idParam ? Number(idParam) : null;
@@ -21,12 +24,29 @@ export function usePracticeQuestionId(
     [defaultId, questions]
   );
 
-  const [selectedId, setSelectedId] = React.useState(() => resolveId(parsedId));
+  const [selectedId, setSelectedIdState] = React.useState(() => resolveId(parsedId));
   const skipMobileScroll = React.useRef(true);
 
   React.useEffect(() => {
-    setSelectedId(resolveId(parsedId));
+    setSelectedIdState(resolveId(parsedId));
   }, [parsedId, resolveId]);
+
+  const setSelectedId = React.useCallback(
+    (value: React.SetStateAction<number>) => {
+      setSelectedIdState((prev) => {
+        const next = typeof value === "function" ? value(prev) : value;
+        if (options?.syncToUrl && next) {
+          const params = new URLSearchParams(searchParams.toString());
+          params.set("id", String(next));
+          params.delete("slug");
+          const query = params.toString();
+          router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+        }
+        return next;
+      });
+    },
+    [options?.syncToUrl, pathname, router, searchParams]
+  );
 
   React.useEffect(() => {
     if (skipMobileScroll.current) {

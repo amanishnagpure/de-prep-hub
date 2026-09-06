@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { FileText, Map, Search as LucideSearch } from "lucide-react";
+import { FileText, Map, Search as LucideSearch, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -68,7 +68,7 @@ export function SearchProvider({
         open={open}
         onOpenChange={setOpen}
         title="Search"
-        description="Topics, SQL notes, practice, interview"
+        description="Topics, practice problems, SQL notes, interview"
       >
         <Command shouldFilter={false}>
           <CommandInput
@@ -89,6 +89,8 @@ export function SearchProvider({
                   <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     {item.type === "roadmap" ? (
                       <Map className="size-4" />
+                    ) : item.type === "code" ? (
+                      <Terminal className="size-4" />
                     ) : (
                       <FileText className="size-4" />
                     )}

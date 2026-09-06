@@ -31,25 +31,21 @@ export function LabSummaryCard({
       : 0;
 
   return (
-    <Link href={href} className="panel-interactive group flex h-full flex-col p-5">
-      <div className="flex items-start justify-between gap-3">
+    <Link href={href} className="panel group block overflow-hidden transition-colors hover:bg-muted/30">
+      <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
         <div className="min-w-0">
-          <p className="font-semibold tracking-tight transition-colors group-hover:text-primary">
-            {title}
-          </p>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{description}</p>
+          <p className="font-semibold transition-colors group-hover:text-primary">{title}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs font-medium tabular-nums">
+          <span className="rounded-md bg-primary/15 px-2 py-0.5 font-mono text-xs font-semibold tabular-nums text-primary">
             {overall}%
           </span>
-          <div className="flex size-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition-all group-hover:border-primary/30 group-hover:bg-primary/10 group-hover:text-primary">
-            <ArrowUpRight className="size-3.5" />
-          </div>
+          <ArrowUpRight className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
         </div>
       </div>
 
-      <div className="mt-5 space-y-3">
+      <div className="space-y-3 px-4 py-3">
         {tracks.map((track) => {
           const stat = stats[track.key];
           return (
@@ -60,7 +56,7 @@ export function LabSummaryCard({
                   {stat.current}/{stat.total}
                 </span>
               </div>
-              <div className="progress-bar mt-1.5">
+              <div className="progress-bar mt-1">
                 <div className="progress-bar-fill" style={{ width: `${stat.percent}%` }} />
               </div>
             </div>

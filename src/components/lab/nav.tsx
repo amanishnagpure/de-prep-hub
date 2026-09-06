@@ -26,14 +26,9 @@ export function LabSidebarLink({
       href={href}
       title={label}
       className={cn(
-        "flex items-center gap-3 rounded-lg text-sm transition-all duration-150",
-        nested ? "px-3 py-2" : "px-3 py-2.5",
-        nested && !collapsed && "ml-5 border-l-2 border-border pl-4",
-        active
-          ? nested
-            ? "border-l-primary font-medium text-primary"
-            : "bg-primary/10 font-medium text-primary shadow-sm ring-1 ring-primary/15"
-          : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
+        "lc-sidebar-link",
+        nested && !collapsed && "ml-3 pl-3",
+        active && "lc-sidebar-link-active",
         collapsed && !nested && "justify-center px-2"
       )}
     >
@@ -56,10 +51,10 @@ export function LabMobileTab({
     <Link
       href={href}
       className={cn(
-        "shrink-0 rounded-lg px-3 py-2 text-sm transition-all",
+        "shrink-0 rounded-md px-3 py-2 text-sm transition-colors",
         active
-          ? "bg-primary/10 font-medium text-primary ring-1 ring-primary/20"
-          : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+          ? "bg-muted font-medium text-primary"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
       )}
     >
       {children}
@@ -82,7 +77,7 @@ export function LabChapterLink({
     <Link
       href={href}
       className={cn(
-        "flex items-center justify-between rounded-lg border border-border/70 bg-card/50 px-4 py-3 transition-all duration-150 hover:border-primary/25 hover:bg-muted/40 hover:shadow-sm",
+        "flex items-center justify-between rounded-md border border-border px-4 py-3 transition-colors hover:bg-muted/50",
         isRead && "border-primary/30 bg-primary/[0.04]"
       )}
     >
@@ -111,9 +106,9 @@ export function LabModuleLink({
   return (
     <Link
       href={href}
-      className="panel-interactive group flex items-center gap-3.5 p-4"
+      className="panel group flex items-center gap-3 p-4 transition-colors hover:bg-muted/40"
     >
-      <div className="icon-tile bg-primary/10 text-primary ring-primary/20">
+      <div className="icon-tile size-9">
         <Icon className="size-4" />
       </div>
       <span className="text-sm font-semibold tracking-tight group-hover:text-primary">

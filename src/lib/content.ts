@@ -1,6 +1,8 @@
 import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
+import codeCatalog from "@/data/de-code/catalog.json";
+import type { CodeProblem } from "@/lib/de-code/types";
 
 const contentDirectory = path.join(process.cwd(), "content");
 const topicsDirectory = path.join(contentDirectory, "topics");
@@ -27,7 +29,8 @@ export interface Roadmap {
 
 export interface SearchItem extends TopicMeta {
   content: string;
-  type: "topic" | "roadmap";
+  type: "topic" | "roadmap" | "code";
+  href?: string;
 }
 
 function getTopicSlugs(): string[] {
@@ -222,6 +225,73 @@ export function getSearchIndex(): SearchItem[] {
     },
   ];
 
+  const codeTracks: SearchItem[] = [
+    {
+      slug: "labs",
+      title: "Labs",
+      description: "Notes, drills, interview prep by technology",
+      order: 0.4,
+      content: "labs sql python spark databricks airflow cloud system design",
+      type: "topic",
+      href: "/labs",
+    },
+    {
+      slug: "code",
+      title: "Code — DE Platform",
+      description: "LeetCode for Data Engineers",
+      order: 0.5,
+      content: "code platform sql python pyspark dsa data engineering judge",
+      type: "code",
+      href: "/code",
+    },
+    {
+      slug: "code-sql",
+      title: "Code — SQL",
+      description: "Fundamentals to DE SQL patterns",
+      order: 0.51,
+      content: "sql window scd dedupe incremental cdc",
+      type: "code",
+      href: "/code/sql",
+    },
+    {
+      slug: "code-python",
+      title: "Code — Python",
+      description: "ETL and data manipulation Python",
+      order: 0.52,
+      content: "python csv json etl pandas",
+      type: "code",
+      href: "/code/python",
+    },
+    {
+      slug: "code-pyspark",
+      title: "Code — PySpark",
+      description: "DataFrame API and optimization",
+      order: 0.53,
+      content: "pyspark spark dataframe optimization",
+      type: "code",
+      href: "/code/pyspark",
+    },
+    {
+      slug: "code-dsa",
+      title: "Code — DSA",
+      description: "Algorithms for DE interviews",
+      order: 0.54,
+      content: "dsa hashmap array binary search intervals",
+      type: "code",
+      href: "/code/dsa",
+    },
+  ];
+
+  const codeProblemItems: SearchItem[] = (codeCatalog as CodeProblem[]).map((problem, index) => ({
+    slug: `code-${problem.track}-${problem.slug}`,
+    title: `${problem.title} (${problem.track})`,
+    description: `${problem.difficulty} · ${problem.experienceLevel} · ${problem.topic}`,
+    order: 10 + index * 0.001,
+    content: `${problem.title} ${problem.description} ${problem.concepts.join(" ")} ${problem.track} ${problem.topic}`,
+    type: "code" as const,
+    href: `/code/${problem.track}/${problem.topic}?slug=${problem.slug}`,
+  }));
+
   return [
     {
       slug: "roadmap",
@@ -231,8 +301,10 @@ export function getSearchIndex(): SearchItem[] {
       content: roadmap.content,
       type: "roadmap",
     },
+    ...codeTracks,
     ...topics,
     ...sqlLabExtras,
     ...pythonLabExtras,
+    ...codeProblemItems,
   ];
 }

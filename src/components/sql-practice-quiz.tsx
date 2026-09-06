@@ -21,6 +21,7 @@ import {
   QUESTION_TIMER_SECONDS,
   type SqlPracticeQuestion,
 } from "@/lib/sql-practice";
+import { LC_TIER_BADGE } from "@/lib/lc-styles";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 
@@ -34,11 +35,7 @@ const tierLabels: Record<TierFilter, string> = {
   hard: "Hard only",
 };
 
-const tierBadge: Record<SqlPracticeQuestion["tier"], string> = {
-  basic: "bg-emerald-500/10 text-primary ring-emerald-500/20",
-  medium: "bg-muted font-medium text-foreground ring-amber-500/20",
-  hard: "bg-rose-500/10 text-rose-400 ring-rose-500/20",
-};
+const tierBadge = LC_TIER_BADGE;
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -191,7 +188,7 @@ export function SqlPracticeQuiz() {
             <span className="font-mono text-xs text-muted-foreground">#{current.id}</span>
             <span
               className={cn(
-                "rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1",
+                "lc-badge",
                 tierBadge[current.tier]
               )}
             >
